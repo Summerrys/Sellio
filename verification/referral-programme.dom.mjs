@@ -277,6 +277,11 @@ try {
   await click(byTestId('refer-join'));
   assert.equal(text(byTestId('refer-join-error')), "Refer & earn isn't open yet.");
   await close();
+  answers.referral_join = () => ({ data: null, error: { code: '42501', message: "Refer & earn opens after your shop's first payment." } });
+  close = await show(h(app.Refer), ['/refer']);
+  await click(byTestId('refer-join'));
+  assert.equal(text(byTestId('refer-join-error')), "Refer & earn opens after your shop's first payment.", 'paying shops only (20 Nov)');
+  await close();
   answers.referral_join = () => ({ data: null, error: { message: 'connection reset' } });
   close = await show(h(app.Refer), ['/refer']);
   await click(byTestId('refer-join'));
@@ -286,9 +291,10 @@ try {
 
   // 5. Not yet: still on the free trial (Alvin: paying shops only), joining closed, plan lapsed.
   for (const [label, setup, dashboard, admin, want] of [
-    ['trial', () => owner({}, { subscription: { status: 'trial', tier: 'growth' } }), { joiningOpen: true, canJoin: true }, false, /Refer & earn opens after your shop’s first payment\. Your code will be here then\./],
-    ['soon', () => owner(), { joiningOpen: false, canJoin: true }, false, /Refer & earn isn't open yet\./],
-    ['inactive', () => owner({}, { subscription: { status: 'cancelled', tier: 'growth' } }), { joiningOpen: true, canJoin: false }, false, /Refer & earn opens when your business plan is active\./],
+    ['trial', () => owner({}, { subscription: { status: 'trial', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'trial' }, false, /Refer & earn opens after your shop’s first payment\. Your code will be here then\./],
+    ['trial', () => owner(), { joiningOpen: true, canJoin: false, joinBlock: 'no payment' }, false, /Refer & earn opens after your shop’s first payment\./],
+    ['soon', () => owner(), { joiningOpen: false, canJoin: true, joinBlock: null }, false, /Refer & earn isn't open yet\./],
+    ['inactive', () => owner({}, { subscription: { status: 'cancelled', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'plan lapsed' }, false, /Refer & earn opens when your business plan is active\./],
   ]) {
     reset();
     setup();
@@ -308,7 +314,7 @@ try {
   assert.ok(byTestId('refer-join'), 'an admin can join');
   assert.match(text(byTestId('refer-admin-only')), /Joining is closed for now\. You can join because you’re a Sellio admin\./);
   await close();
-  passed('a shop on its free trial waits for its first payment; closed joining says so (but lets a Sellio admin in); a lapsed plan waits until it is active');
+  passed('a shop on its free trial, or with no payment recorded, waits for its first payment; closed joining says so (but lets a Sellio admin in); a lapsed plan waits until it is active');
 
   // 6. A distributor: the code, the link, sharing, and the WhatsApp switch. No wallet yet.
   reset();

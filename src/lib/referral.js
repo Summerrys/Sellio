@@ -149,7 +149,8 @@ async function rpc(name, args) {
 // Anyone, signed in or not: {found:false}, or {found, code, shopName, logoUrl, firstName,
 // whatsapp} (whatsapp only when the distributor chose to show it).
 export const referralCodeInfo = (code) => rpc('referral_code_info', { p_code: code });
-// The shop's owner. Not joined: {joined:false, joiningOpen, termsVersion, canJoin, rates}.
+// The shop's owner. Not joined: {joined:false, joiningOpen, termsVersion, canJoin, joinBlock, rates}
+// (joinBlock, why it can't join yet: 'trial', 'no payment', 'plan lapsed', 'shop closed', 'home shop').
 // Joined: {joined, code, link, status, showWhatsapp, earning, notEarningReason, rates, …}.
 export const referralDashboard = (tenantId) => rpc('referral_dashboard', { p_tenant_id: tenantId });
 export const joinReferral = (tenantId, termsVersion) => rpc('referral_join', { p_tenant_id: tenantId, p_terms_version: termsVersion });
@@ -163,7 +164,8 @@ const DATABASE_SAYS = new Set([
   N_('Refer & earn is closed for this shop.'),
   N_("Refer & earn isn't open yet."),
   N_('The distributor terms have changed. Please read them again.'),
-  N_('Refer & earn is for shops on a business plan or its free trial.'),
+  N_("Refer & earn opens after your shop's first payment."),
+  N_('Refer & earn is for shops on a paid business plan.'),
   N_("That referral code isn't valid."),
   N_("That's this shop's own code."),
   N_("That code belongs to someone at this shop, so it can't be used here."),

@@ -22,8 +22,10 @@ import { useAppText } from '@/lib/appText';
 // terms), then shares it: WhatsApp, the link, or the QR on their phone.
 //
 // Alvin, 20 Nov 2026:
-// - "this referral program will only start when the merchant is actually a paying merchant": a
-//   shop still on its free trial sees that Refer & earn opens after its first payment.
+// - "this referral program will only start when the merchant is actually a paying merchant", then
+//   "make joining require a recorded payment and a plan past its trial": Sellio refuses the rest
+//   (referral_join), and the dashboard says why (joinBlock); a shop on its free trial, or with no
+//   payment recorded, sees that Refer & earn opens after its first payment.
 // - "for the wallet and also how the distributor actually earns the money, where does it go
 //   to, etc. Put them aside first": no wallet, pending earnings or plan-fee-back progress here
 //   yet; the database keeps counting them from the first sign-up.
@@ -184,7 +186,8 @@ export default function Refer() {
   else if (state !== 'ready' || !data) view = state === 'error' ? 'error' : 'loading';
   else if (data.joined) view = 'joined';
   else if (!data.joiningOpen && !admin) view = 'soon';
-  else if (subscription?.status === 'trial') view = 'trial';
+  else if (data.joinBlock === 'trial' || data.joinBlock === 'no payment'
+    || (data.joinBlock === undefined && subscription?.status === 'trial')) view = 'trial';
   else if (!data.canJoin) view = 'inactive';
   else view = 'join';
 

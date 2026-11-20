@@ -19,6 +19,9 @@ const read = (file) => readFileSync(path.join(app, file), 'utf8');
 const db = new PGlite();
 await db.exec(read('verification/referral-programme.stubs.sql'));
 await db.exec(read('supabase/migrations/20261110090000_referral_programme.sql'));
+// Later referral migrations, in order (their md5 guards match these local copies).
+await db.exec(read('supabase/migrations/20261120135956_referral_events_and_typed_codes.sql'));
+await db.exec(read('supabase/migrations/20261120141926_referral_join_paying_shops.sql'));
 let results;
 try {
   await db.exec('begin;');

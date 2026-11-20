@@ -175,8 +175,28 @@ begin
     perform pg_temp.as_user(e_h);
     v_err := null;
     begin v := public.referral_join(v_h, v_terms); exception when others then v_err := sqlstate || ' ' || sqlerrm; end;
-    v_res := v_res || pg_temp.r('free home shops cannot join', v_err like '42501%business plan%', v_err);
+    v_res := v_res || pg_temp.r('free home shops cannot join', v_err like '42501%paid business plan%', v_err);
+    -- Paying shops only (20 Nov 2026): a payment recorded and a plan past its trial.
+    perform pg_temp.as_user(e_staff);
+    v_err := null;
+    begin v := public.referral_join(v_x, v_terms); exception when others then v_err := sqlstate || ' ' || sqlerrm; end;
+    v_res := v_res || pg_temp.r('a shop on its free trial cannot join yet', v_err like '42501%after your shop''s first payment%', v_err);
+    v := public.referral_dashboard(v_x);
+    v_res := v_res || pg_temp.r('…and its dashboard says why (trial)',
+                                (v ->> 'canJoin')::boolean = false and v ->> 'joinBlock' = 'trial', v::text);
     perform pg_temp.as_user(e_r0);
+    v_err := null;
+    begin v := public.referral_join(v_r0, v_terms); exception when others then v_err := sqlstate || ' ' || sqlerrm; end;
+    v_res := v_res || pg_temp.r('an active plan with no payment recorded cannot join yet', v_err like '42501%after your shop''s first payment%', v_err);
+    v := public.referral_dashboard(v_r0);
+    v_res := v_res || pg_temp.r('…and its dashboard says why (no payment)',
+                                (v ->> 'canJoin')::boolean = false and v ->> 'joinBlock' = 'no payment', v::text);
+    insert into app.shop_payments (stripe_invoice_id, tenant_id, stripe_subscription_id, stripe_customer_id, amount_paid,
+                                   commission_base, currency, billing_cycle, paid_at)
+    values ('in_zz_r0_0', null, 'sub_zz_r0', 'cus_zz_r0', 390, 390, 'SGD', 'yearly', now() - interval '60 days');
+    v := public.referral_dashboard(v_r0);
+    v_res := v_res || pg_temp.r('a payment found through the shop''s subscription counts (paid at sign-up, before the shop)',
+                                (v ->> 'canJoin')::boolean and v -> 'joinBlock' = 'null'::jsonb, v::text);
     v := public.referral_join(v_r0, v_terms);
     v_c0 := v ->> 'code';
     v_res := v_res || pg_temp.r('a distributor joins', v_c0 ~ '^[A-HJ-NP-Z2-9]{6}$', v::text);
@@ -425,7 +445,8 @@ begin
     v_res := v_res || pg_temp.r('staff can''t see the dashboard', v_err = '42501', v_err);
     perform pg_temp.as_user(e_h);
     v := public.referral_dashboard(v_h);
-    v_res := v_res || pg_temp.r('a home shop sees it can''t join', (v ->> 'joined')::boolean = false and (v ->> 'canJoin')::boolean = false, v::text);
+    v_res := v_res || pg_temp.r('a home shop sees it can''t join', (v ->> 'joined')::boolean = false and (v ->> 'canJoin')::boolean = false
+                                and v ->> 'joinBlock' = 'home shop', v::text);
 
     -- 9. Review
     v_step := 'review';
