@@ -5,6 +5,7 @@ import {
   getFailureDetails,
   getInvoiceSubscriptionId,
   getStripeClient,
+  hasBeenPaid,
   mapStripeStatus,
   resolvePlan,
   retrieveInvoice,
@@ -165,12 +166,14 @@ async function syncFromSubscription(options: {
   if (status === "past_due" && invoice) {
     failure = await getFailureDetails(stripe, invoice);
   }
-  const gracePeriodEndsAt = computeGracePeriod(
+  // A failed payment: 3 days from the first failure if the subscription has been paid
+  // before, none if it never has (see computeGracePeriod).
+  const gracePeriodEndsAt = computeGracePeriod({
     status,
-    invoice?.next_payment_attempt,
-    event.created * 1000,
+    anchorMs: event.created * 1000,
     existingGrace,
-  );
+    everPaid: status === "past_due" ? await hasBeenPaid(stripe, subscription?.id) : false,
+  });
   const clearFailure = ["active", "trial"].includes(status) || invoice?.status === "paid";
 
   const applied = await syncBillingState(
@@ -212,7 +215,7 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.text();
     event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Stripe signature verification failed:", error.message);
     return json({ error: "Invalid Stripe signature" }, 400);
   }
@@ -392,11 +395,11 @@ Deno.serve(async (req: Request) => {
 
     await finishEvent(supabase, event.id, "processed", auditDetails);
     return json({ received: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Stripe webhook processing failed:", event?.id, event?.type, error.message);
     try {
       await finishEvent(supabase, event.id, "failed", { ...auditDetails, error: error.message });
-    } catch (auditError) {
+    } catch (auditError: any) {
       console.error("Could not record webhook failure:", auditError.message);
     }
     return json({ error: "Webhook processing failed" }, 500);

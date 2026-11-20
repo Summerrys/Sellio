@@ -173,20 +173,44 @@ export async function getFailureDetails(stripe: Stripe, invoice: any) {
   };
 }
 
-export function computeGracePeriod(
-  status: string,
-  nextPaymentAttempt: unknown,
-  anchorMs: number,
-  existingGrace?: string | null,
-) {
-  if (status !== "past_due") return null;
-  const threeDaysAfterFailure = anchorMs + (3 * 24 * 60 * 60 * 1000);
-  const retryPlusOneDay =
-    typeof nextPaymentAttempt === "number"
-      ? (nextPaymentAttempt * 1000) + (24 * 60 * 60 * 1000)
-      : 0;
-  const existing = existingGrace ? new Date(existingGrace).getTime() : 0;
-  return new Date(Math.max(threeDaysAfterFailure, retryPlusOneDay, existing)).toISOString();
+export const GRACE_DAYS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// How long a shop keeps its plan after a failed payment (Alvin, 20 Nov 2026):
+// - A subscription that has never been paid (its trial ended and the first charge failed):
+//   no grace. The shop locks at once and shows the unpaid invoice to pay.
+// - One that has been paid before: 3 days from the first failure. Stripe's retries don't
+//   add more; the end stays where the first failure put it.
+// The end of a grace never moves later: the database keeps the later of the two
+// (sync_stripe_billing_state), and null leaves it as it is.
+export function computeGracePeriod(options: {
+  status: string;
+  anchorMs: number;
+  existingGrace?: string | null;
+  everPaid: boolean;
+}) {
+  if (options.status !== "past_due" || !options.everPaid) return null;
+  if (options.existingGrace) return new Date(options.existingGrace).toISOString();
+  return new Date(options.anchorMs + GRACE_DAYS * DAY_MS).toISOString();
+}
+
+// Whether a subscription has ever been paid: a paid invoice above zero (a trial's invoice is 0).
+export async function hasBeenPaid(stripe: any, subscriptionId: string | null | undefined) {
+  if (!subscriptionId) return false;
+  let startingAfter: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const list: any = await stripe.invoices.list({
+      subscription: subscriptionId,
+      status: "paid",
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    const invoices: any[] = list?.data ?? [];
+    if (invoices.some((invoice) => (invoice?.amount_paid ?? 0) > 0)) return true;
+    if (!list?.has_more || invoices.length === 0) return false;
+    startingAfter = invoices[invoices.length - 1].id;
+  }
+  return false;
 }
 
 export function buildSyncArgs(options: {
