@@ -1061,9 +1061,9 @@ const APP_LANGUAGES = [
 ];
 Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code, locale]));
 const LOADERS = {
-  zh: () => import("./assets/index-2SIGlcmF.js"),
-  ms: () => import("./assets/index-Dky_8AXV.js"),
-  id: () => import("./assets/index-BYt2xZEj.js")
+  zh: () => import("./assets/index-EdtyZiyl.js"),
+  ms: () => import("./assets/index-B8VzXndv.js"),
+  id: () => import("./assets/index-Dbqj9Mmv.js")
 };
 const TRANSLATED = Object.keys(LOADERS);
 const CHOICE_KEY = "sellio_app_language";

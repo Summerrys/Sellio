@@ -74,6 +74,12 @@ const asFile = (canvas, quality = 0.92) => new Promise((resolve) => canvas.toBlo
 window.fetch = async (url, options) => {
   if (String(url).startsWith('data:') || String(url).startsWith('blob:')) return window.__realFetch(url, options);
   const body = JSON.parse(options.body);
+  // describeMenuItems: a description for each item the menu printed none for.
+  if (String(url).endsWith('/describeMenuItems')) {
+    window.__described = (window.__described || []).concat([body.items.map((i) => i.name)]);
+    await new Promise((r) => setTimeout(r, 150));
+    return { ok: true, text: async () => JSON.stringify({ descriptions: body.items.map((i) => i.name + ', as served at our stall.') }) };
+  }
   window.__sent = { imageWidth: body.imageWidth, imageHeight: body.imageHeight, mediaType: body.mediaType, version: body.version, chars: body.imageBase64.length };
   const s = body.imageWidth / W;
   const box = (d) => [d.x, d.y, d.x + d.w, d.y + d.h].map((n) => Math.round(n * s));
@@ -213,6 +219,23 @@ try {
   await page.evaluate(() => document.querySelectorAll('[data-testid="scan-item"]')[4].scrollIntoView({ block: 'center' }));
   await shoot('2-prices-needed.png');
   passed('saving with an empty price asks for it first');
+
+  // 3b. The descriptions the menu didn't print, written one by one; an item's editor from its price.
+  await page.waitForSelector('[data-testid="scan-written"]', { timeout: 15000 });
+  assert.deepEqual(await page.evaluate(() => window.__described), [['Laksa', 'Kopi', 'Teh Tarik', 'Iced Lemon Tea']], 'only those without printed words, in the menu\'s order');
+  assert.equal(await page.textContent('[data-testid="scan-written"]'), '4 descriptions written. Check the ones marked AI draft.');
+  await page.click('[aria-label="Add a price for Teh Tarik"]');
+  await page.waitForSelector('[data-testid="scan-edit"]');
+  const sheetBox = await page.locator('[data-testid="scan-edit"]').boundingBox();
+  assert.ok(sheetBox.y >= 0 && sheetBox.y + sheetBox.height <= 844.5, `the editor fits the screen: ${JSON.stringify(sheetBox)}`);
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.testid), 'scan-edit-price', 'opened on the price');
+  await page.keyboard.type('2.2');
+  assert.equal(await page.inputValue('[data-testid="scan-edit"] textarea'), 'Teh Tarik, as served at our stall.');
+  await shoot('2b-item-editor.png');
+  await page.click('[data-testid="scan-edit"] button:has-text("Done")');
+  assert.equal(await page.locator('[data-testid="scan-edit"]').count(), 0);
+  assert.equal((await page.textContent('[aria-label^="Price of Teh Tarik"]')).trim(), 'S$2.20');
+  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price and fits the screen');
 
   // 4. The photo editor, on the whole menu, with the picture boxed.
   const EDITOR = 'div.fixed.inset-0';

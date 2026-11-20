@@ -22,7 +22,7 @@ import { getProductsSteps } from '@/components/tour/tourSteps';
 import { itemWords } from '@/lib/planFeatures';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, AlertCircle, ImageIcon, Loader2, X, Pencil, GripVertical } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, AlertCircle, Loader2, X, GripVertical } from 'lucide-react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -39,6 +39,9 @@ import ImageEditModal from '@/components/onboarding/ImageEditModal';
 import DeleteProductsSheet from '../components/products/DeleteProductsSheet';
 import { planMove, withSortOrders } from '@/lib/productOrder';
 import Celebrate from '@/components/ui-custom/Celebrate';
+import { ScanReviewList, ScanItemSheet, DescriptionsStrip, groupScanItems, SCAN_REVIEW_CSS } from '@/components/products/ScanReview';
+import useDescriptionWriter from '@/lib/useDescriptionWriter';
+import { describeItems, CANT_WRITE } from '@/lib/menuDescriptions';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -75,7 +78,7 @@ const priceText = (price) => (typeof price !== 'number' || !Number.isFinite(pric
 const photoProblem = (message) => Object.assign(new Error(message), { photo: true });
 const slugOf = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'item';
 
-export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded }) {
+export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, categories, onSuccess, maxProducts, currentProductCount, onLimitExceeded, currency = 'SGD' }) {
   const { t } = useAppText();
   const [imagePreview, setImagePreview] = useState(null);
   const [scanning, setScanning] = useState(false);
@@ -86,9 +89,14 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   const [step, setStep] = useState('scan');
   const [partial, setPartial] = useState(false);
   const [pricesAsked, setPricesAsked] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  // The item open in its editor ({ id, focus }), and the photo editor ({ id, mode }: 'menu' opens
+  // on the menu photo whatever the item's picture is).
+  const [sheet, setSheet] = useState(null);
+  const [photoEditor, setPhotoEditor] = useState(null);
+  const [rewritingId, setRewritingId] = useState(null);
   // What the last save added: how many, and each section with its count, in the menu's order.
   const [saved, setSaved] = useState({ count: 0, sections: [] });
+  const writer = useDescriptionWriter({ tenantId, setItems: setScannedItems });
   const activeScan = useRef({ id: 0, controller: null });
   // The photo as sent and the full photo (for cutting pictures and the editor).
   const scanPhoto = useRef(null);
@@ -103,10 +111,12 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     scanPhoto.current = null;
   }, []);
 
+  const resetWriter = writer.reset;
   const cancelScan = useCallback(() => {
     activeScan.current.id += 1;
     activeScan.current.controller?.abort();
-  }, []);
+    resetWriter();
+  }, [resetWriter]);
   const handleClose = () => {
     if (saving) return;
     cancelScan();
@@ -114,6 +124,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   };
   useBackToClose(open, handleClose);
 
+  const startWriter = writer.start;
   const handleScan = useCallback(async file => {
     if (!file) return;
     cancelScan();
@@ -122,7 +133,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     activeScan.current.controller = controller;
     const current = () => activeScan.current.id === id && !controller.signal.aborted;
     setScanning(true); setError(null); setRetakeOnly(false); setStep('scan'); setImagePreview(null); setScannedItems([]);
-    setPartial(false); setPricesAsked(false); setEditingId(null);
+    setPartial(false); setPricesAsked(false); setSheet(null); setPhotoEditor(null);
     releasePhotos();
     try {
       if (!file.size || (file.type && !file.type.startsWith('image/'))) throw photoProblem(appT('Please take a clear photo of your menu.'));
@@ -159,10 +170,14 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (!data.items?.length) throw photoProblem(SCAN_REASONS[data.reason] ? appT(SCAN_REASONS[data.reason]) : appT('No items found. Try a clearer photo.'));
       const items = data.items.map((item, i) => ({
         ...item, _id: i, _selected: true, price: priceText(item.price), picture: null, image_url: null,
+        description: String(item.description || '').trim(),
       }));
       setScannedItems(items);
       setPartial(!!data.partial);
       setStep('review');
+      // Descriptions for the items the menu printed none for, written one by one in the menu's
+      // order (describeMenuItems).
+      startWriter(groupScanItems(items).flatMap((section) => section.items).filter((item) => !item.description));
       // Each item's own picture, cut from the full photo.
       if (prepared.full) {
         for (const item of items) {
@@ -179,7 +194,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
     } finally {
       if (current()) setScanning(false);
     }
-  }, [cancelScan, releasePhotos, tenantId]);
+  }, [cancelScan, releasePhotos, startWriter, tenantId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -188,8 +203,34 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   }, [open, photo, handleScan, cancelScan, releasePhotos]);
 
   const updateItem = (id, field, value) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, [field]: value } : item));
-  const removeItem = (id) => setScannedItems(prev => prev.filter(item => item._id !== id));
+  const removeItem = (id) => {
+    writer.release(id);
+    setScannedItems(prev => prev.filter(item => item._id !== id));
+  };
   const toggleItem = (id) => setScannedItems(prev => prev.map(item => item._id === id ? { ...item, _selected: !item._selected } : item));
+  // The shop's own words: never written over by the AI.
+  const ownDescription = (id, value) => {
+    writer.release(id);
+    setScannedItems(prev => prev.map(item => item._id === id ? { ...item, description: value, _desc: 'own', _typed: undefined } : item));
+  };
+  const renameSection = (key, name) => setScannedItems(prev => prev.map(item => (String(item.category || '').trim().toLowerCase() === key ? { ...item, category: name } : item)));
+
+  // Rewrite (or write one) in an item's editor: asked for on its own, an AI draft again.
+  const rewrite = async (id) => {
+    const item = scannedItems.find(i => i._id === id);
+    if (!item?.name?.trim() || rewritingId != null) return;
+    writer.release(id);
+    setRewritingId(id);
+    try {
+      const [text] = await describeItems({ tenantId, items: [item], rewrite: !!item.description?.trim() });
+      if (text) setScannedItems(prev => prev.map(i => (i._id === id ? { ...i, description: text, _desc: 'done', _typed: undefined } : i)));
+      else toast.message(t('No description came back. Please try again.'));
+    } catch (e) {
+      showError(e, t('Couldn’t write a description'), { t, fallback: appT(CANT_WRITE) });
+    } finally {
+      setRewritingId(null);
+    }
+  };
 
   // From the photo editor: the new picture (a data URL), or null to have none. A part boxed on
   // the menu photo (onMenu, crop) keeps its place, for the editor to open there next time.
@@ -203,11 +244,20 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       toast.error(t('Couldn’t keep that photo. Please try again.'));
     }
   };
+  // A photo taken or chosen in the item's editor, at item-photo size.
+  const pictureFromFile = async (id, file) => {
+    try {
+      const shrunk = await shrinkImage(file, { maxSide: PHOTO_MAX_SIDE });
+      const url = keepUrl(URL.createObjectURL(shrunk.blob));
+      updateItem(id, 'picture', { blob: shrunk.blob, url, type: shrunk.type, ext: shrunk.ext, rect: null, sized: true });
+    } catch (err) {
+      toast.error(err instanceof UnreadablePhotoError ? appT(UNREADABLE_PHOTO_MESSAGE) : t('Couldn’t keep that photo. Please try again.'));
+    }
+  };
 
   const handleSave = async () => {
-    const selected = scannedItems.filter(i => i._selected);
-    if (!selected.length) return;
-    const noPrice = selected.filter(i => typedPrice(i.price) == null).length;
+    if (!scannedItems.some(i => i._selected)) return;
+    const noPrice = scannedItems.filter(i => i._selected && typedPrice(i.price) == null).length;
     if (noPrice) {
       setPricesAsked(true);
       setError(noPrice === 1
@@ -215,14 +265,21 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         : appT('Add a price for {count} selected items, or deselect them.', { count: noPrice }));
       return;
     }
+    const selectedTotal = scannedItems.filter(i => i._selected).length;
     // Enforce the plan's product limit — don't let a scan push the merchant over their cap.
-    if (maxProducts != null && (currentProductCount + selected.length) > maxProducts) {
+    if (maxProducts != null && (currentProductCount + selectedTotal) > maxProducts) {
       const remaining = Math.max(maxProducts - currentProductCount, 0);
       setError(remaining === 1
-        ? appT('Your plan allows up to {max} products (1 slot left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, count: selected.length })
-        : appT('Your plan allows up to {max} products ({remaining} slots left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, remaining, count: selected.length }));
+        ? appT('Your plan allows up to {max} products (1 slot left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, count: selectedTotal })
+        : appT('Your plan allows up to {max} products ({remaining} slots left). Deselect some items or upgrade your plan to add all {count}.', { max: maxProducts, remaining, count: selectedTotal }));
       return;
     }
+    // Descriptions still being written stop here: the one being typed is kept whole, those
+    // still waiting stay blank.
+    const finished = writer.stop();
+    const items = scannedItems.map(item => (finished && item._id === finished.id && item._desc !== 'own' ? { ...item, description: finished.text } : item));
+    // In the order shown: sections in the menu's order, each with its items.
+    const selected = groupScanItems(items.filter(i => i._selected)).flatMap(section => section.items);
     setSaving(true); setError(null);
     const uploaded = [];
     try {
@@ -238,8 +295,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       const photoUrls = {};
       for (const item of selected) {
         if (!item.picture?.blob) continue;
-        // A picture cut from the menu is made at item-photo size; one saved from the editor
-        // (up to 2400 px) is shrunk like any item photo.
+        // A picture cut from the menu, or taken or chosen in the item's editor, is made at
+        // item-photo size; one saved from the photo editor (up to 2400 px) is shrunk now.
         const shrunk = item.picture.sized
           ? { blob: item.picture.blob, type: item.picture.type, ext: item.picture.ext }
           : await shrinkImage(item.picture.blob, { maxSide: PHOTO_MAX_SIDE });
@@ -249,7 +306,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         uploaded.push(path);
         photoUrls[item._id] = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
       }
-      const uniqueCats = [...new Set(selected.map(i => i.category).filter(Boolean))];
+      const uniqueCats = [...new Set(selected.map(i => String(i.category || '').trim()).filter(Boolean))];
       const catMap = {};
       categories.forEach(c => { catMap[c.name.toLowerCase()] = c.id; });
       // New sections go after the shop's own, in the menu's order (as the Categories page adds
@@ -267,8 +324,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         tenant_id: tenantId,
         name: item.name,
         price: typedPrice(item.price),
-        description: item.description || null,
-        category_id: catMap[item.category?.toLowerCase()] || null,
+        description: String(item.description || '').trim() || null,
+        category_id: catMap[String(item.category || '').trim().toLowerCase()] || null,
         image_url: photoUrls[item._id] || item.image_url || null,
         slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now() + Math.random().toString(36).slice(2, 5),
         is_active: true,
@@ -280,15 +337,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (insertedProducts?.length) {
         await supabase.from('inventory_items').insert(insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' })));
       }
-      const sections = [];
-      for (const item of selected) {
-        const name = String(item.category || '').trim();
-        if (!name) continue;
-        const section = sections.find((sec) => sec.name.toLowerCase() === name.toLowerCase());
-        if (section) section.count += 1;
-        else sections.push({ name, count: 1 });
-      }
+      const sections = groupScanItems(selected).filter(section => section.name).map(section => ({ name: section.name, count: section.items.length }));
       setSaved({ count: selected.length, sections });
+      setSheet(null);
       setStep('done');
       onSuccess?.();
     } catch (e) {
@@ -302,39 +353,53 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
 
   if (!open) return null;
   const selectedCount = scannedItems.filter(i => i._selected).length;
+  const allSelected = scannedItems.length > 0 && selectedCount === scannedItems.length;
   const needPrice = scannedItems.filter(i => i._selected && typedPrice(i.price) == null).length;
   const hasPictures = scannedItems.some(i => i.picture);
-  const editing = scannedItems.find(i => i._id === editingId) || null;
+  const drafts = scannedItems.filter(i => i._desc === 'done').length;
+  const sectionCount = groupScanItems(scannedItems).length;
+  const sheetItem = sheet ? scannedItems.find(i => i._id === sheet.id) || null : null;
+  const editing = photoEditor ? scannedItems.find(i => i._id === photoEditor.id) || null : null;
   const fullPhoto = scanPhoto.current?.full || null;
   // The editor opens on the whole menu with the item's picture boxed (where it was cut, or where
-  // the AI saw it), or nothing boxed; a photo chosen instead, or turned, opens on its own.
-  const editorOnMenu = !!(editing && fullPhoto && (!editing.picture || editing.picture.rect));
+  // the AI saw it), or nothing boxed; a photo chosen instead, or turned, opens on its own, unless
+  // Box it on the menu photo was asked for.
+  const editorOnMenu = !!(editing && fullPhoto && (photoEditor.mode === 'menu' || !editing.picture || editing.picture.rect));
   const editorBox = editorOnMenu ? (editing.picture?.rect || fullPhotoRect(editing.photo, scanPhoto.current, fullPhoto)) : null;
+  const reviewSubtitle = scannedItems.length === 1
+    ? t('1 item, in your menu’s order')
+    : sectionCount <= 1
+      ? t('{count} items in 1 section, in your menu’s order', { count: scannedItems.length })
+      : t('{count} items in {sections} sections, in your menu’s order', { count: scannedItems.length, sections: sectionCount });
+  const restartWriter = () => startWriter(groupScanItems(scannedItems).flatMap(section => section.items).filter(item => !String(item.description || '').trim() && item._desc !== 'own'));
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="scan-menu-title" data-pull-refresh-block onKeyDown={event => { if (event.key === 'Escape' && !editing) handleClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
-      <div style={{ width: '100%', maxWidth: 560, background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div role="dialog" aria-modal="true" aria-labelledby="scan-menu-title" data-pull-refresh-block onKeyDown={event => { if (event.key === 'Escape' && !editing && !sheetItem) handleClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}>
+      <style>{SCAN_REVIEW_CSS}</style>
+      <div style={{ width: '100%', maxWidth: 560, background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <div style={{ padding: '16px 12px 14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(var(--color-primary), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <ScanLine size={18} color="rgb(var(--color-primary))" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p id="scan-menu-title" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{t('Scan Menu')}</p>
-            <p style={{ margin: '1px 0 0', fontSize: 12, color: '#64748b' }}>
+            <p id="scan-menu-title" style={{ margin: 0, fontSize: 16, lineHeight: '20px', fontWeight: 700, color: '#0f172a' }}>{t('Scan Menu')}</p>
+            <p data-testid="scan-subtitle" style={{ margin: '2px 0 0', fontSize: 12.5, lineHeight: '17px', color: '#64748b' }}>
               {step === 'scan' && (scanning ? t('Reading your menu…') : retakeOnly ? t('Take another photo') : t('Try again or take another photo'))}
-              {step === 'review' && t('{count} items found — review before saving', { count: scannedItems.length })}
+              {step === 'review' && reviewSubtitle}
               {step === 'done' && t('Products added successfully!')}
             </p>
           </div>
-          <button type="button" aria-label={t('Close menu scan')} disabled={saving} autoFocus onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', alignItems: 'center' }}>
+          <button type="button" aria-label={t('Close menu scan')} disabled={saving} autoFocus onClick={handleClose} style={{ width: 44, height: 44, background: 'none', border: 'none', borderRadius: 10, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={20} />
           </button>
         </div>
 
+        {step === 'review' && <DescriptionsStrip progress={writer.progress} drafts={drafts} onStop={writer.stop} onRetry={restartWriter} />}
+
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: step === 'review' ? 0 : 20 }}>
 
           {/* Extraction starts as soon as the native camera returns a photo. */}
           {step === 'scan' && (
@@ -357,100 +422,43 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
             </div>
           )}
 
-          {/* Step: Review */}
+          {/* Step: Review, in the menu's order (Alvin, 20 Nov 2026) */}
           {step === 'review' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {partial && (
-                <div data-testid="scan-partial" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#92400e' }}>
-                  {t('This menu is long, so only part of it was read. Scan the rest in another photo.')}
-                </div>
-              )}
-              {needPrice > 0 && (
-                <div data-testid="scan-need-price" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#92400e' }}>
-                  {needPrice === 1 ? t('1 item has no price on the menu. Add it below, or deselect it.') : t('{count} items have no price on the menu. Add them below, or deselect them.', { count: needPrice })}
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
-                  {t('{selectedCount} of {count} selected', { selectedCount, count: scannedItems.length })}
-                  {hasPictures && <span data-testid="scan-photo-hint"> · {t('Tap a photo to change it')}</span>}
-                </p>
-                <button onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: true })))} style={{ fontSize: 12, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>{t('Select all')}</button>
-              </div>
-
-              {scannedItems.map(item => {
-                const missing = item._selected && typedPrice(item.price) == null;
-                const canEditPhoto = !!(fullPhoto || item.picture);
-                const photoLabel = t('Photo for {name}', { name: item.name || t('this item') });
-                return (
-                  <div key={item._id} data-testid="scan-item" style={{ background: item._selected ? 'rgba(var(--color-primary), 0.04)' : '#f8fafc', border: `1px solid ${item._selected ? 'rgba(var(--color-primary), 0.25)' : '#e2e8f0'}`, borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-
-                    {/* Checkbox */}
-                    <input type="checkbox" checked={item._selected} onChange={() => toggleItem(item._id)} aria-label={item.name} style={{ width: 16, height: 16, accentColor: 'rgb(var(--color-primary))', flexShrink: 0, marginTop: 3 }} />
-
-                    {/* Its photo: tap to change it */}
-                    <button type="button" data-testid="scan-item-photo" aria-label={photoLabel} disabled={!canEditPhoto} onClick={() => setEditingId(item._id)}
-                      style={{ position: 'relative', width: 52, height: 52, borderRadius: 8, background: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', padding: 0, cursor: canEditPhoto ? 'pointer' : 'default' }}>
-                      {item.picture
-                        ? <img src={item.picture.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <ImageIcon size={16} color="#cbd5e1" />}
-                      {canEditPhoto && (
-                        <span aria-hidden="true" style={{ position: 'absolute', right: 2, bottom: 2, width: 16, height: 16, borderRadius: 999, background: 'rgba(15,23,42,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {item.picture ? <Pencil size={9} color="white" /> : <Plus size={10} color="white" />}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Fields */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {/* Name row */}
-                      <input
-                        value={item.name}
-                        onChange={e => updateItem(item._id, 'name', e.target.value)}
-                        style={{ width: '100%', fontWeight: 600, fontSize: 13, color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', outline: 'none', background: 'white', boxSizing: 'border-box' }}
-                        placeholder={t('Product name')}
-                      />
-                      {/* Price + Category row */}
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <div data-testid="scan-item-price" data-missing={missing ? 'yes' : 'no'} style={{ display: 'flex', alignItems: 'center', border: missing ? `1.5px ${pricesAsked ? 'solid #ef4444' : 'dashed #f59e0b'}` : '1px solid #e2e8f0', borderRadius: 6, background: missing ? '#fffbeb' : 'white', overflow: 'hidden', width: 96, flexShrink: 0 }}>
-                          <span style={{ fontSize: 11, color: '#94a3b8', padding: '0 4px 0 6px', fontWeight: 500 }}>$</span>
-                          <input type="number" inputMode="decimal" min="0" step="0.01" value={item.price} placeholder={t('Add price')} aria-label={t('Price')} aria-invalid={missing && pricesAsked ? 'true' : undefined}
-                            onChange={e => updateItem(item._id, 'price', e.target.value)}
-                            style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgb(var(--color-primary))', border: 'none', outline: 'none', padding: '4px 6px 4px 0', background: 'transparent', width: '100%', minWidth: 0 }} />
-                        </div>
-                        <input value={item.category || ''} onChange={e => updateItem(item._id, 'category', e.target.value)} placeholder={t('Category')} style={{ flex: 1, fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', minWidth: 0 }} />
-                      </div>
-                      {/* Description row */}
-                      <input value={item.description || ''} onChange={e => updateItem(item._id, 'description', e.target.value)} placeholder={t('Description (optional)')} style={{ width: '100%', fontSize: 11, color: '#64748b', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', background: 'white', outline: 'none', boxSizing: 'border-box' }} />
-                      {item.variants?.length > 0 && (
-                        <p data-testid="scan-item-options" style={{ margin: 0, fontSize: 11, color: '#64748b' }}>
-                          {item.variants.map(group => `${group.name}: ${group.options.map(o => (o.price_modifier > 0 ? `${o.label} +${priceText(Number(o.price_modifier))}` : o.label)).join(' / ')}`).join(' · ')}
-                        </p>
-                      )}
+            <>
+              {(partial || needPrice > 0) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px 0' }}>
+                  {partial && (
+                    <div data-testid="scan-partial" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#92400e' }}>
+                      {t('This menu is long, so only part of it was read. Scan the rest in another photo.')}
                     </div>
-
-                    {/* Delete */}
-                    <button onClick={() => removeItem(item._id)} aria-label={t('Remove {name}', { name: item.name || t('this item') })} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', color: '#ef4444', padding: '4px 6px', flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                );
-              })}
-
-              {error && (
-                <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span>{error}</span>
-                  {maxProducts != null && (currentProductCount + selectedCount) > maxProducts && sellsPlans() && (
-                    <button
-                      onClick={() => { handleClose(); onLimitExceeded?.(); }}
-                      style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 8, border: 'none', background: '#dc2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      {t('Upgrade Plan')}
-                    </button>
+                  )}
+                  {needPrice > 0 && (
+                    <div data-testid="scan-need-price" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#92400e' }}>
+                      {needPrice === 1 ? t('1 item has no price on the menu. Add it below, or deselect it.') : t('{count} items have no price on the menu. Add them below, or deselect them.', { count: needPrice })}
+                    </div>
                   )}
                 </div>
               )}
-            </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 12px 4px 20px' }}>
+                <p style={{ fontSize: 12.5, color: '#64748b', margin: 0 }}>
+                  {t('{selectedCount} of {count} selected', { selectedCount, count: scannedItems.length })}
+                  {hasPictures && <span data-testid="scan-photo-hint"> · {t('Tap a photo to change it')}</span>}
+                </p>
+                <button type="button" onClick={() => setScannedItems(prev => prev.map(i => ({ ...i, _selected: !allSelected })))} style={{ padding: '10px 4px', fontSize: 13, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
+                  {allSelected ? t('Select none') : t('Select all')}
+                </button>
+              </div>
+              <ScanReviewList
+                items={scannedItems}
+                currency={currency}
+                pricesAsked={pricesAsked}
+                canEditPhoto={item => !!(fullPhoto || item.picture)}
+                onToggle={toggleItem}
+                onOpen={(id, focus) => setSheet({ id, focus: focus || 'name' })}
+                onPhoto={id => setPhotoEditor({ id, mode: 'auto' })}
+                onRename={renameSection}
+              />
+            </>
           )}
 
           {/* Step: Done, with a tick and one burst of confetti (Alvin, 20 Nov 2026) */}
@@ -469,23 +477,60 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
           )}
         </div>
 
+        {/* A problem saving: above the buttons, where it's seen */}
+        {step === 'review' && error && (
+          <div role="alert" style={{ margin: '0 16px 4px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#dc2626', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+            <span>{error}</span>
+            {maxProducts != null && (currentProductCount + selectedCount) > maxProducts && sellsPlans() && (
+              <button
+                onClick={() => { handleClose(); onLimitExceeded?.(); }}
+                style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 8, border: 'none', background: '#dc2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t('Upgrade Plan')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Footer */}
         {step === 'review' && (
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, flexShrink: 0 }}>
-            <NativeCameraScanControl label={t('Scan another menu photo')} disabled={saving} onFile={onPhoto} onError={message => toast.message(message)} style={{ flex: 1, padding: 11, borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 600, color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <ScanLine size={14} />{' '}{t('Retake')}
+          <div style={{ padding: '12px 16px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, flexShrink: 0 }}>
+            <NativeCameraScanControl label={t('Scan another menu photo')} disabled={saving} onFile={onPhoto} onError={message => toast.message(message)} style={{ flex: 1, height: 48, boxSizing: 'border-box', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', fontSize: 14, fontWeight: 600, color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <ScanLine size={16} />{' '}{t('Retake')}
             </NativeCameraScanControl>
-            <button onClick={handleSave} disabled={saving || !selectedCount} style={{ flex: 2, padding: 11, borderRadius: 10, border: 'none', background: saving || !selectedCount ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: saving || !selectedCount ? 'not-allowed' : 'pointer' }}>
-              {saving ? t('Saving...') : t('Add {selectedCount} Products', { selectedCount })}
+            <button onClick={handleSave} disabled={saving || !selectedCount} style={{ flex: 2, height: 48, borderRadius: 12, border: 'none', background: saving || !selectedCount ? '#cbd5e1' : primaryGradient, color: 'white', fontSize: 15, fontWeight: 700, cursor: saving || !selectedCount ? 'not-allowed' : 'pointer' }}>
+              {saving ? t('Saving...') : selectedCount === 1 ? t('Add 1 product') : t('Add {count} products', { count: selectedCount })}
             </button>
           </div>
         )}
         {step === 'done' && (
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
+          <div style={{ padding: '12px 20px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
             <button onClick={handleClose} style={{ width: '100%', padding: 13, borderRadius: 12, border: 'none', background: primaryGradient, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{t('See my products')}</button>
           </div>
         )}
       </div>
+
+      {/* One item's editor */}
+      {step === 'review' && sheetItem && (
+        <ScanItemSheet
+          item={sheetItem}
+          items={scannedItems}
+          currency={currency}
+          pricesAsked={pricesAsked}
+          focus={sheet.focus}
+          hasMenuPhoto={!!fullPhoto}
+          rewriting={rewritingId === sheetItem._id}
+          onChange={(field, value) => updateItem(sheetItem._id, field, value)}
+          onDescription={value => ownDescription(sheetItem._id, value)}
+          onRewrite={() => rewrite(sheetItem._id)}
+          onPhotoFile={file => pictureFromFile(sheetItem._id, file)}
+          onEditPhoto={() => setPhotoEditor({ id: sheetItem._id, mode: 'auto' })}
+          onBoxOnMenu={() => setPhotoEditor({ id: sheetItem._id, mode: 'menu' })}
+          onRemovePhoto={() => updateItem(sheetItem._id, 'picture', null)}
+          onRemove={() => { removeItem(sheetItem._id); setSheet(null); }}
+          onClose={() => setSheet(null)}
+        />
+      )}
 
       {/* The photo editor on the whole menu, with this item's picture boxed. */}
       {editing && (
@@ -499,7 +544,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
             ? t('Move the box onto its picture, then tap Apply and Save.')
             : t('Tap Crop to box its picture on the menu, or Replace to choose a photo.')) : ''}
           onSave={(dataUrl, info) => savePicture(editing._id, dataUrl, editorOnMenu, info)}
-          onClose={() => setEditingId(null)}
+          onClose={() => setPhotoEditor(null)}
         />
       )}
     </div>
@@ -1232,6 +1277,7 @@ export default function Products({ embedded = false } = {}) {
           onPhoto={handleScanPhoto}
           tenantId={tenantId}
           categories={categories}
+          currency={tenant?.currency || 'SGD'}
           maxProducts={maxProducts}
           currentProductCount={products.length}
           onLimitExceeded={() => setUpgradeModalOpen(true)}

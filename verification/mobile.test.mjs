@@ -315,7 +315,10 @@ try {
   };
   const scanRequests = [];
   let scanFails = true;
+  // describeMenuItems (the review's AI descriptions: scan-review.dom.mjs) never answers here.
+  const noAnswer = () => new Promise(() => {});
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/describeMenuItems')) return noAnswer();
     scanRequests.push({ url, options });
     const answer = scanFails ? ({ error: 'Try a clearer menu photo.' }) : ({
       items: [{ name: 'Fixture Latte', price: 4, category: 'Drinks' }, { name: 'Fixture Tea', price: 3, category: 'Drinks' }],
@@ -340,9 +343,9 @@ try {
   scanFails = false;
   await act(async () => { click([...scan.container.querySelectorAll('button')].find(button => button.textContent === 'Try Again')); await next(); });
   assert.equal(scanRequests.length, 2);
-  assert.ok(scan.container.querySelector('input[placeholder="Product name"]'), 'Extracted names remain editable');
+  assert.deepEqual([...scan.container.querySelectorAll('[data-testid="scan-item-name"]')].map(n => n.textContent), ['Fixture Latte', 'Fixture Tea'], 'Extracted items are shown for review (each opens its editor)');
   assert.equal(catalogWrites.length, 0, 'Extraction must never save products without review');
-  const importButton = () => [...scan.container.querySelectorAll('button')].find(button => /Add \d+ Products/.test(button.textContent));
+  const importButton = () => [...scan.container.querySelectorAll('button')].find(button => /^Add \d+ products?$/.test(button.textContent));
   await act(async () => { click(importButton()); await next(); });
   assert.match(scan.container.textContent, /Your plan allows up to 2 products/);
   assert.equal(catalogWrites.length, 0, 'The subscription limit still blocks batch creation');
@@ -359,7 +362,7 @@ try {
   // Closing or retaking invalidates an old OCR response, even if the network
   // finishes after AbortController aborts the request.
   const responses = [];
-  globalThis.fetch = (url, options) => new Promise(resolve => responses.push({ options, resolve }));
+  globalThis.fetch = (url, options) => (String(url).endsWith('/describeMenuItems') ? noAnswer() : new Promise(resolve => responses.push({ options, resolve })));
   const stale = mount(ScanMenuDialog, { ...scanProps, open: true, maxProducts: null });
   await stale.render(); await act(async () => next());
   assert.equal(responses.length, 1);
@@ -371,12 +374,12 @@ try {
     responses[0].resolve({ ok: true, text: async () => JSON.stringify({ items: [{ name: 'Stale capture', price: 1 }] }) });
     await next();
   });
-  assert.equal(stale.container.querySelector('input[placeholder="Product name"]'), null);
+  assert.equal(stale.container.querySelector('[data-testid="scan-item-name"]'), null);
   await act(async () => {
     responses[1].resolve({ ok: true, text: async () => JSON.stringify({ items: [{ name: 'Fresh capture', price: 2 }] }) });
     await next();
   });
-  assert.equal(stale.container.querySelector('input[placeholder="Product name"]').value, 'Fresh capture');
+  assert.equal(stale.container.querySelector('[data-testid="scan-item-name"]').textContent, 'Fresh capture');
   const callCount = responses.length;
   scanReadFails = true;
   const badPhoto = mount(ScanMenuDialog, { ...scanProps, open: true });

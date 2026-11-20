@@ -909,6 +909,10 @@ const Camera = "相机";
 const Location = "位置信息";
 const More$1 = "更多";
 const Loading$1 = "加载中";
+const Stop = "停止";
+const Rename = "重命名";
+const Section = "分类";
+const Rewrite = "重写";
 const shop = {
   Dashboard,
   "Manage listings": "管理商品",
@@ -1173,7 +1177,6 @@ const shop = {
   "Reading your menu…": "正在读取您的菜单…",
   "Try again or take another photo": "请重试或重新拍照",
   "Take another photo": "再拍一张",
-  "{count} items found — review before saving": "找到 {count} 件商品 — 请检查后再保存",
   "Products added successfully!": "商品已成功添加！",
   "Close menu scan": "关闭菜单扫描",
   "Menu being scanned": "正在扫描的菜单",
@@ -1189,7 +1192,6 @@ const shop = {
   "Products Added!": "商品已添加！",
   "{selectedCount} products have been added to your catalog.": "已将 {selectedCount} 件商品添加到您的商品目录。",
   "Scan another menu photo": "扫描另一张菜单照片",
-  "Add {selectedCount} Products": "添加 {selectedCount} 件商品",
   "This photo doesn’t look like a menu. Take a photo of the menu or price list.": "这张照片看起来不像菜单。请拍摄菜单或价目表。",
   "The menu is too blurry to read. Hold the phone steady, get closer and make sure the menu is well lit.": "菜单太模糊，无法读取。请拿稳手机、靠近一点，并确保菜单光线充足。",
   "Only part of the menu is in the photo. Step back so the whole menu fits, or scan it in parts.": "照片里只有部分菜单。请退后一点，让整份菜单入镜，或分段扫描。",
@@ -1205,7 +1207,6 @@ const shop = {
   "Photo for {name}": "{name}的照片",
   "this item": "这件商品",
   "Add price": "添加价格",
-  "Remove {name}": "移除{name}",
   "Move the box onto its picture, then tap Apply and Save.": "把方框移到它的图片上，然后点按“应用”和“保存”。",
   "Tap Crop to box its picture on the menu, or Replace to choose a photo.": "点按“裁剪”框出它在菜单上的图片，或点按“更换”选择照片。",
   "Saving...": "正在保存...",
@@ -2639,7 +2640,43 @@ const shop = {
   "Drag the dots to change the order.": "拖动圆点即可调整顺序。",
   "Select items to delete": "选择要删除的商品",
   "Delete 1 {product}": "删除 1 件{product}",
-  "Delete {count} {products}": "删除 {count} 件{products}"
+  "Delete {count} {products}": "删除 {count} 件{products}",
+  "AI draft": "AI 草稿",
+  "Writing descriptions · {done} of {total}": "正在撰写描述 · {done}/{total}",
+  Stop,
+  "You can check items or add them now. Any still waiting stay blank.": "您现在就可以检查或添加商品。还没写好的描述会留空。",
+  "Items without one stay blank.": "没有描述的商品会留空。",
+  "1 description written. Check it: it’s marked AI draft.": "已写好 1 条描述。请检查标有“AI 草稿”的这一条。",
+  "{count} descriptions written. Check the ones marked AI draft.": "已写好 {count} 条描述。请检查标有“AI 草稿”的描述。",
+  "Add a price for {name}": "为{name}添加价格",
+  "Price of {name}: {price}": "{name}的价格：{price}",
+  "Writing…": "正在撰写…",
+  "+ Add a description": "+ 添加描述",
+  "No photo yet": "还没有照片",
+  "No section": "无分类",
+  "Section name": "分类名称",
+  "Rename {section}": "重命名{section}",
+  Rename,
+  "Add {name}": "添加{name}",
+  "No name": "无名称",
+  "Edit item": "编辑商品",
+  "{position} of {count} in {section}": "{section}中的第 {position}/{count} 件",
+  "Take a photo": "拍照",
+  "Choose from phone": "从手机选择",
+  "Box it on the menu photo": "在菜单照片上框选",
+  Section,
+  Rewrite,
+  "Write one": "撰写描述",
+  "You can change options after adding, in the product’s editor.": "添加后，可以在商品编辑页更改选项。",
+  "Remove from scan": "从扫描中移除",
+  "Descriptions can’t be written right now. Please try again.": "暂时无法撰写描述，请重试。",
+  "No description came back. Please try again.": "没有收到描述，请重试。",
+  "1 item, in your menu’s order": "1 件商品，按菜单顺序排列",
+  "{count} items in 1 section, in your menu’s order": "1 个分类中的 {count} 件商品，按菜单顺序排列",
+  "{count} items in {sections} sections, in your menu’s order": "{sections} 个分类中的 {count} 件商品，按菜单顺序排列",
+  "Add 1 product": "添加 1 件商品",
+  "Add {count} products": "添加 {count} 件商品",
+  "Couldn’t write a description": "无法撰写描述"
 };
 const All = "全部";
 const Goods = "商品";
