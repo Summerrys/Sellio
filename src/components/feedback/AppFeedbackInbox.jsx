@@ -8,7 +8,7 @@ import { outsideLinkProps } from '@/lib/nativeApp';
 import { whatsappLink } from '@/lib/shopSelling';
 import { FEEDBACK_TOPICS, amISellioAdmin, feedbackList, feedbackSummary, markFeedback, noteTestPhone } from '@/lib/appFeedback';
 import ExploreTabBar, { TAB_BAR_SPACE } from '@/components/explore/ExploreTabBar';
-import { AppRatingSheet } from './AppRatingPrompt';
+import { AppRatingSheet, STAR_GOLD, THEME, THEME_TINT } from './AppRatingPrompt';
 import { timeAgo } from '@/components/explore/shared';
 
 // /admin/feedback — Admin → Feedback: how people rate the Sellio app (lib/appFeedback.js), for
@@ -19,8 +19,6 @@ import { timeAgo } from '@/components/explore/shared';
 // app's language), sending nothing. English only: it's for Sellio's own team.
 
 const PAGE = 50;
-const PURPLE = '#8b2fc9';
-const PINK = '#e0449a';
 const TOPIC = Object.fromEntries(FEEDBACK_TOPICS);
 const ROLE = { guest: 'Not signed in', buyer: 'Buyer', seller: 'Business', home_seller: 'Home seller', staff: 'Staff' };
 const LANGUAGE = { en: 'EN', zh: '中文', ms: 'BM', id: 'ID' };
@@ -41,8 +39,8 @@ function Stars({ value, size = 16 }) {
         <svg key={n} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.47L12 17.46l-5.8 3.06 1.1-6.47-4.7-4.6 6.5-.95L12 2.6z"
-            fill={n <= value ? (value <= 3 ? PINK : PURPLE) : 'none'}
-            stroke={n <= value ? (value <= 3 ? PINK : PURPLE) : '#cbd5e1'}
+            fill={n <= value ? STAR_GOLD : 'none'}
+            stroke={n <= value ? STAR_GOLD : '#cbd5e1'}
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
@@ -69,7 +67,7 @@ function Summary({ summary }) {
             <div key={n} className="flex items-center gap-2 text-xs leading-[14px] text-slate-600">
               <span style={{ width: 18 }}>{n}★</span>
               <span className="flex-1 h-2 rounded bg-slate-100 overflow-hidden">
-                <span className="block h-2" style={{ width: `${Math.round((count / most) * 100)}%`, background: n <= 3 ? PINK : PURPLE }} />
+                <span className="block h-2" style={{ width: `${Math.round((count / most) * 100)}%`, background: STAR_GOLD }} />
               </span>
               <span className="text-right" style={{ width: 22 }}>{count}</span>
             </div>
@@ -84,7 +82,7 @@ function Tag({ children, tone = 'plain' }) {
   const tones = {
     plain: { background: '#f1f5f9', color: '#334155', fontWeight: 500 },
     green: { background: '#ecfdf5', color: '#047857', fontWeight: 600 },
-    purple: { background: '#f3e8ff', color: '#6b21a8', fontWeight: 600 },
+    theme: { background: THEME_TINT, color: THEME, fontWeight: 600 },
     amber: { background: '#fef3c7', color: '#92400e', fontWeight: 600 },
   };
   return <span className="h-6 px-[9px] rounded-full text-xs leading-6" style={tones[tone]}>{children}</span>;
@@ -124,7 +122,7 @@ function FeedbackCard({ item, onMarked }) {
         <Stars value={Number(item.stars) || 0} />
         <span className="flex items-center gap-1.5 text-xs leading-4 text-slate-500">
           {timeAgo(item.created_at)}
-          {!done && <span role="img" aria-label="Not done yet" className="block w-2 h-2 rounded-full" style={{ background: PURPLE }} />}
+          {!done && <span role="img" aria-label="Not done yet" className="block w-2 h-2 rounded-full" style={{ background: THEME }} />}
         </span>
       </div>
       {item.comment
@@ -134,7 +132,7 @@ function FeedbackCard({ item, onMarked }) {
         <div className="flex flex-wrap gap-1.5">
           {(item.topics || []).map((key) => <Tag key={key}>{TOPIC[key] || key}</Tag>)}
           {item.contact_ok && <Tag tone="green">Contact OK</Tag>}
-          {item.opened_play && <Tag tone="purple">Opened Google Play</Tag>}
+          {item.opened_play && <Tag tone="theme">Opened Google Play</Tag>}
           {item.is_test && <Tag tone="amber">Test</Tag>}
         </div>
       )}
@@ -166,7 +164,7 @@ function FeedbackCard({ item, onMarked }) {
             onClick={() => setContactOpen((v) => !v)}
             aria-expanded={contactOpen}
             className="h-9 px-4 rounded-[10px] border bg-white text-sm font-semibold"
-            style={{ borderColor: PURPLE, color: '#6b21a8' }}
+            style={{ borderColor: THEME, color: THEME }}
           >
             Contact
           </button>
@@ -295,14 +293,14 @@ export default function AppFeedbackInbox() {
         {state === 'ready' && (
           <>
             <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-white border border-slate-200 rounded-[14px] text-[13px] leading-[18px] text-slate-600">
-              <Bell className="w-4 h-4 flex-shrink-0" style={{ color: PURPLE }} />
+              <Bell className="w-4 h-4 flex-shrink-0" style={{ color: THEME }} />
               <span>Each 1–3★ rating sends Sellio’s admins a push alert.</span>
             </div>
             <button
               type="button"
               onClick={() => setPreviewing(true)}
               className="w-full h-10 rounded-xl border bg-white text-sm font-semibold"
-              style={{ borderColor: PURPLE, color: '#6b21a8' }}
+              style={{ borderColor: THEME, color: THEME }}
             >
               Preview the question (sends nothing)
             </button>
@@ -328,7 +326,7 @@ export default function AppFeedbackInbox() {
               })}
             </div>
             <label className="flex items-center gap-2 px-1 text-sm text-slate-600">
-              <input type="checkbox" checked={includeTest} onChange={(e) => setIncludeTest(e.target.checked)} className="w-4 h-4" style={{ accentColor: PURPLE }} />
+              <input type="checkbox" checked={includeTest} onChange={(e) => setIncludeTest(e.target.checked)} className="w-4 h-4" style={{ accentColor: THEME }} />
               Show tests (sent from admin accounts, or from a phone that opened this page)
             </label>
             {items.length === 0 ? (

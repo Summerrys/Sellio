@@ -87,9 +87,13 @@ export default function AppRatingPrompt({ settleMs = SETTLE_MS, retryMs = RETRY_
   return <AppRatingSheet open account={askedFor} onClose={() => setAskedFor(null)} />;
 }
 
-// The brand's colours (the mockups Alvin approved, 20 Nov 2026).
-const PURPLE = '#8b2fc9';
-const GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b2fc9)';
+// Colours (Alvin, 20 Nov 2026): the person's own, from the colour theme they chose in Settings
+// (AppUserContext puts it on the page; Sellio's blue to purple without one), and the stars a
+// bright golden yellow.
+export const THEME = 'rgb(var(--color-primary, 59 130 246))';
+export const THEME_FILL = 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))';
+export const THEME_TINT = 'rgb(var(--color-primary, 59 130 246) / 0.1)';
+export const STAR_GOLD = '#FBBC04';
 const STAR_PATH = 'M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.47L12 17.46l-5.8 3.06 1.1-6.47-4.7-4.6 6.5-.95L12 2.6z';
 
 function StarRow({ stars, size, onPick, disabled, t }) {
@@ -111,8 +115,8 @@ function StarRow({ stars, size, onPick, disabled, t }) {
           <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
             <path
               d={STAR_PATH}
-              fill={n <= stars ? 'url(#sellio-rating-star)' : 'none'}
-              stroke={n <= stars ? 'url(#sellio-rating-star)' : '#64748b'}
+              fill={n <= stars ? STAR_GOLD : 'none'}
+              stroke={n <= stars ? STAR_GOLD : '#64748b'}
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
@@ -192,15 +196,6 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
 
   return (
     <BottomSheet open={open} onClose={close} labelledBy="app-rating-title" zIndex={1000}>
-      <svg width="0" height="0" aria-hidden="true" className="absolute">
-        <defs>
-          <linearGradient id="sellio-rating-star" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#fb923c" />
-            <stop offset="0.55" stopColor="#e0449a" />
-            <stop offset="1" stopColor="#8b2fc9" />
-          </linearGradient>
-        </defs>
-      </svg>
       <div className="px-1 pt-3 pb-1 flex flex-col" data-testid="app-rating" data-step={step}>
         {step === 'ask' && (
           <>
@@ -233,10 +228,10 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
                     onClick={() => toggle(key)}
                     className="h-11 rounded-full border text-sm flex items-center gap-1.5"
                     style={on
-                      ? { padding: '0 16px 0 12px', borderColor: PURPLE, background: '#f3e8ff', color: '#6b21a8', fontWeight: 600 }
+                      ? { padding: '0 16px 0 12px', borderColor: THEME, background: THEME_TINT, color: '#0f172a', fontWeight: 600 }
                       : { padding: '0 16px', borderColor: '#cbd5e1', background: '#fff', color: '#334155', fontWeight: 500 }}
                   >
-                    {on && <Check className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />}
+                    {on && <Check className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" style={{ color: THEME }} />}
                     {t(label)}
                   </button>
                 );
@@ -252,7 +247,7 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
               maxLength={COMMENT_MAX}
               rows={3}
               placeholder={t('What happened, and what would help?')}
-              className="mt-2 w-full h-24 rounded-xl border border-slate-300 px-3.5 py-3 text-[15px] leading-[22px] text-slate-900 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="mt-2 w-full h-24 rounded-xl border border-slate-300 px-3.5 py-3 text-[15px] leading-[22px] text-slate-900 resize-none focus:outline-none focus:border-transparent focus:ring-2 focus:ring-[rgb(var(--color-primary))]"
             />
             {signedIn && (
               <label className="mt-4 flex items-start gap-3">
@@ -261,7 +256,7 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
                   checked={contactOk}
                   onChange={(e) => setContactOk(e.target.checked)}
                   className="mt-0.5 w-5 h-5 flex-shrink-0"
-                  style={{ accentColor: PURPLE }}
+                  style={{ accentColor: THEME }}
                 />
                 <span className="flex flex-col gap-0.5">
                   <span className="text-[15px] leading-[22px] font-semibold text-slate-900">{t('You can contact me about this')}</span>
@@ -270,7 +265,7 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
               </label>
             )}
             {error && <p role="alert" className="mt-3 mb-0 text-sm text-red-600">{error}</p>}
-            <button type="button" onClick={sendFeedback} disabled={sending} className={`${mainButton} mt-5`} style={{ background: PURPLE }}>
+            <button type="button" onClick={sendFeedback} disabled={sending} className={`${mainButton} mt-5`} style={{ background: THEME_FILL }}>
               {t('Send feedback')}
             </button>
             <button type="button" onClick={close} disabled={sending} className={quietButton}>{t('Skip')}</button>
@@ -282,7 +277,7 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
             <StarRow stars={stars} size={36} onPick={pick} t={t} />
             <h2 id="app-rating-title" className={`${title} mt-4`}>{t('Glad it’s working for you!')}</h2>
             <p className={`${lead} mx-auto`} style={{ maxWidth: 320 }}>{t('Would you leave that rating on Google Play too? It helps other shops find Sellio.')}</p>
-            <button type="button" onClick={rateOnPlay} className={`${mainButton} mt-6`} style={{ background: PURPLE }}>
+            <button type="button" onClick={rateOnPlay} className={`${mainButton} mt-6`} style={{ background: THEME_FILL }}>
               {t('Rate on Google Play')}
               <ExternalLink className="w-[18px] h-[18px]" aria-hidden="true" />
             </button>
@@ -292,12 +287,12 @@ export function AppRatingSheet({ open, account = '', onClose, preview = false })
 
         {step === 'sent' && (
           <>
-            <div aria-hidden="true" className="mx-auto mt-3 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: GRADIENT }}>
+            <div aria-hidden="true" className="mx-auto mt-3 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: THEME_FILL }}>
               <Check className="w-[30px] h-[30px] text-white" strokeWidth={2.5} />
             </div>
             <h2 id="app-rating-title" className={`${title} mt-[18px]`}>{t('Thanks, that really helps')}</h2>
             <p className={`${lead} mx-auto`} style={{ maxWidth: 310 }}>{t('The Sellio team reads every message. If you said we can contact you, we’ll get back to you.')}</p>
-            <button type="button" onClick={onClose} className={`${mainButton} mt-6`} style={{ background: PURPLE }}>{t('Done')}</button>
+            <button type="button" onClick={onClose} className={`${mainButton} mt-6`} style={{ background: THEME_FILL }}>{t('Done')}</button>
           </>
         )}
       </div>

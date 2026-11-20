@@ -158,6 +158,11 @@ try {
   assert.equal(text(document.querySelector('#app-rating-title')), 'Thanks. What could be better?');
   assert.equal(document.querySelector('[data-testid="app-rating"]').dataset.step, 'low');
   assert.equal(starButton(2).getAttribute('aria-checked'), 'true');
+  // Golden stars, and the person's own colours (their theme), not a purple of its own.
+  assert.deepEqual([...document.querySelectorAll('[role="radio"] path')].map((p) => p.getAttribute('fill')),
+    ['#FBBC04', '#FBBC04', 'none', 'none', 'none'], 'bright golden yellow stars');
+  assert.match(buttonNamed('Send feedback').getAttribute('style'), /background: var\(--color-primary-gradient/, 'the theme colour');
+  assert.equal(/8b2fc9|e0449a|f3e8ff|6b21a8/i.test(document.body.innerHTML), false, 'no purple');
   const chips = [...document.querySelectorAll('button[aria-pressed]')].map(text);
   assert.deepEqual(chips, ['Ease of use', 'Speed', 'Ordering', 'Design', 'Something’s broken', 'Something else']);
   await click(buttonNamed('Speed'));
@@ -165,6 +170,7 @@ try {
   await click(buttonNamed('Ease of use'));
   await click(buttonNamed('Ease of use')); // and off again
   assert.equal(buttonNamed('Speed').getAttribute('aria-pressed'), 'true');
+  assert.match(buttonNamed('Speed').getAttribute('style'), /border-color: rgb\(var\(--color-primary.*background: rgb\(var\(--color-primary[^;]*\/ 0\.1\)/, 'a picked topic in the theme colour');
   assert.equal(buttonNamed('Ease of use').getAttribute('aria-pressed'), 'false');
   const note = document.querySelector('textarea');
   assert.equal(note.getAttribute('placeholder'), 'What happened, and what would help?');
@@ -445,8 +451,11 @@ try {
   const filterLabels = [...document.querySelectorAll('[aria-label="Filter by rating"] button')].map(text);
   assert.deepEqual(filterLabels, ['All · 3', '1–3★ · 1', '4★ · 1', '5★ · 1', 'To do · 1']);
   assert.match(text(document.body), /Maybe later: 2 · Opened Google Play: 1 · 1 test answer left out/);
+  assert.equal(/8b2fc9|e0449a|f3e8ff|6b21a8/i.test(document.body.innerHTML), false, 'no purple on Admin → Feedback either');
+  assert.ok([...document.querySelectorAll('[aria-label="Rating summary"] span.block')].every((bar) => /background: rgb\(251, 188, 4\)|background: #FBBC04/i.test(bar.getAttribute('style'))), 'golden bars');
   const cards = document.querySelectorAll('[data-testid="feedback-item"]');
   assert.equal(cards.length, 2);
+  assert.equal(cards[0].querySelector('[role="img"] path').getAttribute('fill'), '#FBBC04', 'golden stars');
   assert.match(text(cards[0]), /Printer keeps disconnecting/);
   assert.match(text(cards[0]), /Something’s broken\s*Speed\s*Contact OK/);
   assert.match(text(cards[0]), /Business · Kopi Corner · EN · Android · v2\.0 \(206\)/);
