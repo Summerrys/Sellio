@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 import {
   buildSyncArgs,
   computeGracePeriod,
+  findTenantId,
   getFailureDetails,
   getInvoiceSubscriptionId,
   getStripeClient,
@@ -12,6 +13,12 @@ import {
   retrieveSubscription,
   syncBillingState,
 } from "./_shared/billing.ts";
+import {
+  noteReferralCheckout,
+  recordChargeReversal,
+  recordInvoicePayment,
+  referralReference,
+} from "./_shared/referrals.ts";
 import { handleShopCheckout } from "./_shared/shop-checkout.ts";
 
 const corsHeaders = {
@@ -85,32 +92,6 @@ async function finishEvent(
     })
     .eq("event_id", eventId);
   if (error) throw new Error("Could not finalize webhook event: " + error.message);
-}
-
-async function findTenantId(
-  supabase: any,
-  customerId: string | null,
-  subscriptionId: string | null,
-) {
-  if (subscriptionId) {
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .select("tenant_id")
-      .eq("stripe_subscription_id", subscriptionId)
-      .maybeSingle();
-    if (error) throw new Error("Subscription tenant lookup failed: " + error.message);
-    if (data?.tenant_id) return data.tenant_id;
-  }
-  if (customerId) {
-    const { data, error } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("stripe_customer_id", customerId)
-      .maybeSingle();
-    if (error) throw new Error("Customer tenant lookup failed: " + error.message);
-    if (data?.id) return data.id;
-  }
-  return null;
 }
 
 async function loadExistingGrace(supabase: any, tenantId: string) {
@@ -242,7 +223,10 @@ Deno.serve(async (req: Request) => {
         return json({ received: true, skipped: true, warning: "Not a subscription checkout" });
       }
 
-      const tenantId = session.client_reference_id ?? null;
+      // A sign-up from a distributor's link carries ref_CODE there, not a shop: it signs up like
+      // any other, and the referral is noted below (see _shared/referrals.ts).
+      const referralCode = referralReference(session.client_reference_id);
+      const tenantId = referralCode ? null : session.client_reference_id ?? null;
       const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id ?? null;
       auditDetails = { tenantId, customerId, subscriptionId };
@@ -287,6 +271,15 @@ Deno.serve(async (req: Request) => {
             expires_at: expiresAt.toISOString(),
           });
           if (inviteError) throw new Error("Merchant invite creation failed: " + inviteError.message);
+        }
+        if (referralCode) {
+          await noteReferralCheckout({ supabase, stripe }, { session, code: referralCode, customerId, subscriptionId });
+          // Paid at checkout (no trial): Stripe may have sent invoice.paid before this event, when
+          // there was no referral yet. Recording it again earns on it (safe to repeat).
+          if (session.invoice) {
+            const firstInvoice = await retrieveInvoice(stripe, session.invoice);
+            await recordInvoicePayment({ supabase, stripe }, firstInvoice, { tenantId: null, subscriptionId, customerId });
+          }
         }
       }
     } else if (
@@ -365,12 +358,21 @@ Deno.serve(async (req: Request) => {
           : invoice?.customer?.id ?? null;
       const tenantId = await findTenantId(supabase, customerId, subscriptionId);
       auditDetails = { tenantId, customerId, subscriptionId };
+      // The referral programme records every paid invoice above zero (invoice.paid; Stripe also
+      // sends invoice.payment_succeeded for the same payment), including a sign-up's first
+      // payment before its shop exists and an earlier subscription's invoice.
+      const recordPayment = async () =>
+        event.type === "invoice.paid"
+          ? (await recordInvoicePayment({ supabase, stripe }, invoice, { tenantId, subscriptionId, customerId })).recorded
+          : false;
       if (!tenantId || !subscriptionId) {
-        await finishEvent(supabase, event.id, "skipped", auditDetails);
+        const recorded = await recordPayment();
+        await finishEvent(supabase, event.id, recorded ? "processed" : "skipped", auditDetails);
         return json({ received: true, warning: "Tenant or subscription not found" });
       }
       if (!await isCurrentSubscription(supabase, tenantId, subscriptionId)) {
-        await finishEvent(supabase, event.id, "skipped", auditDetails);
+        const recorded = await recordPayment();
+        await finishEvent(supabase, event.id, recorded ? "processed" : "skipped", auditDetails);
         return json({ received: true, skipped: true, warning: "Obsolete invoice event" });
       }
       await syncFromSubscription({
@@ -382,6 +384,20 @@ Deno.serve(async (req: Request) => {
         event,
         resetOrders: event.type === "invoice.payment_succeeded",
       });
+      await recordPayment();
+    } else if (
+      event.type === "charge.refunded" ||
+      event.type === "charge.dispute.created" ||
+      event.type === "charge.dispute.closed"
+    ) {
+      // The referral programme takes back what was earned on a refunded or disputed payment, and
+      // gives it back when Sellio wins the dispute (see _shared/referrals.ts).
+      const outcome = await recordChargeReversal({ supabase, stripe }, event);
+      auditDetails = { tenantId: null, customerId: outcome.customerId, subscriptionId: null };
+      if (outcome.recorded === 0) {
+        await finishEvent(supabase, event.id, "skipped", auditDetails);
+        return json({ received: true, skipped: true, warning: outcome.reason });
+      }
     } else if (event.type === "customer.subscription.trial_will_end") {
       const subscription = event.data.object;
       auditDetails = {

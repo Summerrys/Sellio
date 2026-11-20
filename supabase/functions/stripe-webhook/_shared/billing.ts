@@ -128,6 +128,34 @@ export function getInvoiceSubscriptionId(invoice: any): string | null {
   return typeof value === "string" ? value : value?.id ?? null;
 }
 
+// The shop a Stripe subscription or customer belongs to, or null (a sign-up whose shop isn't set
+// up yet).
+export async function findTenantId(
+  supabase: any,
+  customerId: string | null,
+  subscriptionId: string | null,
+): Promise<string | null> {
+  if (subscriptionId) {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("tenant_id")
+      .eq("stripe_subscription_id", subscriptionId)
+      .maybeSingle();
+    if (error) throw new Error("Subscription tenant lookup failed: " + error.message);
+    if (data?.tenant_id) return data.tenant_id;
+  }
+  if (customerId) {
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    if (error) throw new Error("Customer tenant lookup failed: " + error.message);
+    if (data?.id) return data.id;
+  }
+  return null;
+}
+
 export async function retrieveSubscription(stripe: Stripe, subscriptionId: string) {
   return await stripe.subscriptions.retrieve(subscriptionId, {
     expand: ["items.data.price.product", "latest_invoice"],

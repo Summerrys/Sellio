@@ -35,7 +35,7 @@ export type World = {
   rpcs: { fn: string; args: Row }[];
   rpcAnswer?: (fn: string, args: Row) => unknown;
   stripe: Record<string, Row>; // by API path: "invoices", "subscriptions", "payment_intents", "charges", ...
-  stripeLists?: Record<string, (params: URLSearchParams) => Row[]>; // GET /v1/<name>
+  stripeLists?: Record<string, (params: URLSearchParams) => Row[] | { data: Row[]; has_more: boolean }>; // GET /v1/<name>
   stripeCalls: string[];
 };
 
@@ -114,6 +114,13 @@ function answerSupabase(w: World, req: Request, url: URL, body: string | null) {
 function answerStripe(w: World, req: Request, url: URL) {
   w.stripeCalls.push(`${req.method} ${url.pathname}${url.search ? " " + decodeURIComponent(url.search.slice(1)) : ""}`);
   const [, resource, id, ...rest] = url.pathname.split("/").filter(Boolean);
+  if (req.method === "GET" && resource === "invoices" && id && rest[0] === "lines") {
+    const lines = w.stripe.invoices[id]?.lines?.all ?? w.stripe.invoices[id]?.lines?.data ?? [];
+    return jsonResponse({ object: "list", url: `/v1/invoices/${id}/lines`, has_more: false, data: lines });
+  }
+  if (req.method === "POST" && id && rest.length === 0 && w.stripe[resource]?.[id]) {
+    return jsonResponse(w.stripe[resource][id]); // an update (metadata): the object as it is
+  }
   if (req.method === "GET" && id && rest.length === 0) {
     const found = w.stripe[resource]?.[id];
     return found
@@ -122,7 +129,11 @@ function answerStripe(w: World, req: Request, url: URL) {
   }
   if (req.method === "GET" && !id) {
     const list = w.stripeLists?.[resource];
-    if (list) return jsonResponse({ object: "list", url: `/v1/${resource}`, has_more: false, data: list(url.searchParams) });
+    if (list) {
+      const listed: any = list(url.searchParams);
+      const data = Array.isArray(listed) ? listed : listed.data;
+      return jsonResponse({ object: "list", url: `/v1/${resource}`, has_more: !Array.isArray(listed) && Boolean(listed.has_more), data });
+    }
     if (resource === "invoices") {
       const subscription = url.searchParams.get("subscription");
       const status = url.searchParams.get("status");
