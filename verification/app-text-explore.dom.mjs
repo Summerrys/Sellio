@@ -158,7 +158,7 @@ const stubs = {
   back: [
     "import { useState } from 'react';",
     'export const useBackToClose = () => {}; export const handOverBackStep = () => false; export const removeBackStep = () => {};',
-    'export const stepToFirstEntry = () => {}; export const handleAndroidBack = () => false; export const STILL_OPEN_CHECK_MS = 500;',
+    'export const handleAndroidBack = () => false; export const STILL_OPEN_CHECK_MS = 500;',
     'export function useOpenWithBack(open, defaultOpen, onOpenChange) { const [own, setOwn] = useState(!!defaultOpen); return [open ?? own, onOpenChange || setOwn]; }',
   ].join("\n"),
   tenant: "import { createContext } from 'react'; export const useTenant = () => globalThis.tenantFixture; export default createContext(null);",

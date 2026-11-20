@@ -29,7 +29,7 @@ const passed = (name) => { passes++; console.log('PASS ' + name); };
 try {
   const fixtures = {
     social: "export const SocialLogin = { initialize: async () => {}, logout: async () => {}, login: async (args) => { globalThis.logins.push(args); return globalThis.pickerReply(args); } };",
-    clients: "export const getSupabase = async () => ({ auth: { signInWithIdToken: async (args) => { globalThis.idTokenCalls.push(args); return { data: { session: { access_token: 'a' } }, error: null }; } } }); export const getMobileOAuthClient = () => null;",
+    clients: "export const getSupabase = async () => ({ auth: { signInWithIdToken: async (args) => { globalThis.idTokenCalls.push(args); return { data: { session: { access_token: 'a' } }, error: null }; } } });",
   };
   const plugin = { name: 'native-google-fixtures', setup(builder) {
     builder.onResolve({ filter: /^@capgo\/capacitor-social-login$/ }, () => ({ path: 'social', namespace: 'mock' }));

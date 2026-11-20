@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import PullToRefresh from './PullToRefresh';
 import { AppRefreshContext } from '@/lib/AppRefreshContext';
 import { fetchPublishedAppVersion, getAppAssetVersion, getAppReloadUrl, isNewAppVersion } from '@/lib/appUpdates';
-import { stepToFirstEntry } from '@/lib/useBackToClose';
 import { isCapacitorApp } from '@/lib/nativeApp';
 import { onReconnect } from '@/lib/network';
 import {
@@ -142,18 +141,16 @@ export default function AppRefreshProvider({ children }) {
         return;
       }
     }
-    // In the Android app the updated Sellio starts on the first entry of the page's history
-    // (when that is this page), so nothing of the old copy is left behind it to go Back to.
     const url = getAppReloadUrl(window.location.href);
     const go = () => window.location.replace(url);
     // In the apps: switch to the downloaded update, on this same page (keepUrlPathAfterReload).
     if (IN_APP && newVersion) {
       void loadLiveUpdates()
         .then(live => live.applyUpdateNow())
-        .then(switched => { if (!switched) void stepToFirstEntry().then(go, go); }, () => { void stepToFirstEntry().then(go, go); });
+        .then(switched => { if (!switched) go(); }, () => { go(); });
       return;
     }
-    void stepToFirstEntry().then(go, go);
+    go();
   }, [getReloadState, newVersion]);
 
   return (

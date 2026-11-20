@@ -95,7 +95,7 @@ const stubs = {
   loading: 'export default function LoadingShapes({ label }) { return globalThis.__h("div", { "data-testid": "loading" }, label); } export const StoreShapes = () => null;',
   tour: 'const tour = { eligible: false, completeStage() {} }; export const useProductTour = () => tour; export const getOrdersSteps = () => []; export const getProductsSteps = () => [];',
   appFiles: 'export const inAppFiles = () => false; export const saveFileInApp = () => {};',
-  back: 'export const useBackToClose = () => {}; export const handOverBackStep = () => false; export const stepToFirstEntry = async () => {};',
+  back: 'export const useBackToClose = () => {}; export const handOverBackStep = () => false;',
   pull: 'export default function PullToRefresh({ children }) { return children; }',
   likes: 'export const useKnownLike = () => null;',
   edges: 'export const extractBannerEdgeAssets = async () => null; export const isValidBannerEdgeColor = () => false;',

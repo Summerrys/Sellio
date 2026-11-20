@@ -22,19 +22,9 @@ export function appPlatform(browser = currentWindow()) {
   }
 }
 
-// Base44's Android wrapper (the old app, which loads the website from selliosg.base44.app)
-// exposes one of these bridges to the page.
-export function isBase44Shell(browser = currentWindow()) {
-  return !!browser && (
-    typeof browser.ReactNativeWebView?.postMessage === 'function' ||
-    typeof browser.__hybrid_bridge?.sendMessage === 'function'
-  );
-}
-
-// Any Sellio app: the Capacitor app or Base44's old one. A browser, or Sellio added to a home
-// screen, is not an app.
+// Sellio's app, Android or iPhone. A browser, or Sellio added to a home screen, is not an app.
 export function isNativeApp(browser = currentWindow()) {
-  return isCapacitorApp(browser) || isBase44Shell(browser);
+  return isCapacitorApp(browser);
 }
 
 // Where Sellio sells its plans: the plan cards, the upgrade wall, Pay invoice and Billing.
@@ -54,8 +44,7 @@ export const PLANS_ON_WEBSITE = N_('Plans are managed on the Sellio website');
 
 // A link to another app or website (WhatsApp, say). A browser opens it in a new tab. In
 // Sellio's apps the page goes to it in place: the app hands any address outside Sellio to
-// the phone, which opens WhatsApp or the browser (Base44's old app asks "Open External
-// Link?" first). An app's web view has no tabs.
+// the phone, which opens WhatsApp or the browser. An app's web view has no tabs.
 export function outsideLinkProps(href) {
   return isNativeApp() ? { href } : { href, target: '_blank', rel: 'noopener noreferrer' };
 }

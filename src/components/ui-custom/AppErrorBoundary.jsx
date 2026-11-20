@@ -1,13 +1,11 @@
 import React from 'react';
 import { backLog } from '@/lib/backLog';
-import { stepToFirstEntry } from '@/lib/useBackToClose';
 
 // The last line of defence around the whole app (main.jsx): a screen that fails to load or
 // crashes shows this instead of leaving the app blank. The usual cause is a page whose code is
 // downloaded only when it is first opened, at a moment with no connection (just back from the
 // background, say): the download fails and nothing else could catch it. Reload opens the same
-// page again; in the Android app, from the first entry of the page's history, like an update
-// (lib/useBackToClose), so nothing of this copy is left behind to go Back to.
+// page again.
 const NOT_DOWNLOADED = /dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
 
 export default class AppErrorBoundary extends React.Component {
@@ -26,9 +24,7 @@ export default class AppErrorBoundary extends React.Component {
   }
 
   reload() {
-    const url = window.location.href;
-    const go = () => window.location.replace(url);
-    void stepToFirstEntry().then(go, go);
+    window.location.replace(window.location.href);
   }
 
   render() {

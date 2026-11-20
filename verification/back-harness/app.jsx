@@ -4,11 +4,8 @@ import './monitor.js'; // first: it records the entries the page really adds
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { useBackToClose, handOverBackStep, stepToFirstEntry } from '../../src/lib/useBackToClose.js';
+import { useBackToClose, handOverBackStep } from '../../src/lib/useBackToClose.js';
 import AddressMap from '../../src/components/ui-custom/AddressMap.jsx';
-
-// What Sellio's update reload calls first (AppRefreshProvider).
-window.__stepToFirstEntry = stepToFirstEntry;
 
 function Start() {
   // How often react-router has shown the start page (kept across reloads).

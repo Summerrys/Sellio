@@ -207,13 +207,18 @@ try {
   globalThis.File = fileConstructor;
   passed('Camera permission starts on tap, excludes microphone, captures JPEG and releases streams on capture/cancel/unmount');
 
-  // Android capture must release the permission stream before launching the
+  // Sellio's Android app: capture must release the permission stream before launching the
   // external camera. These fixtures verify web/native handoff, not a phone.
   const agentDescriptor = Object.getOwnPropertyDescriptor(navigator, 'userAgent');
-  const originalBridge = window.ReactNativeWebView;
   const originalDevices = navigator.mediaDevices;
   Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'Android Sellio fixture' });
-  window.ReactNativeWebView = { postMessage() {} };
+  window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+  // Once allowed, the app goes straight to the camera; these checks ask each time.
+  const askAgain = () => window.localStorage.removeItem('sellio.cameraAllowed');
+  askAgain();
+  const permissionHelp = [];
+  const onPermissionHelp = event => permissionHelp.push(event.detail.kind);
+  window.addEventListener('sellio:permission-help', onPermissionHelp);
   const { default: NativeCameraScanControl } = await loadComponent('src/components/ui-custom/NativeCameraScanControl.jsx');
   const nativeErrors = []; const nativeFiles = []; const nativeRequests = [];
   let grant; let rejectGrant; let released = 0; let launches = 0;
@@ -236,6 +241,7 @@ try {
   await selectPhoto(captureInput(), fixturePhoto);
   assert.equal(nativeFiles[0], fixturePhoto);
   captureInput().showPicker = () => { throw new DOMException('Gesture expired', 'NotAllowedError'); };
+  askAgain();
   await act(async () => { click(captureInput()); grant({ getTracks: () => [{ stop: () => released++ }] }); await next(); });
   assert.match(nativeErrors.at(-1), /Tap Scan again/);
   const requestsBeforeRetry = nativeRequests.length;
@@ -245,8 +251,11 @@ try {
     assert.equal(retryTap.defaultPrevented, false, 'A new real tap can launch native capture after a slow permission prompt');
   });
   assert.equal(nativeRequests.length, requestsBeforeRetry);
+  askAgain();
+  const errorsBeforeDenial = nativeErrors.length;
   await act(async () => { click(captureInput()); rejectGrant(new DOMException('Denied', 'NotAllowedError')); await next(); });
-  assert.match(nativeErrors.at(-1), /Allow Camera/);
+  assert.deepEqual(permissionHelp, ['camera'], 'A refusal shows why Sellio needs the camera, with Open Settings');
+  assert.equal(nativeErrors.length, errorsBeforeDenial, 'and no error line besides');
   const blocked = mount(NativeCameraScanControl, { ...nativeProps, onBeforeOpen: () => false });
   await blocked.render();
   await act(async () => {
@@ -261,14 +270,12 @@ try {
   assert.equal(released, 3, 'Permission granted after navigation must release the camera');
   if (agentDescriptor) Object.defineProperty(navigator, 'userAgent', agentDescriptor);
   else delete navigator.userAgent;
-  window.ReactNativeWebView = originalBridge;
+  delete window.Capacitor;
+  askAgain();
+  window.removeEventListener('sellio:permission-help', onPermissionHelp);
   Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: originalDevices });
   passed('Native camera capture handles permission, gesture expiry, cancellation, denial, quota blocks and late grants');
 
-  const scanMocks = { name: 'scan-no-live-client', setup(builder) {
-    builder.onResolve({ filter: /base44Client$/ }, () => ({ path: 'client', namespace: 'scan-fixture' }));
-    builder.onLoad({ filter: /.*/, namespace: 'scan-fixture' }, () => ({ contents: 'export const base44 = {};', loader: 'js' }));
-  } };
   // The photo is prepared on a canvas (src/lib/menuScan.js), which jsdom can't draw: these
   // stand in for preparing it and cutting pictures; the rest of menuScan.js is the real one.
   const scanPhotoStandIn = { name: 'scan-photo', setup(builder) {
@@ -279,7 +286,7 @@ try {
       'export const cutPicture = (img, rect) => globalThis.__cutPicture(img, rect);',
     ].join('\n') }));
   } };
-  const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanMocks, scanPhotoStandIn]);
+  const { ScanMenuDialog } = await loadComponent('src/pages/Products.jsx', [mock, scanPhotoStandIn]);
   let scanReadFails = false;
   globalThis.__scanPhoto = async () => {
     await next();
@@ -402,7 +409,8 @@ try {
     };
     return { browser, entries, back: () => { if (index > 0) index--; return entries[index]; } };
   };
-  for (const bridge of [{ ReactNativeWebView: { postMessage() {} } }, { __hybrid_bridge: { sendMessage() {} } }]) {
+  const sellioApp = (platform) => ({ Capacitor: { isNativePlatform: () => true, getPlatform: () => platform } });
+  for (const bridge of [sellioApp('android')]) {
     const native = browserHistory('Android', bridge);
     completeAuthNavigation('/Dashboard', native.browser);
     assert.deepEqual(native.entries, ['/Dashboard'], 'Completed Auth must not remain behind the Android home page');
@@ -413,7 +421,7 @@ try {
     completeAuthNavigation('/Onboarding?token=test-only', invite.browser);
     assert.deepEqual(invite.entries, ['/Onboarding?token=test-only'], 'Keep destination parameters');
   }
-  for (const [agent, bridge] of [['Android', {}], ['iPhone', {}], ['iPhone', { ReactNativeWebView: { postMessage() {} } }], ['Macintosh', {}]]) {
+  for (const [agent, bridge] of [['Android', {}], ['iPhone', {}], ['iPhone', sellioApp('ios')], ['Macintosh', {}]]) {
     const ordinary = browserHistory(agent, bridge);
     completeAuthNavigation('/Dashboard', ordinary.browser);
     assert.deepEqual(ordinary.entries, ['/Dashboard'], `${agent}: completed sign-in must not stay behind the next page (Back to it bounces forward)`);
@@ -617,7 +625,6 @@ try {
         [/(RequirePermission|PermissionGate)$/, 'gate'],
         [/useProductTour$/, 'tour'],
         [/(ThemeSelector|TourGuide|PricingModal|PrinterSettings|UserManagement)$/, 'empty'],
-        [/base44Client$/, 'base44'],
       ];
       for (const [filter, name] of patterns) builder.onResolve({ filter }, () => ({ path: name, namespace: 'settings-fixture' }));
       builder.onResolve({ filter: /^@tanstack\/react-query$/, namespace: 'settings-fixture' }, args => ({ path: args.path, external: true }));
@@ -627,7 +634,6 @@ try {
           gate: 'export default function Gate({ children }) { return children; }',
           tour: 'export const useProductTour = () => ({ isOwner: false, eligible: false });',
           empty: 'export default function Empty() { return null; }',
-          base44: 'export const base44 = { functions: { invoke: () => { throw new Error("Unexpected write"); } } };',
         }[name];
         return { contents, loader: 'js' };
       });

@@ -94,7 +94,6 @@ sellio.sg. For sellio.apptelier.sg this needs that address to point at the Pages
 old app there (the landing page at every address, open to search engines). Not moved:
 
 - files (`_routes.json`): Pages serves them on every address as they are;
-- `/google-signin`: Base44's old Android app opens Google sign-in there;
 - preview deployments (`<id>.sellio-f1t.pages.dev`).
 
 Keep the move for at least 180 days, as Google asks. The start page, `/privacy` and

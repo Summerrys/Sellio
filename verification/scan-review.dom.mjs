@@ -63,9 +63,7 @@ const plugins = [
   } },
   { name: 'client', setup(b) {
     b.onResolve({ filter: /supabaseClient$/ }, () => ({ path: 'client', namespace: 'mock' }));
-    b.onResolve({ filter: /base44Client$/ }, () => ({ path: 'base44', namespace: 'mock' }));
     b.onLoad({ filter: /^client$/, namespace: 'mock' }, () => ({ loader: 'js', contents: 'export const getSupabase = async () => globalThis.__client;' }));
-    b.onLoad({ filter: /^base44$/, namespace: 'mock' }, () => ({ loader: 'js', contents: 'export const base44 = {};' }));
   } },
   // Preparing the photo and cutting pictures need a real canvas: stand-ins; the rest of
   // menuScan.js (prices, options, boxes, reasons) is the real one.

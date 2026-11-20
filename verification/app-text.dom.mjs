@@ -53,7 +53,7 @@ const act = React.act;
 const h = React.createElement;
 
 const mocks = {
-  clients: "export const getSupabase = async () => ({ auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) } }); export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+  clients: "export const getSupabase = async () => ({ auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) } }); export const SUPABASE_URL = 'https://project.example.invalid';",
   profile: 'export const useAppUser = () => ({ setAppUser() {} });',
   navigation: 'export const completeAuthNavigation = () => {};',
   deletion: 'export const accountDeletionDestination = (value) => value;',

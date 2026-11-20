@@ -115,9 +115,7 @@ try {
   await writeFile(entry, PAGE);
   const plugin = { name: 'stand-ins', setup(b) {
     b.onResolve({ filter: /supabaseClient$/ }, () => ({ path: 'client', namespace: 'stub' }));
-    b.onResolve({ filter: /base44Client$/ }, () => ({ path: 'base44', namespace: 'stub' }));
     b.onLoad({ filter: /^client$/, namespace: 'stub' }, () => ({ loader: 'js', contents: 'export const getSupabase = async () => window.__client; export const SUPABASE_URL = "https://x.invalid"; export const supabase = window.__client;' }));
-    b.onLoad({ filter: /^base44$/, namespace: 'stub' }, () => ({ loader: 'js', contents: 'export const base44 = { auth: {}, entities: {} };' }));
   } };
   const result = await build({
     entryPoints: [entry], write: false, bundle: true, format: 'esm', jsx: 'automatic', minify: false,

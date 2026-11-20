@@ -46,7 +46,7 @@ link is much less likely to use it up, on Android the link opens Sellio's app (s
 and /Auth are app links), and a link to a closed account opens the closed-account screen.
 Supabase's default links (`{{ .ConfirmationURL }}`) went to Supabase first, then on to the
 sign-in's redirect address. Every link goes to sellio.sg, wherever the sign-in was started
-(the old Base44 app, localhost).
+(localhost, say).
 
 Look (Alvin, 6 Nov 2026): the button, colours, warning box and footer of the reset email he
 already had (orange button, orange-pink-purple bar, "Sent by Sellio · Powered by Apptelier");

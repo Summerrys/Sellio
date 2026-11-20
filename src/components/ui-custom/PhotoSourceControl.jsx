@@ -12,8 +12,7 @@ import { useAppText } from '@/lib/appText';
 // home screen, or a phone's browser, Android or iPhone) a tap opens "Add a photo": Take
 // photo (the phone's camera; in the Android app it asks for the camera the first time, as
 // Scan does) or Choose from gallery. The phones' own pickers differ: Android's goes straight
-// to the gallery, and Sellio's Android app (Base44's web view) adds the camera only once
-// Sellio may use it. On a computer it's the browser's own file picker. The sheet stays open
+// to the gallery. On a computer it's the browser's own file picker. The sheet stays open
 // while the camera or gallery is up, since the photo arrives at the option that opened it;
 // then the sheet closes.
 const OPTION = 'w-full flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white p-3 text-left cursor-pointer active:bg-slate-50';

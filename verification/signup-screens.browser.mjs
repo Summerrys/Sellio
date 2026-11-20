@@ -88,8 +88,7 @@ try {
   await writeFile(entry, PAGE.replace('AUTH_FILE', authFile).replace('JOIN_FILE', joinFile));
   const stub = (name, contents) => ({ name, contents });
   const stubs = [
-    [/supabaseClient$/, stub('client', 'export const getSupabase = async () => window.__client; export const getMobileOAuthClient = () => window.__client; export const SUPABASE_URL = "https://x.invalid"; export const supabase = window.__client;')],
-    [/base44Client$/, stub('base44', 'export const base44 = { auth: {}, entities: {} };')],
+    [/supabaseClient$/, stub('client', 'export const getSupabase = async () => window.__client; export const SUPABASE_URL = "https://x.invalid"; export const supabase = window.__client;')],
     [/AppUserContext$/, stub('profile', 'import React from "react"; const C = React.createContext(null); export default C; export const AppUserContext = C; export function useAppUser() { return { appUser: null, setAppUser: (u) => { window.__calls.push(["setAppUser", u]); }, clearAppUser: () => { window.__calls.push(["clearAppUser"]); }, loading: false }; } export const AppUserProvider = ({ children }) => children; export const cookieUtils = { get: () => null, set() {}, remove() {} };')],
     [/lib\/phoneAuth(\.js)?$/, stub('phone', 'export async function callPhoneAuth(body) { window.__calls.push(["phone-auth", body]); return window.__phoneAuth ? window.__phoneAuth(body) : null; }')],
     [/AuthPricingModal(\.jsx)?$/, stub('plans', 'export default function AuthPricingModal() { return <div data-testid="plans-modal">plans</div>; }')],

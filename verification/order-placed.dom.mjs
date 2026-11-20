@@ -113,7 +113,7 @@ const stubs = {
   push: 'export const offerPushAlerts = () => {};',
   device: 'export const rememberThisPhone = () => {};',
   ratingParts: 'export const OrderRateRow = () => null; export const RateOrderSheet = () => null; export const RatePrompt = () => null; export const RatingSheet = () => null; export const RatingPill = () => null;',
-  native: 'export const isNativeApp = () => false; export const isCapacitorApp = () => false; export const appPlatform = () => ""; export const mapLinkProps = () => ({}); export const placeWithCountry = (a) => a; export const isBase44Shell = () => false; export const outsideLinkProps = () => ({}); export const openOutside = () => {}; export const sellsPlans = () => true;',
+  native: 'export const isNativeApp = () => false; export const isCapacitorApp = () => false; export const appPlatform = () => ""; export const mapLinkProps = () => ({}); export const placeWithCountry = (a) => a; export const outsideLinkProps = () => ({}); export const openOutside = () => {}; export const sellsPlans = () => true;',
   authNav: 'export const rememberReturnPath = () => {};',
   back: 'export const useBackToClose = () => {}; export const handOverBackStep = () => false;',
   loading: 'export default function LoadingShapes() { return null; } export const StoreShapes = () => null;',

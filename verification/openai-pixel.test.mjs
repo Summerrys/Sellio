@@ -42,7 +42,7 @@ const consent = (analytics, { age = 1000, life = 180 * DAY } = {}) => {
 };
 
 // A page whose head runs the Pixel script (after another script, as in index.html).
-function page(url, { cookie = null, app: platform = null, base44 = false } = {}) {
+function page(url, { cookie = null, app: platform = null } = {}) {
   const cookieJar = new CookieJar();
   if (cookie) cookieJar.setCookieSync(`sellio_cookie_consent=${encodeURIComponent(JSON.stringify(cookie))}; Path=/`, url);
   const html = `<!doctype html><html><head><script id="sellio-fresh-start">window.__first = true</script>` +
@@ -51,7 +51,6 @@ function page(url, { cookie = null, app: platform = null, base44 = false } = {})
     url, runScripts: 'dangerously', cookieJar,
     beforeParse(window) {
       if (platform) window.Capacitor = { isNativePlatform: () => true, getPlatform: () => platform };
-      if (base44) window.ReactNativeWebView = { postMessage() {} };
     },
   }).window;
 }
@@ -78,7 +77,7 @@ for (const where of ['/', '/privacy', '/terms/', '/explore', '/listing/35a9f64c-
 }
 passed('the Pixel is set up on the public and sign-up pages once cookies are allowed (SDK first in the head; consent, then init)');
 
-for (const where of ['/store/beijing-dumplings', '/store', '/Dashboard', '/Orders', '/Counter', '/KitchenDisplay', '/Settings', '/explore/me', '/chats', '/google-signin', '/delete-account', '/listing']) {
+for (const where of ['/store/beijing-dumplings', '/store', '/Dashboard', '/Orders', '/Counter', '/KitchenDisplay', '/Settings', '/explore/me', '/chats', '/delete-account', '/listing']) {
   expectNoPixel(page('https://sellio.sg' + where, { cookie: allowed }), where);
 }
 passed('no Pixel on storefronts, in the shop workspace, chats or other pages');
@@ -100,8 +99,7 @@ passed('no Pixel without a valid Allow (none yet, declined, expired, malformed)'
 
 expectNoPixel(page('https://sellio.sg/', { cookie: allowed, app: 'android' }), 'Android app');
 expectNoPixel(page('https://sellio.sg/Auth?token=cs_live_a1B2', { cookie: allowed, app: 'ios' }), 'iPhone app');
-expectNoPixel(page('https://sellio.sg/', { cookie: allowed, base44: true }), "Base44's old app");
-for (const host of ['sellio-f1t.pages.dev', 'abc123.sellio-f1t.pages.dev', 'www.sellio.sg', 'sellio.apptelier.sg', 'selliosg.base44.app', 'localhost:5173', 'sellio.sg.example.com']) {
+for (const host of ['sellio-f1t.pages.dev', 'abc123.sellio-f1t.pages.dev', 'www.sellio.sg', 'sellio.apptelier.sg', 'localhost:5173', 'sellio.sg.example.com']) {
   expectNoPixel(page(`https://${host}/`, { cookie: allowed }), host);
 }
 passed('no Pixel in the apps or at any address but sellio.sg');

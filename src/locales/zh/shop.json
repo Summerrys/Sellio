@@ -1320,7 +1320,6 @@
   "You’re offline. {showing}": "您目前离线。{showing}",
   "Allow Camera in your phone’s Sellio permissions, then try {action} again.": "请在手机的 Sellio 权限中允许使用相机，然后再试一次“{action}”。",
   "Camera access enabled. Tap {action} again to open your camera.": "已允许使用相机。请再点按“{action}”打开相机。",
-  "Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap {action} again.": "相机权限已关闭。请在手机的 Sellio 权限中允许使用相机，然后再点按“{action}”。",
   "Could not open the camera. Close other camera apps and try {action} again.": "无法打开相机。请关闭其他相机应用，然后再试一次“{action}”。",
   "Opening camera…": "正在打开相机…",
   "Close this message": "关闭此消息",

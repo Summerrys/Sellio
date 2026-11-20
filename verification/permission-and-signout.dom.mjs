@@ -99,7 +99,7 @@ async function unmountAll() {
   }
 }
 const app = (platform) => { win.Capacitor = { isNativePlatform: () => true, getPlatform: () => platform }; };
-const website = () => { delete win.Capacitor; delete win.ReactNativeWebView; };
+const website = () => { delete win.Capacitor; };
 const sheet = (id) => document.body.querySelector(`[data-testid="${id}"]`);
 const click = async (element) => { await act(async () => { element.click(); }); await wait(); };
 
@@ -217,27 +217,14 @@ try {
   passed("Camera allowed: opens after the check, then straight away; a camera closed without a photo checks again");
   await unmountAll();
 
-  // Base44's old app: as before (its words, no sheet). A website: the camera asks for itself.
-  website();
-  win.ReactNativeWebView = { postMessage() {} };
-  Object.defineProperty(win.navigator, 'userAgent', { configurable: true, value: 'Mozilla/5.0 (Linux; Android 14) Base44' });
-  gum.result = 'refuse';
-  gum.calls = 0;
-  await mount(h(React.Fragment, null,
-    h(ui.PermissionHelp),
-    h(ui.NativeCameraScanControl, { label: 'Scan', onFile: () => {}, onError: (m) => errors.push(m) }, 'Scan')));
-  assert.equal(await tap(), false);
-  assert.equal(gum.calls, 1);
-  assert.match(errors.at(-1), /Camera access is off\. Allow Camera in your phone’s Sellio permissions, then tap Scan again\./);
-  assert.equal(sheet('permission-help'), null);
-  await unmountAll();
+  // A website: the camera asks for itself.
   website();
   gum.calls = 0;
   await mount(h(ui.NativeCameraScanControl, { label: 'Scan', onFile: () => {}, onError: (m) => errors.push(m) }, 'Scan'));
   assert.equal(await tap(), true, 'a website: the camera opens at once');
   assert.equal(gum.calls, 0);
   await unmountAll();
-  passed("Base44's old app keeps its words; websites unchanged");
+  passed('Websites: the camera opens at once and asks for itself');
 
   // ------------------------------------------- the empty notifications list, alerts off
   app('android');

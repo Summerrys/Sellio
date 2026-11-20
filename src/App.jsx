@@ -1,7 +1,6 @@
 import { Toaster as SonnerToaster } from 'sonner';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import Splash from './pages/Splash';
@@ -13,15 +12,11 @@ import AppRefreshProvider from '@/components/ui-custom/AppRefreshProvider';
 import { AppUserProvider, useAppUser } from '@/lib/AppUserContext';
 import { homeFor } from '@/lib/staffAccess';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import MobileOAuthReturn from '@/components/auth/MobileOAuthReturn';
-import { isMobileOAuthCallback } from '@/lib/mobileOAuth';
 import LaunchSplash from '@/components/ui-custom/LaunchSplash';
-import GoogleSignInRelay from '@/components/auth/GoogleSignInRelay';
 import SignInWelcome from '@/components/auth/SignInWelcome';
 import { AppLanguagePreviewBadge } from '@/components/ui-custom/AppLanguageSwitch';
 import { startLaunch } from '@/lib/appLaunch';
-import { GOOGLE_RELAY_PATH } from '@/lib/googleRelay';
-import { isNativeApp as inSellioApp, isBase44Shell } from '@/lib/nativeApp';
+import { isNativeApp as inSellioApp } from '@/lib/nativeApp';
 import { alertsKind } from '@/lib/pushAlerts';
 import PushPrompt from '@/components/notifications/PushPrompt';
 import OfflineKeeper from '@/components/ui-custom/OfflineKeeper';
@@ -86,7 +81,7 @@ function RouteIndexingGuard() {
   return null;
 }
 
-// Sellio's apps (the Capacitor app, and Base44's old wrapper) open the root URL.
+// Sellio's apps (Android and iPhone) open the root URL.
 // The app opens on Explore under the Sellio launch splash (LaunchSplash,
 // lib/appLaunch.js), signed in or not; an opening link with a query or hash
 // (invites, recovery) still goes to Auth. Ordinary browser visits keep the public
@@ -95,21 +90,7 @@ function RouteIndexingGuard() {
 const RootRoute = () => {
   const { appUser } = useAppUser();
   const location = useLocation();
-  const [isNativeApp, setIsNativeApp] = useState(() => inSellioApp());
-
-  useEffect(() => {
-    if (isNativeApp) return;
-
-    // Base44's wrapper can inject its bridge after React mounts.
-    const timer = window.setInterval(() => {
-      if (isBase44Shell()) setIsNativeApp(true);
-    }, 100);
-    const timeout = window.setTimeout(() => window.clearInterval(timer), 5000);
-    return () => {
-      window.clearInterval(timer);
-      window.clearTimeout(timeout);
-    };
-  }, [isNativeApp]);
+  const [isNativeApp] = useState(() => inSellioApp());
 
   // The app's start: one Sellio splash until the first screen is ready.
   useLayoutEffect(() => {
@@ -193,11 +174,6 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-  // The external-browser callback must not initialize the normal auth/profile
-  // providers or consume the code before it reaches the originating WebView.
-  if (isMobileOAuthCallback(window.location.href)) return <MobileOAuthReturn />;
-  // Google sign-in from the app starts here (index.html forwards before this loads).
-  if (window.location.pathname === GOOGLE_RELAY_PATH) return <GoogleSignInRelay />;
   return (
     <AppUserProvider>
     <AuthProvider>
@@ -207,7 +183,6 @@ function App() {
         <AppRefreshProvider>
         <Router>
           <RouteIndexingGuard />
-          <NavigationTracker />
           {/* "You've been signed out" when Sellio's sign-in ended by itself (src/lib/signOutWatch.js). */}
           <SignedOutNotice />
           <Suspense fallback={null}>

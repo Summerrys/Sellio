@@ -412,7 +412,6 @@ try {
     const browserLike = { navigator: { serviceWorker: {} }, Notification: {}, PushManager: {} };
     assert.equal(pushAlerts.alertsKind({ ...browserLike, Capacitor: { isNativePlatform: () => true, getPlatform: () => 'android' } }), 'android');
     assert.equal(pushAlerts.alertsKind({ ...browserLike, Capacitor: { isNativePlatform: () => true, getPlatform: () => 'ios' } }), '', 'the iPhone app: none yet');
-    assert.equal(pushAlerts.alertsKind({ ...browserLike, ReactNativeWebView: { postMessage() {} } }), '', "Base44's old app: none");
     assert.equal(pushAlerts.alertsKind(browserLike), 'web');
     assert.equal(pushAlerts.alertsKind({ navigator: {}, Notification: {} }), '', 'no push in this browser (a Safari tab on iPhone)');
     assert.equal(pushAlerts.alertsKind(undefined), '');
@@ -434,7 +433,7 @@ try {
     window.location.href = 'https://sellio.sg/Orders?sellio_alert=%3Cb%3E';
     assert.equal(pushAlerts.takeOpenedAlert(), null, 'an odd id is dropped');
     assert.deepEqual(history.calls, [[{ idx: 4 }, '/Orders']]);
-    passed('pushAlerts: the Android app and browsers that can show alerts get them (not the iPhone app yet, Base44 or a Safari tab on iPhone); an opened alert comes off the address');
+    passed('pushAlerts: the Android app and browsers that can show alerts get them (not the iPhone app yet or a Safari tab on iPhone); an opened alert comes off the address');
 
     // No settings for the site: nothing is offered and Firebase is never loaded.
     reset({ settings: null });

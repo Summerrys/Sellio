@@ -1,4 +1,7 @@
-// DOM-level transport tests. These do not claim to test Android intent delivery.
+// Google sign-in on the sign-in page (src/pages/Auth.jsx): the website's own Google redirect, and
+// Google sign-in in Sellio's Android app, which signs in natively (src/lib/nativeGoogle.js), then
+// finishes on Auth through the COMPLETE_KEY note (src/lib/mobileOAuth.js).
+// Run: node verification/google-signin.dom.mjs /tmp/sellio-verification
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
@@ -7,9 +10,7 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import { webcrypto } from 'node:crypto';
-import {
-  CALLBACK_PARAM, COMPLETE_KEY, VERIFIER_KEY, createMobileAuthAttempt,
-} from '../src/lib/mobileOAuth.js';
+import { COMPLETE_KEY } from '../src/lib/mobileOAuth.js';
 
 const require = createRequire('/tmp/sellio-verification/package.json');
 const { JSDOM } = require('jsdom');
@@ -45,7 +46,7 @@ const mock = { name: 'isolated-auth-clients', setup(builder) {
   builder.onResolve({ filter: /AccountDeletionForm$/ }, () => ({ path: 'deletion', namespace: 'mock' }));
   builder.onResolve({ filter: /^sonner$/ }, () => ({ path: 'toast', namespace: 'mock' }));
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ loader: 'js', contents: {
-    clients: 'export const getSupabase = async () => { globalThis.clientReads++; return globalThis.appClient; }; export const getMobileOAuthClient = () => { globalThis.mobileReads++; return globalThis.oauthClient; }; export const SUPABASE_URL = "https://project.example.invalid";',
+    clients: 'export const getSupabase = async () => { globalThis.clientReads++; return globalThis.appClient; }; export const SUPABASE_URL = "https://project.example.invalid";',
     profile: 'export const useAppUser = () => ({ setAppUser: user => { globalThis.profile = user; } });',
     navigation: 'export const completeAuthNavigation = value => { globalThis.authDestination = value; };',
     deletion: 'export const accountDeletionDestination = value => value;',
@@ -63,7 +64,6 @@ const load = async relative => {
   return { module: await import(pathToFileURL(local)), local };
 };
 const loaded = [];
-const callbackModule = await load('src/components/auth/MobileOAuthReturn.jsx'); loaded.push(callbackModule.local);
 const googleModule = await load('src/lib/googleSignIn.js'); loaded.push(googleModule.local);
 const authModule = await load('src/pages/Auth.jsx'); loaded.push(authModule.local);
 const splashModule = await load('src/pages/Splash.jsx'); loaded.push(splashModule.local);
@@ -83,92 +83,22 @@ const reset = () => {
   win.localStorage.clear(); win.sessionStorage.clear();
   location.href = location.origin + '/Auth'; location.search = ''; location.hash = '';
   location.replaced = undefined; location.assigned = undefined;
-  win.ReactNativeWebView = undefined;
-  globalThis.clientReads = 0; globalThis.mobileReads = 0;
+  delete win.Capacitor;
+  globalThis.clientReads = 0;
 };
+// Sellio's Android app (src/lib/nativeApp.js).
+const inAndroidApp = () => { win.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' }; };
 try {
-  reset();
-  const attempt = createMobileAuthAttempt(browser);
-  win.localStorage.clear(); // Browser and app are separate storage contexts.
-  location.href = attempt.redirectTo + '&code=browser-code';
-  location.search = new URL(location.href).search;
-  globalThis.appClient = globalThis.oauthClient = { auth: { getSession() { throw new Error('Browser must never consume login'); } } };
-  const outside = await mount(callbackModule.module.default);
-  await act(async () => new Promise(resolve => setTimeout(resolve, 1150)));
-  assert.match(outside.container.textContent, /Return to Sellio/);
-  assert.ok(outside.container.querySelector('a[href^="intent://"]'));
-  assert.equal(globalThis.clientReads, 0);
-  assert.equal(globalThis.mobileReads, 0);
-  await outside.close();
-  passed('External browser renders a return button without initializing or consuming any auth session');
-
-  reset();
-  win.ReactNativeWebView = { postMessage() {} };
-  const insideAttempt = createMobileAuthAttempt(browser, { join: true });
-  win.localStorage.setItem(VERIFIER_KEY, '"app-verifier"');
-  location.href = insideAttempt.redirectTo + '&code=native-code';
-  let exchanges = 0; let sessions = 0;
-  globalThis.oauthClient = { auth: { exchangeCodeForSession: async code => {
-    exchanges++; assert.equal(code, 'native-code');
-    return { data: { session: { access_token: 'fixture-access', refresh_token: 'fixture-refresh',
-      user: { identities: [{ provider: 'google' }] } } } };
-  } } };
-  globalThis.appClient = { auth: { setSession: async () => { sessions++; return { error: null }; } } };
-  const inside = await mount(callbackModule.module.default);
-  await act(async () => {});
-  assert.equal(exchanges, 1); assert.equal(sessions, 1);
-  assert.equal(location.replaced, '/Auth?join=1');
-  assert.ok(win.sessionStorage.getItem(COMPLETE_KEY));
-  await inside.close();
-  passed('Native callback completes the session once and returns to the existing Google signup path');
-
-  reset();
-  win.ReactNativeWebView = { postMessage() {} };
-  location.href = attempt.redirectTo + '&code=foreign-code';
-  const foreign = await mount(callbackModule.module.default);
-  assert.match(foreign.container.textContent, /another app window/);
-  assert.equal(globalThis.clientReads, 0);
-  assert.equal(globalThis.mobileReads, 0);
-  await foreign.close();
-  passed('Native returns without a matching local attempt show a recoverable error');
-
   reset();
   let regularRequest;
   globalThis.appClient = { auth: { signInWithOAuth: async request => { regularRequest = request; return { error: null }; } } };
   await googleModule.module.startGoogleSignIn({ redirectTo: location.origin + '/Auth?join=1' });
   // Google asks which account every time, so someone can pick another one (Alvin, 20 Nov 2026).
   assert.deepEqual(regularRequest, { provider: 'google', options: { redirectTo: location.origin + '/Auth?join=1', queryParams: { prompt: 'select_account' } } });
-  assert.equal(globalThis.mobileReads, 0);
   passed('Ordinary browser Google sign-in keeps its original redirect and client, and Google asks which account');
 
   reset();
-  win.ReactNativeWebView = { postMessage() {} };
-  let nativeRequest;
-  globalThis.oauthClient = { auth: { signInWithOAuth: async request => {
-    nativeRequest = request;
-    const url = new URL('https://oauth.example.invalid/auth/v1/authorize');
-    url.searchParams.set('code_challenge', 'fixture-S256');
-    url.searchParams.set('code_challenge_method', 's256');
-    return { data: { url: url.href } };
-  } } };
-  await googleModule.module.startGoogleSignIn({ redirectTo: location.origin + '/Auth?token=paid-invite',
-    queryParams: { login_hint: 'fixture@example.invalid' } });
-  assert.equal(nativeRequest.options.skipBrowserRedirect, true);
-  assert.deepEqual(nativeRequest.options.queryParams, { prompt: 'select_account', login_hint: 'fixture@example.invalid' }, 'Google asks which account, the invite\'s address suggested');
-  assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.get(CALLBACK_PARAM), '1');
-  assert.equal(new URL(nativeRequest.options.redirectTo).searchParams.has('token'), false);
-  assert.equal(globalThis.clientReads, 0);
-  // Opens via Sellio's own relay page (the app's "Open External Link?" box names
-  // sellio.apptelier.sg), which forwards to exactly this authorize address.
-  const relay = new URL(location.assigned);
-  assert.equal(relay.origin + relay.pathname, 'https://sellio.apptelier.sg/google-signin');
-  assert.match(relay.searchParams.get('to'), /^https:\/\/oauth.example.invalid\/auth\/v1\/authorize\?/);
-  assert.equal(new URL(relay.searchParams.get('to')).searchParams.get('code_challenge'), 'fixture-S256');
-  assert.equal(JSON.parse(win.localStorage.getItem('sellio-mobile-google-pending')).inviteToken, 'paid-invite');
-  passed('Android sign-in requests PKCE and launches the wrapper external flow (via the Sellio relay page) while retaining invite context');
-
-  reset();
-  win.ReactNativeWebView = { postMessage() {} };
+  inAndroidApp();
   let finishSessionCheck;
   globalThis.appClient = { auth: {
     getSession: () => new Promise(resolve => { finishSessionCheck = resolve; }),
@@ -205,7 +135,7 @@ try {
   passed('Existing Splash links immediately start Auth and preserve recovery and invite parameters');
 
   for (const onboarded of [true, false]) {
-    reset(); win.ReactNativeWebView = { postMessage() {} };
+    reset(); inAndroidApp();
     location.search = onboarded ? '' : '?join=1';
     win.sessionStorage.setItem(COMPLETE_KEY, JSON.stringify({ origin: location.origin, createdAt: Date.now() }));
     const row = { id: 'profile-fixture', email: 'fixture@example.invalid', role: onboarded ? 'cashier' : 'admin',
@@ -232,7 +162,7 @@ try {
 
   {
     // A brand-new Google account (from the free sign-up, ?join=1) is not "back".
-    reset(); win.ReactNativeWebView = { postMessage() {} };
+    reset(); inAndroidApp();
     location.search = '?join=1';
     win.sessionStorage.setItem(COMPLETE_KEY, JSON.stringify({ origin: location.origin, createdAt: Date.now() }));
     const fresh = { id: 'new-profile', email: 'new-owner@example.invalid', role: 'admin', tenant_id: null, onboarding_completed: false };
@@ -255,7 +185,7 @@ try {
   }
   passed('A new account made by Google sign-in is not welcomed back');
 
-  console.log(passes + ' mobile OAuth DOM checks passed');
+  console.log(passes + ' Google sign-in DOM checks passed');
 } finally {
   for (const file of loaded) await rm(file, { force: true });
   await rm(tmp, { recursive: true, force: true });

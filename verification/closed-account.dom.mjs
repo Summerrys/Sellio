@@ -77,7 +77,7 @@ try {
   globalThis.idTokenReply = { data: null, error: { code: 'user_banned', message: 'User is banned' } };
   const native = await bundle('src/lib/nativeGoogle.js', 'native', {
     social: "export const SocialLogin = { initialize: async () => {}, logout: async () => {}, login: async (args) => { globalThis.socialLogins.push(args); return { result: { idToken: 'google-id-token' } }; } };",
-    clients: "export const getSupabase = async () => ({ auth: { signInWithIdToken: async (args) => { globalThis.idTokenCalls = args; return globalThis.idTokenReply; } } }); export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => ({ auth: { signInWithIdToken: async (args) => { globalThis.idTokenCalls = args; return globalThis.idTokenReply; } } }); export const SUPABASE_URL = 'https://project.example.invalid';",
   });
   let closedError = null;
   try { await native.signInWithNativeGoogle(); } catch (error) { closedError = error; }
@@ -102,7 +102,7 @@ try {
   };
   globalThis.toastErrors = [];
   const { default: Auth } = await bundle('src/pages/Auth.jsx', 'auth', {
-    clients: "export const getSupabase = async () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }); export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => ({ auth: { getSession: async () => ({ data: { session: null } }) } }); export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser() {} });',
     navigation: 'export const completeAuthNavigation = () => {};',
     deletion: 'export const accountDeletionDestination = value => value;',
@@ -171,7 +171,7 @@ try {
   };
   globalThis.navigatedTo = null;
   const { default: Join } = await bundle('src/pages/Join.jsx', 'join', {
-    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser() {} });',
     navigation: 'export const completeAuthNavigation = (to) => { globalThis.navigatedTo = to; };',
     toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
@@ -222,7 +222,7 @@ try {
   // A fresh copy of the page, as the link opens it: a new page load (the app loads the link's
   // address in full; a browser opens it in a new tab), without the Back steps of earlier screens.
   const { default: JoinAgain } = await bundle('src/pages/Join.jsx', 'join-keep', {
-    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser() {} });',
     navigation: 'export const completeAuthNavigation = (to) => { globalThis.navigatedTo = to; };',
     toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
@@ -329,7 +329,7 @@ try {
   // into one conversation, an older link was tapped, and the page then took five refused
   // "Send verification email" taps before a new email replaced the one that worked).
   const { default: JoinLinks } = await bundle('src/pages/Join.jsx', 'join-links', {
-    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser() {} });',
     navigation: 'export const completeAuthNavigation = (to) => { globalThis.navigatedTo = to; };',
     toast: 'export const toast = { error: value => { globalThis.toastErrors.push(value); }, success() {}, custom() {} };',
@@ -402,7 +402,7 @@ try {
 
   // 4. A reset-password link (forgot password) to a closed account opens the same screen.
   const { default: AuthAgain } = await bundle('src/pages/Auth.jsx', 'auth-recovery', {
-    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const getMobileOAuthClient = () => null; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => globalThis.supabaseMock; export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser() {} });',
     navigation: 'export const completeAuthNavigation = () => {};',
     deletion: 'export const accountDeletionDestination = value => value;',

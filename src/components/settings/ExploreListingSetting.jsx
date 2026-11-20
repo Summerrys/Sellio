@@ -8,8 +8,8 @@ import { useTenant } from '@/components/tenant/TenantContext';
 import { useAppText, appT } from '@/lib/appText';
 
 // "Show my shop on Sellio Explore" (tenants.is_public; listed by default).
-// Read and saved directly with Supabase: the column isn't in the Base44 entity
-// layer. Saving needs the settings.edit permission (tenants update policy).
+// Read and saved directly with Supabase. Saving needs the settings.edit permission (tenants
+// update policy).
 export default function ExploreListingSetting({ tenantId }) {
   const { t } = useAppText();
   const { hasPermission } = useTenant();

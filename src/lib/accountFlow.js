@@ -54,19 +54,17 @@ const inCapacitorApp = () => {
 export function appBaseUrl(location, inApp = inCapacitorApp()) {
   if (inApp) return SELLIO_SITE;
   const host = location.hostname;
-  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
-      SELLIO_WEB_ORIGINS.includes(location.origin)) {
+  if (host === 'localhost' || SELLIO_WEB_ORIGINS.includes(location.origin)) {
     return location.origin;
   }
   return SELLIO_SITE;
 }
 
-// Links a shop shares with its customers (store link, WhatsApp, QR code). The Android
-// app runs on selliosg.base44.app, but customers should always see Sellio's main
-// address, whichever Sellio address the shop is using. Test hosts keep their own
-// address so links can be tried there.
+// Links a shop shares with its customers (store link, WhatsApp, QR code): customers should
+// always see Sellio's main address, whichever Sellio address the shop is using. Test hosts keep
+// their own address so links can be tried there.
 export function publicSiteUrl(location) {
-  if (location.hostname === 'selliosg.base44.app' || SELLIO_WEB_ORIGINS.includes(location.origin)) {
+  if (SELLIO_WEB_ORIGINS.includes(location.origin)) {
     return SELLIO_SITE;
   }
   return appBaseUrl(location);

@@ -368,25 +368,20 @@ try {
     passed('Lists, menus and popovers (with or without a parent controlling them) close on Back; choosing an option takes the Back step away; in a dialog, the list closes first');
   }
 
-  // ---- Direct Android wrapper Back (does not depend on a WebView history traversal) ----
-  assert.equal(typeof win.__sellioHandleAndroidBack, 'function');
+  // ---- The Android app's Back (capacitorApp.js calls handleAndroidBack; no WebView history traversal) ----
   assert.equal(mod.handleAndroidBack(), false, 'without overlays, native handles page Back/exit');
   tap(); overlays.A.setOpen(true); await settle();
   tap(); overlays.B.setOpen(true); await settle();
-  assert.equal(win.__sellioHandleAndroidBack(), true);
+  assert.equal(mod.handleAndroidBack(), true);
   await settle();
   assert.equal(overlays.B.open, false, 'direct native Back closes only the newest overlay');
   assert.equal(overlays.A.open, true);
   assert.ok(onOverlayEntry(), 'the existing history entry remains for the other overlay');
-  const hardwareEvent = new win.Event('backbutton', { bubbles: true, cancelable: true });
-  win.document.dispatchEvent(hardwareEvent);
+  assert.equal(mod.handleAndroidBack(), true);
   await settle();
-  assert.ok(hardwareEvent.defaultPrevented, 'Cordova-style native event is consumed');
   assert.equal(overlays.A.open, false);
   assert.ok(atHome());
-  const unusedBack = new win.Event('backbutton', { cancelable: true });
-  win.document.dispatchEvent(unusedBack);
-  assert.equal(unusedBack.defaultPrevented, false, 'native retains ordinary Back/exit');
+  assert.equal(mod.handleAndroidBack(), false, 'native retains ordinary Back/exit');
   passed('Android native Back closes nested overlays directly and falls back on a bare page');
 
   overlays.A.onBack = () => false; // Busy, or an unsaved editor requiring confirmation.
@@ -395,16 +390,14 @@ try {
   await settle();
   assert.equal(overlays.A.open, true, 'busy editor does not disappear on native Back');
   overlays.A.onBack = null;
-  const customBack = new win.Event('sellio:android-back', { cancelable: true });
-  win.dispatchEvent(customBack);
+  assert.equal(mod.handleAndroidBack(), true);
   await settle();
-  assert.equal(customBack.defaultPrevented, true);
   assert.equal(overlays.A.open, false);
   assert.ok(atHome());
-  passed('Android native Back respects busy/unsaved windows and accepts explicit bridge events');
+  passed('Android native Back respects busy/unsaved windows, then closes them once they are done');
 
   // Native Back also navigates app-owned routes rather than relying on the
-  // wrapper's potentially stale canGoBack flag after an app switch.
+  // web view's potentially stale canGoBack flag after an app switch.
   tap(); router.navigate('/Products'); await settle();
   tap(); router.navigate('/Orders'); await settle();
   assert.equal(router.location.pathname, '/Orders');
@@ -425,8 +418,6 @@ try {
   assert.ok(onOverlayEntry());
   win.history.replaceState({ ...win.history.state, sellioOverlay: false }, '');
   assert.ok(!onOverlayEntry());
-  win.ReactNativeWebView = { postMessage() {} };
-  Object.defineProperty(win.navigator, 'userAgent', { configurable: true, value: 'Android WebView' });
   win.document.dispatchEvent(new win.Event('visibilitychange'));
   await settle();
   // If a fresh tap preceded resume, the manager may safely restore its history
@@ -441,8 +432,6 @@ try {
   await pressBack();
   assert.equal(overlays.A.open, false);
   assert.ok(atHome() || !onOverlayEntry());
-  delete win.ReactNativeWebView;
-  delete win.navigator.userAgent;
   passed('Android resume repairs a stale history entry while the editor remains mounted');
 
   // ---- Phase 2 ----
@@ -623,94 +612,6 @@ try {
     assert.match(await readFile(`src/components/ui/${file}.jsx`, 'utf8'), /useOpenWithBack\(open, defaultOpen, onOpenChange\)/);
   }
   passed('Layout (no header arrow), the shared dialogs, the step-by-step screens, Kitchen full screen and Privacy/Terms are wired to these rules');
-
-  // ---- Base44's Android app: the page tells the app about its history again ----
-  {
-    // A report is the current entry replaced by itself (same state, same address).
-    const reports = [];
-    const replaceNow = win.history.replaceState;
-    win.history.replaceState = function replaceState(state, title, url) {
-      if (state === win.history.state && url === undefined) reports.push(Date.now());
-      return replaceNow.call(this, state, title, url);
-    };
-    const asApp = (on) => {
-      if (on) {
-        win.ReactNativeWebView = { postMessage() {} };
-        Object.defineProperty(win.navigator, 'userAgent', { configurable: true,
-          value: 'Mozilla/5.0 (Linux; Android 16; CPH2671 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/155.0.8059.43 Mobile Safari/537.36' });
-      } else {
-        delete win.ReactNativeWebView;
-        delete win.navigator.userAgent;   // jsdom's own again
-      }
-    };
-    const fileInput = win.document.createElement('input');
-    fileInput.type = 'file';
-    win.document.body.appendChild(fileInput);
-    const comeBack = () => win.document.dispatchEvent(new win.Event('visibilitychange'));
-    const allSoon = () => sleep(2200);
-    let popstates = 0;
-    const countPops = () => { popstates += 1; };
-    win.addEventListener('popstate', countPops);
-
-    // In a browser: nothing extra.
-    comeBack(); win.dispatchEvent(new win.Event('focus'));
-    fileInput.dispatchEvent(new win.Event('change', { bubbles: true })); tap();
-    await allSoon();
-    assert.equal(reports.length, 0, 'browsers decide Back themselves: no reports');
-
-    asApp(true);
-    const length1 = win.history.length;
-    // Where the page is: its address, its history entry and react-router's page.
-    const where = () => JSON.stringify([win.location.href, win.history.state, router.location.pathname]);
-    const here = where();
-    assert.ok(!onOverlayEntry());
-    // Back from the background / a picker / a native dialog: reported now and twice more.
-    for (const [what, fire] of [
-      ['coming back from the background', comeBack],
-      ['choosing a photo', () => fileInput.dispatchEvent(new win.Event('change', { bubbles: true }))],
-      ['cancelling the picker', () => fileInput.dispatchEvent(new win.Event('cancel', { bubbles: true }))],
-      ['the app window getting focus back', () => win.dispatchEvent(new win.Event('focus'))],
-    ]) {
-      reports.length = 0;
-      fire(); await allSoon();
-      assert.equal(reports.length, 3, what);
-      assert.equal(where(), here, 'nothing moves: ' + what);
-    }
-    assert.equal(win.history.length, length1, 'reports add no history');
-    assert.equal(popstates, 0, 'reports are not Back or Forward');
-    // At taps, at most every 1.5 s.
-    reports.length = 0;
-    tap(); tap(); await sleep(300); tap(); tap(); await settle();
-    assert.equal(reports.length, 1, 'one report for a burst of taps');
-    await sleep(1600); tap(); await settle();
-    assert.equal(reports.length, 2, 'and another after 1.5 s');
-
-    // With a window open, a report keeps its Back step, and Back still closes it.
-    tap(); overlays.A.setOpen(true); await settle();
-    assert.ok(onOverlayEntry());
-    reports.length = 0;
-    comeBack(); await allSoon();
-    assert.equal(reports.length, 3);
-    assert.ok(onOverlayEntry(), 'still on the Back step');
-    await pressBack();
-    assert.equal(overlays.A.open, false);
-    assert.equal(where(), here, 'Back closed it and stayed on the page');
-    const length2 = win.history.length;
-
-    // A window closed by its own button while reports are due: its Back step still goes.
-    await sleep(1600);
-    tap(); overlays.A.setOpen(true); await settle();
-    overlays.A.setOpen(false); comeBack();
-    await allSoon();
-    assert.equal(where(), here, 'the Back step was taken away as usual');
-    assert.equal(win.history.length, length2, 'no extra history');
-
-    win.removeEventListener('popstate', countPops);
-    fileInput.remove();
-    asApp(false);
-    win.history.replaceState = replaceNow;
-    passed('Android app: coming back from the background, a photo picker or a native dialog (and taps) tells the app about the page\'s history again, changing nothing; browsers are left alone');
-  }
 
   console.log(`\nAll ${passes} back-navigation checks passed.`);
 } catch (err) {

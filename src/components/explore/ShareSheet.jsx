@@ -8,11 +8,10 @@ import { englishText } from '@/lib/appText';
 // "Share to": a listing's link straight into WhatsApp, Telegram, Messenger (phones only),
 // Facebook or an email, copied, or (where the phone offers it) any other app.
 // Links to apps open the app (or its website); this page stays where it is.
-// In Sellio's Android app (Base44's web view, version 13) a link that opens a new tab does
-// nothing, and web pages get no share menu (so no More). There a website link loads in
-// place and the app hands it to the phone, asking "Open External Link?" first: WhatsApp,
-// Telegram or Facebook opens. Email links go to the mail app. The app blocks any other
-// kind of link (fb-messenger:), so Messenger isn't offered there.
+// In Sellio's apps the web view has no tabs: a website link loads in place and the app hands
+// it to the phone, which opens WhatsApp, Telegram or Facebook. Email links go to the mail app.
+// Messenger's own kind of link (fb-messenger:) isn't offered in the apps, and More shows only
+// where the phone offers its share menu to web pages.
 // t: the t of the screen that opens it (lib/appText.js); English without one.
 
 const PHONE = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');

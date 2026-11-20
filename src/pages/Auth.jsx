@@ -10,8 +10,7 @@ import { accountDeletionDestination } from '@/components/profile/AccountDeletion
 import { completeAuthNavigation } from '@/lib/authNavigation';
 import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
-import { COMPLETE_KEY, clearMobileAuth, hasMobileGoogleCompletion, isNativeAndroid } from '@/lib/mobileOAuth';
-import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
+import { COMPLETE_KEY, hasMobileGoogleCompletion } from '@/lib/mobileOAuth';
 import {
   SELLIO_SITE, SELLIO_WEB_ORIGINS, accountErrorMessage, decideOnboardingAccess, emailResendWait, isClosedLoginError, isEmail, isExpiredLinkError,
   isStaffLoginEmail, nextStepFor, phoneCountryFor,
@@ -69,8 +68,7 @@ const startCountryCode = () => COUNTRY_CODES.find((c) => c.code === phoneCountry
 const getBaseUrl = () => {
   if (isCapacitorApp()) return SELLIO_SITE;
   const host = window.location.hostname;
-  if (host === 'localhost' || host.includes('base44.app') || host.includes('base44.com') ||
-      SELLIO_WEB_ORIGINS.includes(window.location.origin)) {
+  if (host === 'localhost' || SELLIO_WEB_ORIGINS.includes(window.location.origin)) {
     return window.location.origin;
   }
   return 'https://sellio.sg';
@@ -504,18 +502,6 @@ export default function Auth() {
 
     processSession();
   }, []);
-
-  // Returning from a cancelled browser sign-in must leave a usable button.
-  useEffect(() => {
-    if (!googleLoading || !isNativeAndroid()) return;
-    let wasHidden = document.visibilityState === 'hidden';
-    const resume = () => {
-      if (document.visibilityState === 'hidden') wasHidden = true;
-      else if (wasHidden) setGoogleLoading(false);
-    };
-    document.addEventListener('visibilitychange', resume);
-    return () => document.removeEventListener('visibilitychange', resume);
-  }, [googleLoading]);
 
   // Google in the Android app on a closed account: Supabase refused the locked login, so
   // Sellio's server checks Google's ID token itself and says what happens to the account.
@@ -1604,7 +1590,6 @@ export default function Auth() {
                   )}
                   {googleLoading ? t('Redirecting...') : t('Sign up with Google')}
                 </button>
-                <GoogleBrowserHint />
                 {googleSignupError && (
                   <div className="mt-3 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
                     <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -1612,14 +1597,6 @@ export default function Auth() {
                   </div>
                 )}
               </>
-            )}
-
-            {googleLoading && isNativeAndroid() && (
-              <button type="button" className="w-full min-h-11 mt-3 text-sm underline"
-                style={{ color: 'var(--primary)' }}
-                onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
-                {t('Cancel Google sign-in')}
-              </button>
             )}
 
             {/* Divider + Google — on Login (not while typing an emailed code) */}
@@ -1649,7 +1626,6 @@ export default function Auth() {
                   )}
                   {googleLoading ? t('Redirecting...') : t('Sign in with Google')}
                 </button>
-                <GoogleBrowserHint />
 
                 {googleGateError && (
                   <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">

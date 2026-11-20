@@ -36,16 +36,13 @@ const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query
 const act = React.act;
 
 globalThis.backLines = [];
-globalThis.steps = 0;
 const tmp = await mkdtemp(path.join(os.tmpdir(), 'sellio-resume-'));
 const mock = { name: 'resume-fixtures', setup(builder) {
   builder.onResolve({ filter: /supabaseClient$/ }, () => ({ path: 'client', namespace: 'mock' }));
   builder.onResolve({ filter: /\/backLog$/ }, () => ({ path: 'backLog', namespace: 'mock' }));
-  builder.onResolve({ filter: /\/useBackToClose$/ }, () => ({ path: 'back', namespace: 'mock' }));
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ loader: 'js', contents: {
     client: 'export const getSupabase = async () => globalThis.client;',
     backLog: 'export const backLog = (line) => { globalThis.backLines.push(line); };',
-    back: 'export const stepToFirstEntry = () => { globalThis.steps += 1; return Promise.resolve(); };',
   }[args.path] }));
 } };
 const outfile = path.join(tmp, 'resume.mjs');
@@ -170,8 +167,7 @@ try {
   assert.equal(reload.textContent, 'Reload');
   await act(async () => { reload.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
   await settle();
-  assert.equal(globalThis.steps, 1, 'in the Android app it first steps to the first entry, like an update');
-  assert.deepEqual(navigations, ['https://sellio.apptelier.sg/Dashboard'], 'then opens the same page again');
+  assert.deepEqual(navigations, ['https://sellio.apptelier.sg/Dashboard'], 'it opens the same page again');
   passed('A page whose code can\'t download shows "couldn\'t load this screen" with Reload (not a blank app); Reload opens the same page again');
 
   const crashed = await show('Cannot read properties of undefined (reading \'name\')');

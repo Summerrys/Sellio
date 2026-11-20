@@ -9,9 +9,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { completeAuthNavigation } from '@/lib/authNavigation';
 import { noteSignInWelcome } from '@/lib/signInWelcome';
 import { googleSignInAvailable, startGoogleSignIn } from '@/lib/googleSignIn';
-import { clearMobileAuth, isNativeAndroid } from '@/lib/mobileOAuth';
 import AppLoader from '@/components/ui-custom/AppLoader';
-import GoogleBrowserHint from '@/components/auth/GoogleBrowserHint';
 import ClosedAccount from '@/components/auth/ClosedAccount';
 import TermsLine from '@/components/auth/TermsLine';
 import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
@@ -341,17 +339,6 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
     }
   };
 
-  useEffect(() => {
-    if (!googleLoading || !isNativeAndroid()) return;
-    let wasHidden = document.visibilityState === 'hidden';
-    const resume = () => {
-      if (document.visibilityState === 'hidden') wasHidden = true;
-      else if (wasHidden) setGoogleLoading(false);
-    };
-    document.addEventListener('visibilitychange', resume);
-    return () => document.removeEventListener('visibilitychange', resume);
-  }, [googleLoading]);
-
   const continueWithGoogle = async () => {
     setGoogleLoading(true);
     try {
@@ -569,14 +556,7 @@ export default function Join({ embedded = false, onLogin = null, initialEmail = 
                     {googleLoading ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" /> : <GoogleIcon />}
                     {googleLoading ? t('Redirecting…') : t('Continue with Google')}
                   </button>
-                  <GoogleBrowserHint />
                 </>
-              )}
-              {googleLoading && isNativeAndroid() && (
-                <button type="button" className="w-full min-h-11 mt-2 text-sm text-orange-700 underline"
-                  onClick={() => { clearMobileAuth(window.localStorage); setGoogleLoading(false); }}>
-                  {t('Cancel Google sign-in')}
-                </button>
               )}
             </>
           )}

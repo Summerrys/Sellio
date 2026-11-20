@@ -1320,7 +1320,6 @@
   "You’re offline. {showing}": "Anda sedang offline. {showing}",
   "Allow Camera in your phone’s Sellio permissions, then try {action} again.": "Izinkan Kamera di izin Sellio pada ponsel Anda, lalu coba {action} lagi.",
   "Camera access enabled. Tap {action} again to open your camera.": "Akses kamera aktif. Ketuk {action} lagi untuk membuka kamera.",
-  "Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap {action} again.": "Akses kamera mati. Izinkan Kamera di izin Sellio pada ponsel Anda, lalu ketuk {action} lagi.",
   "Could not open the camera. Close other camera apps and try {action} again.": "Kamera tidak bisa dibuka. Tutup aplikasi kamera lain dan coba {action} lagi.",
   "Opening camera…": "Membuka kamera…",
   "Close this message": "Tutup pesan ini",

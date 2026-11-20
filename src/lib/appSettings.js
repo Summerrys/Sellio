@@ -2,8 +2,8 @@ import { appPlatform, isCapacitorApp } from './nativeApp.js';
 
 // Sellio's page in the phone's Settings, for a permission that was refused (UX state 7, 14 Nov
 // 2026). Only Sellio's own app can open it: Android opens Sellio's App info (Permissions,
-// Notifications), an iPhone opens Sellio's page in Settings. Websites and Base44's old app can't,
-// so they keep the written steps.
+// Notifications), an iPhone opens Sellio's page in Settings. Websites can't, so they keep the
+// written steps.
 //
 // It's the Bluetooth printer plugin's call (@capacitor-community/bluetooth-le, in both apps since
 // their first builds), so it reaches the apps as a live update, with no new store build. The raw

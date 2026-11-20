@@ -8,7 +8,7 @@ import { englishText } from './appText.js';
 // - 'web': a browser that can show notifications (webPush.js): the website on a computer or an
 //   Android phone, or Sellio added to an iPhone's or iPad's Home Screen (iOS 16.4 and later;
 //   Apple gives Safari tabs none).
-// - '': the iPhone app (no alerts yet), Base44's old app, and browsers that can't.
+// - '': the iPhone app (no alerts yet), and browsers that can't.
 // Whether they can work here as well (the site set up for them, the browser good enough) is up
 // to the module's pushStatus() and shouldAsk().
 export function alertsKind(browser = typeof window !== 'undefined' ? window : undefined) {

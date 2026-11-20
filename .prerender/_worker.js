@@ -2,7 +2,6 @@
 // address). Which page each address gets, as the earlier host's _redirects had it:
 //   www.<domain>/…        →  301 to the same address without www
 //   sellio.apptelier.sg/… and sellio-f1t.pages.dev/…  →  301 to the same address on sellio.sg
-//                            (except /google-signin)
 //   /Privacy, /privacy/, /Terms, /terms/, /index.html  →  301 to /privacy, /terms, /
 //   /                     → index.html (the landing page, prerendered)
 //   /privacy, /terms      → privacy/index.html, terms/index.html
@@ -27,12 +26,10 @@ const REDIRECTS = {
 // same pages, so Google kept listing the old one (Alvin, 6 Nov 2026): their pages now move
 // permanently to the same page on sellio.sg, which tells search engines to list sellio.sg
 // instead, and old links, bookmarks and QR codes still land on the right page. Their files
-// (_routes.json) are still served as they are. /google-signin stays: Base44's old Android
-// app opens Google sign-in there (src/lib/googleRelay.js). Preview deployments
-// (<id>.sellio-f1t.pages.dev) are left alone.
+// (_routes.json) are still served as they are. Preview deployments (<id>.sellio-f1t.pages.dev)
+// are left alone.
 const SITE = 'https://sellio.sg';
 const MOVED_HOSTS = new Set(['sellio.apptelier.sg', 'sellio-f1t.pages.dev']);
-const STAYS_ON_OLD_HOST = new Set(['/google-signin']);
 
 async function fromPages(env, request, url, path) {
   const init = { method: request.method, headers: request.headers };
@@ -124,7 +121,7 @@ export default {
       url.hostname = url.hostname.slice(4);
       return Response.redirect(url.toString(), 301);
     }
-    if (MOVED_HOSTS.has(url.hostname) && !STAYS_ON_OLD_HOST.has(url.pathname)) {
+    if (MOVED_HOSTS.has(url.hostname)) {
       return Response.redirect(SITE + (REDIRECTS[url.pathname] || url.pathname) + url.search, 301);
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {

@@ -1,7 +1,7 @@
 // "Welcome back!" after signing in: the sign-in page leaves the message (src/lib/signInWelcome.js)
 // and the page the sign-in opens shows it once on screen, after the app's launch splash
 // (src/components/auth/SignInWelcome.jsx). The sign-in pages' own part is checked in
-// phone-signin.dom.mjs and mobile-oauth.dom.mjs.
+// phone-signin.dom.mjs and google-signin.dom.mjs.
 // Run: node verification/sign-in-welcome.dom.mjs /tmp/sellio-verification
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';

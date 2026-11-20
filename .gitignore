@@ -29,7 +29,6 @@ dist-app
 *.sw?
 
 .env
-base44/.app.jsonc
 .emergent/
 
 # Firebase config for the apps' push alerts: CI writes it from the GOOGLE_SERVICES_JSON_BASE64

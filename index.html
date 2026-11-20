@@ -2,91 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script id="sellio-fresh-start">
-      /* Runs first of all (keep in step with goFresh in src/lib/useBackToClose.js;
-         verification/back-navigation.browser.mjs runs this script as it is).
-         In the Android app, Sellio loads a page that replaces another (finishing a sign-in,
-         signing out, a reload) on the FIRST entry of the history, so no older pages are left
-         behind it (with them there, Base44's app takes every Back after an app switch). When that
-         first entry is an older page, Sellio leaves a note and goes to it: this is that older
-         page, and it loads the new page in its place at once, before anything else here runs. */
-      (function () {
-        var w = window, l = w.location, KEY = 'sellio-fresh-start';
-        var goOn = function () {
-          var note = null, entry = null;
-          try { note = JSON.parse(w.sessionStorage.getItem(KEY) || 'null'); } catch (e) { return false; }
-          if (!note) return false;
-          try { w.sessionStorage.removeItem(KEY); } catch (e) { /* read once anyway */ }
-          try { entry = w.navigation && w.navigation.currentEntry; } catch (e) { entry = null; }
-          var age = Date.now() - note.at;
-          if (!entry || entry.index !== 0 || entry.key !== note.key || !(age >= 0 && age < 15000) ||
-              typeof note.to !== 'string' || !/^\/(?![\/\\])/.test(note.to)) return false;
-          try { w.sessionStorage.setItem('sellio-fresh-arrived', JSON.stringify({ at: Date.now(), via: l.pathname })); } catch (e) { /* only for the Back log */ }
-          w.__sellioFreshStart = true;
-          try { w.stop(); } catch (e) { /* keep going */ }
-          l.replace(note.to);
-          return true;
-        };
-        // Also when that page comes back from memory instead of loading again.
-        if (!goOn()) w.addEventListener('pageshow', function (event) { if (event.persisted) goOn(); });
-      })();
-    </script>
     <script>
-      /* Runs before Sellio's code loads (keep in step with src/lib/googleRelay.js and
-         src/lib/appLaunch.js; tests/20 checks both):
-         1. /google-signin: Google sign-in from the Android app starts here, so the app's
-            "Open External Link?" box names Sellio. Forwards only to Sellio's own
-            Supabase Google sign-in; anything else stays on the page with an error.
-         2. During the app's start, show the Sellio splash at once: from the first paint
-            when the app opens or comes back from Google sign-in, and across the reloads
-            on the way to the first screen (Dashboard, Join, …). Sellio added to a home
-            screen gets the same splash when it opens (the first page of each of its
-            sessions, from the home screen or Open in app).
-         3. The app opening at "/" goes straight to Explore (Auth for invite or recovery
+      /* Runs before Sellio's code loads (keep in step with src/lib/appLaunch.js):
+         1. During the app's start, show the Sellio splash at once: from the first paint
+            when the app opens, and across the reloads on the way to the first screen
+            (Dashboard, Join, …). Sellio added to a home screen gets the same splash when it
+            opens (the first page of each of its sessions, from the home screen or Open in
+            app).
+         2. The app opening at "/" goes straight to Explore (Auth for invite or recovery
             links) in this same page load, and the landing markup stays hidden and idle
             everywhere except the website's start page. */
       (function () {
         var w = window, l = w.location;
-        if (l.pathname === '/google-signin') {
-          w.__sellioGoogleRelay = 'invalid';
-          try {
-            var configured = '%VITE_SUPABASE_URL%';
-            var sb = new URL(configured.charAt(0) === '%' ? 'https://gzktuteedbtnaxfdylyu.supabase.co' : configured);
-            var to = new URL(new URLSearchParams(l.search).get('to') || '');
-            var q = to.searchParams;
-            var back = new URL(q.get('redirect_to') || '');
-            var apps = ['https://sellio.apptelier.sg', 'https://selliosg.base44.app', 'https://sellio.sg'];
-            if (to.origin === sb.origin && to.pathname === '/auth/v1/authorize' && q.get('provider') === 'google' &&
-                /^[A-Za-z0-9_-]{43,128}$/.test(q.get('code_challenge') || '') && q.get('code_challenge_method') === 's256' &&
-                apps.indexOf(back.origin) >= 0 && back.searchParams.get('sellio_mobile_oauth') === '1') {
-              w.__sellioGoogleRelay = 'forwarding';
-              l.replace(to.href);
-            }
-          } catch (e) { /* stays 'invalid' */ }
-          return;
-        }
-        // Sellio's apps, as App.jsx's RootRoute checks (src/lib/nativeApp.js): Base44's old
-        // Android app (one of its bridges) and the Capacitor app (Android and iPhone).
-        var capacitorApp = false;
-        try { capacitorApp = !!(w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()); } catch (e) { /* not the app */ }
-        var bridge = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function') || capacitorApp;
-        // Sellio added to a home screen (installed from a browser), not the Android app.
+        // Sellio's app (Android and iPhone), as App.jsx's RootRoute checks (src/lib/nativeApp.js).
+        var app = false;
+        try { app = !!(w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()); } catch (e) { /* not the app */ }
+        // Sellio added to a home screen (installed from a browser), not the app.
         var homeScreen = false;
-        try { homeScreen = !bridge && (w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true); } catch (e) { /* no matchMedia */ }
+        try { homeScreen = !app && (w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true); } catch (e) { /* no matchMedia */ }
         try {
           var store = w.sessionStorage, now = Date.now();
           var launch = JSON.parse(store.getItem('sellio-launch') || 'null');
           var age = launch ? now - launch.start : -1;
           var active = !!launch && !launch.done && age >= 0 && age < 10000;
-          // The app opening at its start page, or coming back from Google sign-in: start
-          // the launch here, so the splash is there from the first paint.
-          var googleReturn = l.pathname === '/Auth' && new URLSearchParams(l.search).get('sellio_mobile_oauth') === '1';
+          // The app opening at its start page: start the launch here, so the splash is there
+          // from the first paint.
           // Sellio on a home screen opening: the first page of this session of it (reloads
           // inside it keep the launch already running, as for the app).
           var homeScreenOpens = homeScreen && !store.getItem('sellio-home-screen-session');
           if (homeScreen) store.setItem('sellio-home-screen-session', '1');
-          if (!active && ((bridge && (l.pathname === '/' || googleReturn)) || homeScreenOpens)) {
+          if (!active && ((app && l.pathname === '/') || homeScreenOpens)) {
             store.setItem('sellio-launch', JSON.stringify({ start: now, done: false }));
             active = true;
             age = 0;
@@ -102,20 +47,20 @@
         // The app never shows the landing page: it opens on Explore (or Auth for invite and
         // recovery links) in this same page load, with no second load. Websites keep the
         // landing page.
-        if (bridge && l.pathname === '/') {
+        if (app && l.pathname === '/') {
           var start = (l.search || l.hash) ? '/Auth' : '/explore';
           try { w.history.replaceState(w.history.state, '', start + l.search + l.hash); }
           catch (e) { try { w.stop(); } catch (e2) { /* keep going */ } l.replace(start + l.search + l.hash); }
         }
         // The landing markup in this page is for crawlers and the website's start page. In
         // the app and on every other page it stays hidden, so its images never load.
-        if (bridge || l.pathname !== '/') document.documentElement.setAttribute('data-sellio-shell', '');
+        if (app || l.pathname !== '/') document.documentElement.setAttribute('data-sellio-shell', '');
         // The website's start page: the landing styles ship with the landing page's own
         // code (loaded on demand), so they're linked here before the first paint and the
         // prerendered page is never shown unstyled. The app never loads them.
         // scripts/prerender-routes.mjs fills in the list at build time.
         var landingCss = [/* LANDING_CSS */];
-        if (!bridge && l.pathname === '/') {
+        if (!app && l.pathname === '/') {
           for (var c = 0; c < landingCss.length; c++) {
             document.write('<link rel="stylesheet" crossorigin href="' + landingCss[c] + '">');
           }
@@ -141,9 +86,7 @@
             path === '/explore' || /^\/listing\/[^/]+$/.test(path) || path === '/auth' || path === '/join' || path === '/account');
         };
         var inApp = function () {
-          try { if (w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()) return true; } catch (e) { /* not the app */ }
-          return !!((w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-            (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function'));
+          try { return !!(w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()); } catch (e) { return false; } // not the app
         };
         var allowed = function () {
           try {
@@ -181,8 +124,7 @@
         var w = window, d = document;
         var capacitorPlatform = '';
         try { if (w.Capacitor && w.Capacitor.isNativePlatform && w.Capacitor.isNativePlatform()) capacitorPlatform = w.Capacitor.getPlatform(); } catch (e) { /* not the app */ }
-        var app = (w.ReactNativeWebView && typeof w.ReactNativeWebView.postMessage === 'function') ||
-          (w.__hybrid_bridge && typeof w.__hybrid_bridge.sendMessage === 'function') || !!capacitorPlatform;
+        var app = !!capacitorPlatform;
         var installed = false;
         try { installed = w.matchMedia('(display-mode: standalone)').matches || w.navigator.standalone === true; } catch (e) { /* no matchMedia */ }
         if (!app && !installed) return;

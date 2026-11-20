@@ -34,7 +34,7 @@ const mock = { name: 'phone-signin-fixtures', setup(builder) {
   builder.onResolve({ filter: /AccountDeletionForm$/ }, () => ({ path: 'deletion', namespace: 'mock' }));
   builder.onResolve({ filter: /^sonner$/ }, () => ({ path: 'toast', namespace: 'mock' }));
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ loader: 'js', contents: {
-    clients: "export const getSupabase = async () => globalThis.appClient; export const getMobileOAuthClient = () => globalThis.appClient; export const SUPABASE_URL = 'https://project.example.invalid';",
+    clients: "export const getSupabase = async () => globalThis.appClient; export const SUPABASE_URL = 'https://project.example.invalid';",
     profile: 'export const useAppUser = () => ({ setAppUser: user => { globalThis.profile = user; } });',
     navigation: 'export const completeAuthNavigation = value => { globalThis.authDestination = value; };',
     deletion: 'export const accountDeletionDestination = value => value;',

@@ -64,7 +64,7 @@ import { PAGE_FEATURES, itemWords } from '@/lib/planFeatures';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SellProvider, useSell } from '@/lib/sell';
 import { inAppFiles, clearExpiredFiles } from '@/lib/appFiles';
-import { isBase44Shell, sellsPlans } from '@/lib/nativeApp';
+import { sellsPlans } from '@/lib/nativeApp';
 import { useBackToClose, handOverBackStep } from '@/lib/useBackToClose';
 import { isStaffAccount } from '@/lib/staffAccess';
 import { rememberThisPhone } from '@/lib/deviceKey';
@@ -597,12 +597,9 @@ function AppLayout({ children, currentPageName }) {
 
   const displayUser = customUser || user;
 
-  // Avoid adding a second bottom inset inside Base44's Android wrapper.
-  // The wrapper owns the native system navigation area; browser/PWA and iOS
-  // viewports continue using their CSS safe-area padding.
-  const isNativeAndroid = typeof window !== 'undefined' &&
-    /Android/i.test(window.navigator.userAgent) && isBase44Shell();
-  const bottomSafeAreaInset = isNativeAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)';
+  // The phone's own bottom area (the gesture bar): browsers, Sellio added to a home screen and
+  // the iPhone app pad for it; in the Android app the inset is 0.
+  const bottomSafeAreaInset = 'env(safe-area-inset-bottom, 0px)';
 
   // Setting up a store fills the screen, with no menu or bottom bar: a business's
   // onboarding, and a home seller's shop setup (the same look).

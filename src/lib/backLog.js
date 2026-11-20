@@ -1,6 +1,6 @@
 // TEMPORARY — remove once Back in the Android app is confirmed working.
-// A short record of what happens around Back (and of errors) in Sellio's Android apps (Base44's old one and
-// the Capacitor one), for Alvin's account only:
+// A short record of what happens around Back (and of errors) in Sellio's Android app, for Alvin's
+// account only:
 // kept on the phone (never sent anywhere), with a small "Back log" button that copies it to paste
 // to Claude. It starts low on the left, above the bottom bar, and can be dragged anywhere on the
 // screen; it stays where it's left.
@@ -20,7 +20,7 @@ const MAX_LINES = 400;
 const MAX_COPY_CHARS = 18000;
 
 const browser = typeof window !== 'undefined' ? window : null;
-// Sellio's Android apps: the Capacitor app, and Base44's old one.
+// Sellio's Android app.
 const inAndroidApp = () => !!browser && /Android/i.test(browser.navigator?.userAgent || '') && isNativeApp(browser);
 
 // A short, stable hash of a text (cyrb53): enough to recognise one email without writing it here.
@@ -255,13 +255,6 @@ if (browser && inAndroidApp()) {
       how = type ? ` by ${type}${from ? ` from ${new URL(from).pathname}` : ''}` : '';
     } catch { how = ''; }
     backLog(`page loaded${how}: ${entries.length} entries in this page's run of history, first is ${entries[0]?.sameDocument ? 'this page' : 'another page'}, ${ua}`);
-  } catch { /* nothing to note */ }
-  // Started on the first entry by way of an older page there (index.html, goFresh in
-  // useBackToClose.js).
-  try {
-    const arrived = JSON.parse(browser.sessionStorage.getItem('sellio-fresh-arrived') || 'null');
-    browser.sessionStorage.removeItem('sellio-fresh-arrived');
-    if (arrived && Date.now() - arrived.at < 15000) backLog(`fresh start: arrived on the first entry (by way of ${arrived.via})`);
   } catch { /* nothing to note */ }
   // Registered before Sellio's own listeners (this file loads first), so these see every event.
   // Saved at once when the app goes off screen (it may be closed there) and when the page goes

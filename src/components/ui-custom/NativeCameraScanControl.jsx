@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import PhotoPickerControl from './PhotoPickerControl';
-import { appPlatform, isBase44Shell } from '@/lib/nativeApp';
+import { appPlatform } from '@/lib/nativeApp';
 import { useAppText, appT } from '@/lib/appText';
 import { showPermissionHelp } from '@/lib/permissionHelp';
 
@@ -34,22 +34,18 @@ function checkAgainIfNoPhoto() {
 }
 
 // capture=environment delegates photography to the phone's camera app.
-// Two apps need a grant first:
-// - Base44's Android wrapper.
-// - Sellio's Android app (14 Nov 2026): its web view asks Android for the camera as the camera
-//   opens, but a "Don't allow" there just closes it without a word to the page (Capacitor's
-//   BridgeWebChromeClient), so the button seemed to do nothing. Asking first, the same way,
-//   tells Sellio, which then shows why it needs the camera and opens Settings (PermissionHelp).
-//   Once the camera was allowed, taps go straight to it (a check would start the camera twice).
+// Sellio's Android app needs a grant first (14 Nov 2026): its web view asks Android for the
+// camera as the camera opens, but a "Don't allow" there just closes it without a word to the page
+// (Capacitor's BridgeWebChromeClient), so the button seemed to do nothing. Asking first, the same
+// way, tells Sellio, which then shows why it needs the camera and opens Settings (PermissionHelp).
+// Once the camera was allowed, taps go straight to it (a check would start the camera twice).
 // Sellio's iPhone app and websites let the camera ask for itself.
 // `action` is the button's name in its hints ("tap Scan again").
 export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen, children, disabled, action: actionName, ...props }) {
   // Read when a hint is shown, so the default follows the language at that moment.
   const actionLabel = () => actionName || appT('Scan');
   const { t } = useAppText();
-  const base44Android = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent) && isBase44Shell();
-  const sellioAndroid = typeof window !== 'undefined' && appPlatform() === 'android';
-  const nativeAndroid = base44Android || sellioAndroid;
+  const nativeAndroid = typeof window !== 'undefined' && appPlatform() === 'android';
   const granted = useRef(!nativeAndroid);
   const mounted = useRef(false);
   const pending = useRef(false);
@@ -66,7 +62,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
     if (pending.current) { event.preventDefault(); return; }
     if (!nativeAndroid) return;
     if (granted.current) { granted.current = false; return; }
-    if (sellioAndroid && cameraAllowedBefore()) { checkAgainIfNoPhoto(); return; }
+    if (cameraAllowedBefore()) { checkAgainIfNoPhoto(); return; }
     if (!navigator.mediaDevices?.getUserMedia) {
       event.preventDefault();
       onError?.(appT('Allow Camera in your phone’s Sellio permissions, then try {action} again.', { action: actionLabel() }));
@@ -84,7 +80,7 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       audio: false,
     }).then(stream => {
       stream.getTracks().forEach(track => track.stop());
-      if (sellioAndroid) rememberCamera(true);
+      rememberCamera(true);
       if (!mounted.current || id !== request.current) return;
       granted.current = true;
       pending.current = false;
@@ -104,14 +100,12 @@ export default function NativeCameraScanControl({ onFile, onError, onBeforeOpen,
       setPreparing(false);
       granted.current = false;
       const refused = error.name === 'NotAllowedError' || error.name === 'SecurityError';
-      if (refused && sellioAndroid) {
+      if (refused) {
         rememberCamera(false);
         showPermissionHelp('camera', { action: actionLabel() });
         return;
       }
-      onError?.(refused
-        ? appT('Camera access is off. Allow Camera in your phone’s Sellio permissions, then tap {action} again.', { action: actionLabel() })
-        : appT('Could not open the camera. Close other camera apps and try {action} again.', { action: actionLabel() }));
+      onError?.(appT('Could not open the camera. Close other camera apps and try {action} again.', { action: actionLabel() }));
     });
   };
 
