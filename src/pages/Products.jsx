@@ -22,7 +22,7 @@ import { getProductsSteps } from '@/components/tour/tourSteps';
 import { itemWords } from '@/lib/planFeatures';
 import DummyProductCard from '@/components/tour/DummyProductCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, CheckCircle2, AlertCircle, ImageIcon, Loader2, X, Pencil } from 'lucide-react';
+import { ShoppingBag, Plus, Search, LayoutGrid, List, Upload, Download, FileDown, FileSpreadsheet, Package, ScanLine, Trash2, AlertCircle, ImageIcon, Loader2, X, Pencil, GripVertical } from 'lucide-react';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { isShopTenant } from '@/lib/shopSelling';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -34,8 +34,11 @@ import { sellsPlans } from '@/lib/nativeApp';
 import { useAppText, appT } from '@/lib/appText';
 import { prepareMenuPhoto, fullPhotoRect, cutPicture, typedPrice, cleanScannedOptions, SCAN_REASONS } from '@/lib/menuScan';
 import { shrinkImage, PHOTO_MAX_SIDE, LONG_CACHE, UnreadablePhotoError, UNREADABLE_PHOTO_MESSAGE, extFor } from '@/lib/imageShrink';
-import { explainError } from '@/lib/plainError';
+import { explainError, showError } from '@/lib/plainError';
 import ImageEditModal from '@/components/onboarding/ImageEditModal';
+import DeleteProductsSheet from '../components/products/DeleteProductsSheet';
+import { planMove, withSortOrders } from '@/lib/productOrder';
+import Celebrate from '@/components/ui-custom/Celebrate';
 
 const CSV_HEADERS = ['Name', 'SKU', 'Description', 'Category', 'Price', 'Cost Price', 'Compare At Price', 'Stock Quantity', 'Low Stock Threshold', 'Track Inventory', 'Active', 'Featured', 'Tags', 'Variants', 'Image URL', 'Additional Images'];
 
@@ -84,6 +87,8 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   const [partial, setPartial] = useState(false);
   const [pricesAsked, setPricesAsked] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  // What the last save added: how many, and each section with its count, in the menu's order.
+  const [saved, setSaved] = useState({ count: 0, sections: [] });
   const activeScan = useRef({ id: 0, controller: null });
   // The photo as sent and the full photo (for cutting pictures and the editor).
   const scanPhoto = useRef(null);
@@ -275,6 +280,15 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (insertedProducts?.length) {
         await supabase.from('inventory_items').insert(insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' })));
       }
+      const sections = [];
+      for (const item of selected) {
+        const name = String(item.category || '').trim();
+        if (!name) continue;
+        const section = sections.find((sec) => sec.name.toLowerCase() === name.toLowerCase());
+        if (section) section.count += 1;
+        else sections.push({ name, count: 1 });
+      }
+      setSaved({ count: selected.length, sections });
       setStep('done');
       onSuccess?.();
     } catch (e) {
@@ -439,12 +453,18 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
             </div>
           )}
 
-          {/* Step: Done */}
+          {/* Step: Done, with a tick and one burst of confetti (Alvin, 20 Nov 2026) */}
           {step === 'done' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 0', gap: 16 }}>
-              <CheckCircle2 size={56} color="#10b981" />
-              <p style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>{t('Products Added!')}</p>
-              <p style={{ fontSize: 14, color: '#64748b', margin: 0, textAlign: 'center' }}>{t('{selectedCount} products have been added to your catalog.', { selectedCount })}</p>
+            <div data-testid="scan-done" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0 12px', gap: 8 }}>
+              <Celebrate />
+              <p role="status" style={{ fontSize: 22, lineHeight: '28px', fontWeight: 800, color: '#0f172a', margin: 0, textAlign: 'center' }}>
+                {saved.count === 1 ? t('1 product added') : t('{count} products added', { count: saved.count })}
+              </p>
+              {saved.sections.length > 0 && (
+                <p data-testid="scan-done-sections" style={{ fontSize: 14.5, lineHeight: '21px', color: '#475569', margin: 0, textAlign: 'center' }}>
+                  {t('In your menu’s order: {sections}.', { sections: saved.sections.map((sec) => `${sec.name} (${sec.count})`).join(', ') })}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -462,7 +482,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         )}
         {step === 'done' && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
-            <button onClick={handleClose} style={{ width: '100%', padding: 11, borderRadius: 10, border: 'none', background: primaryGradient, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{t('Done')}</button>
+            <button onClick={handleClose} style={{ width: '100%', padding: 13, borderRadius: 12, border: 'none', background: primaryGradient, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{t('See my products')}</button>
           </div>
         )}
       </div>
@@ -520,7 +540,8 @@ export default function Products({ embedded = false } = {}) {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
+  const [selectionBusy, setSelectionBusy] = useState(false);
 
   const [showDialog, setShowDialog] = useState(false);
   useBackToClose(showDialog, () => setShowDialog(false));
@@ -710,6 +731,8 @@ export default function Products({ embedded = false } = {}) {
     window.URL.revokeObjectURL(url);
   };
 
+  // Hold an item and let go to select it, for deleting (Alvin, 20 Nov 2026: hold to select and
+  // Select all stay, beside holding and dragging to move). In select mode it adds the item.
   const handleLongPress = (productId) => {
     // FIX: long-press multi-select only exists to enable bulk delete — with no
     // products.delete permission there's nothing useful it can do, so don't let it
@@ -717,6 +740,10 @@ export default function Products({ embedded = false } = {}) {
     // button itself was ever meant to be the gate — except that button wasn't gated
     // either, so a view/edit-only Manager could still bulk-delete products).
     if (!hasPermission('products.delete')) return;
+    if (selectionMode) {
+      setSelectedIds(prev => new Set(prev).add(productId));
+      return;
+    }
     setSelectionMode(true);
     setSelectedIds(new Set([productId]));
   };
@@ -730,36 +757,121 @@ export default function Products({ embedded = false } = {}) {
     });
   };
 
+  const allSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id));
   const handleSelectAll = () => {
-    setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(filteredProducts.map(p => p.id)));
   };
 
   const handleCancelSelection = () => {
     setSelectionMode(false);
     setSelectedIds(new Set());
-    setDeleteConfirm(false);
+    setDeleteSheetOpen(false);
   };
 
+  const selectedProducts = products.filter(p => selectedIds.has(p.id));
+  const selectionDone = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+    await queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
+    handleCancelSelection();
+  };
+
+  // Deleting takes each item's stock count with it; past orders keep their own copy of its name
+  // and price. A failure says so (it used to fail in silence).
   const handleBulkDelete = async () => {
-    if (!selectedIds.size || !hasPermission('products.delete')) return;
+    if (!selectedIds.size || !hasPermission('products.delete') || selectionBusy) return;
+    const ids = [...selectedIds];
+    const first = selectedProducts[0]?.name || '';
+    setSelectionBusy(true);
     try {
       const supabase = await getSupabase();
-      const ids = [...selectedIds];
-      await supabase.from('inventory_items').delete().in('product_id', ids);
-      await supabase.from('products').delete().in('id', ids);
-      await queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
-      await queryClient.invalidateQueries({ queryKey: ['productCount', tenantId] });
-      handleCancelSelection();
+      const { error: stockError } = await supabase.from('inventory_items').delete().in('product_id', ids);
+      if (stockError) throw stockError;
+      const { error } = await supabase.from('products').delete().in('id', ids).eq('tenant_id', tenantId);
+      if (error) throw error;
+      toast.success(ids.length === 1 ? t('{name} deleted', { name: first }) : t('{count} {products} deleted', { count: ids.length, products: words.products }));
+      await selectionDone();
     } catch (e) {
-      console.error('Bulk delete failed:', e);
+      showError(e, t('Couldn’t delete'), { t });
+      await queryClient.invalidateQueries({ queryKey: ['products', tenantId] });
+    } finally {
+      setSelectionBusy(false);
     }
   };
+
+  // Hide instead: off the menu, still in Products (is_active false).
+  const handleBulkHide = async () => {
+    if (!selectedIds.size || !hasPermission('products.edit') || selectionBusy) return;
+    const ids = [...selectedIds];
+    const first = selectedProducts[0]?.name || '';
+    setSelectionBusy(true);
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.from('products').update({ is_active: false }).in('id', ids).eq('tenant_id', tenantId);
+      if (error) throw error;
+      toast.success(ids.length === 1 ? t('{name} is hidden', { name: first }) : t('{count} {products} hidden', { count: ids.length, products: words.products }));
+      await selectionDone();
+    } catch (e) {
+      showError(e, t('Couldn’t hide them'), { t });
+    } finally {
+      setSelectionBusy(false);
+    }
+  };
+
+  // Hold an item and drag it within its section (Alvin, 20 Nov 2026): the new order is saved at
+  // once (products.sort_order, lib/productOrder.js), with Undo. Only a whole section can be
+  // rearranged: not while searching (even spaces show one flat list, mixing sections) or showing
+  // one status (part of a section). A category filter shows one whole section.
+  const canMove = hasPermission('products.edit') && !searchQuery && statusFilter === 'all';
+  // `items`: the section as shown (a category, or those without one).
+  const handleMove = (items, from, to) => {
+    const known = new Set(categories.map((c) => c.id));
+    const sections = [
+      ...categories.map((c) => products.filter((p) => p.category_id === c.id)),
+      products.filter((p) => !p.category_id || !known.has(p.category_id)),
+    ];
+    const index = sections.findIndex((section) => section.some((p) => p.id === items[from]?.id));
+    if (index < 0) return;
+    sections[index] = items;
+    const changes = planMove(sections, index, from, to);
+    if (!changes.length) return;
+    const key = ['products', tenantId];
+    const apply = (rows) => queryClient.setQueryData(key, (old) => (Array.isArray(old) ? withSortOrders(old, rows) : old));
+    const save = async (rows) => {
+      const supabase = await getSupabase();
+      // Ten at a time: numbering a whole shop can change every row.
+      for (let i = 0; i < rows.length; i += 10) {
+        const results = await Promise.all(rows.slice(i, i + 10).map((row) => supabase.from('products').update({ sort_order: row.sort_order }).eq('id', row.id).eq('tenant_id', tenantId)));
+        const failed = results.find((result) => result?.error);
+        if (failed) throw failed.error;
+      }
+    };
+    const notSaved = (e) => {
+      showError(e, t('Couldn’t save the new order'), { t });
+      queryClient.invalidateQueries({ queryKey: key });
+    };
+    apply(changes);
+    save(changes).catch(notSaved);
+    toast(t('Moved {name}', { name: items[from]?.name || '' }), {
+      action: {
+        label: t('Undo'),
+        onClick: () => {
+          const back = changes.map((c) => ({ id: c.id, sort_order: c.before }));
+          apply(back);
+          save(back).catch(notSaved);
+        },
+      },
+    });
+  };
+
+  // Back (the phone's button or swipe) ends select mode, after closing the delete window.
+  useBackToClose(selectionMode && !deleteSheetOpen, handleCancelSelection);
 
   if (toMyListings) return <Navigate to={`/explore/listings${location.search}`} replace />;
 
   return (
     <RequirePermission permission="products.view">
       <div className={embedded ? 'space-y-4' : 'space-y-6'}>
+        {!selectionMode && (
         <div className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 mb-6'}>
           {!embedded && (<>
           <div data-tour="products-header" className="flex items-center justify-between mb-1">
@@ -850,49 +962,37 @@ export default function Products({ embedded = false } = {}) {
               )}
           </div>
         </div>
+        )}
 
-        {/* Selection toolbar — fixed on mobile so it stays reachable while scrolling a long
-            product list, without touching any shared/global layout CSS (position:sticky
-            here previously required loosening overflow-x-hidden on <main>, which caused a
-            page-wide horizontal-overflow regression elsewhere — position:fixed avoids that
-            entirely since it isn't affected by an ancestor's overflow property). On desktop
-            it stays in normal flow like before, since the product list rarely needs scrolling
-            past the toolbar there. */}
+        {/* Select mode (Alvin, 20 Nov 2026): a bar under the header with ✕, how many are selected
+            and Select all, and Delete at the bottom in place of the tab bar (it covers the tab bar,
+            the raised Counter button too). The page's title and buttons step aside meanwhile, so
+            nothing sits under the bar. Fixed on phones: position: sticky would need <main>'s
+            overflow-x-hidden loosened, which once made the whole page scroll sideways. */}
         {selectionMode && (
           <>
-            {window.innerWidth < 1024 && <div style={{ height: 60 }} />}
+            <div className="lg:hidden" style={{ height: 48 }} aria-hidden="true" />
             <div
-              style={
-                window.innerWidth < 1024
-                  ? { position: 'fixed', top: 'calc(56px + env(safe-area-inset-top, 0px) + 8px)', left: 8, right: 8, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.25)', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)' }
-                  : { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(var(--color-primary), 0.06)', borderRadius: 12, border: '1px solid rgba(var(--color-primary), 0.2)', marginBottom: 4 }
-              }
+              data-testid="select-bar"
+              className="fixed left-0 right-0 z-30 lg:static lg:rounded-xl lg:border lg:border-slate-200"
+              style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))', height: 56, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px 0 6px', background: 'white', borderBottom: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)' }}
             >
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'rgb(var(--color-primary))' }}>
-              {t('{size} selected', { size: selectedIds.size })}
-            </span>
-            <button onClick={handleSelectAll} style={{ fontSize: 12, fontWeight: 600, color: 'rgb(var(--color-primary))', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
-              {t('Select all ({count})', { count: filteredProducts.length })}
-            </button>
-            {!deleteConfirm ? (
-              <button
-                onClick={() => setDeleteConfirm(true)}
-                disabled={!selectedIds.size}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedIds.size ? '#ef4444' : '#cbd5e1', color: 'white', fontSize: 12, fontWeight: 700, cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}
-              >
-                <Trash2 size={13} />{' '}{t('Delete')}
+              <button type="button" onClick={handleCancelSelection} aria-label={t('Stop selecting')} style={{ width: 44, height: 44, border: 'none', background: 'none', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', cursor: 'pointer', flexShrink: 0 }}>
+                <X size={22} aria-hidden="true" />
               </button>
-            ) : (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>{t('Delete {size}?', { size: selectedIds.size })}</span>
-                <button onClick={handleBulkDelete} style={{ padding: '5px 10px', borderRadius: 7, border: 'none', background: '#ef4444', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t('Yes')}</button>
-                <button onClick={() => setDeleteConfirm(false)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #e2e8f0', background: 'white', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' }}>{t('No')}</button>
+              <p role="status" aria-live="polite" style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 17, lineHeight: '22px', fontWeight: 700, color: '#0f172a' }}>
+                {t('{size} selected', { size: selectedIds.size })}
+              </p>
+              <button type="button" onClick={handleSelectAll} style={{ height: 44, border: 'none', background: 'none', borderRadius: 10, padding: '0 10px', fontSize: 14, fontWeight: 600, color: 'rgb(var(--color-primary))', cursor: 'pointer', flexShrink: 0 }}>
+                {allSelected ? t('Select none') : t('Select all')}
+              </button>
+            </div>
+            {canMove && (
+              <div data-testid="move-tip" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: '#eef2f7' }}>
+                <GripVertical size={16} color="#475569" aria-hidden="true" />
+                <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', color: '#334155' }}>{t('Drag the dots to change the order.')}</p>
               </div>
             )}
-            <button onClick={handleCancelSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
-              <X size={18} />
-            </button>
-            </div>
           </>
         )}
 
@@ -1024,6 +1124,7 @@ export default function Products({ embedded = false } = {}) {
             selectedIds,
             onLongPress: handleLongPress,
             onToggleSelect: handleToggleSelect,
+            canMove,
             variant: embedded ? 'listing' : 'product',
           };
           // My listings: how many, like before.
@@ -1035,7 +1136,7 @@ export default function Products({ embedded = false } = {}) {
             </p>
           ) : null;
           if (categoryFilter !== 'all' || searchQuery) {
-            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} /></>;
+            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} onMove={(from, to) => handleMove(filteredProducts, from, to)} tourTagFirstCard={productsTour.eligible} /></>;
           }
           const knownIds = new Set(categories.map(c => c.id));
           const groups = [
@@ -1044,7 +1145,7 @@ export default function Products({ embedded = false } = {}) {
           ].filter(g => g.items.length > 0);
           // Nothing grouped (a shop without categories): one plain list in My listings.
           if (embedded && groups.length === 1 && groups[0].key === 'uncategorized') {
-            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} tourTagFirstCard={productsTour.eligible} /></>;
+            return <>{count}<ProductGrid products={filteredProducts} {...gridProps} onMove={(from, to) => handleMove(filteredProducts, from, to)} tourTagFirstCard={productsTour.eligible} /></>;
           }
           return (
             <div className={embedded ? 'space-y-5' : 'space-y-6'}>
@@ -1055,7 +1156,7 @@ export default function Products({ embedded = false } = {}) {
                     <h2 className="text-sm font-semibold text-slate-700">{g.name}</h2>
                     <span className="text-xs text-slate-400">{g.items.length}</span>
                   </div>
-                  <ProductGrid products={g.items} {...gridProps} tourTagFirstCard={productsTour.eligible && i === 0} />
+                  <ProductGrid products={g.items} {...gridProps} onMove={(from, to) => handleMove(g.items, from, to)} tourTagFirstCard={productsTour.eligible && i === 0} />
                 </section>
               ))}
             </div>
@@ -1070,6 +1171,41 @@ export default function Products({ embedded = false } = {}) {
             tour={productsTour}
           />
         )}
+
+        {selectionMode && (
+          <>
+            <div aria-hidden="true" style={{ height: 24 }} />
+            <div
+              data-testid="delete-bar"
+              data-pull-refresh-block
+              className="fixed left-0 right-0 bottom-0 z-40 lg:left-[var(--sidebar-width)]"
+              style={{ minHeight: 88, boxSizing: 'border-box', padding: '16px 16px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', background: 'white', borderTop: '1px solid #e2e8f0', boxShadow: '0 -4px 14px rgba(15, 23, 42, 0.06)' }}
+            >
+              <button
+                type="button"
+                disabled={!selectedIds.size}
+                onClick={() => setDeleteSheetOpen(true)}
+                style={{ width: '100%', maxWidth: 560, margin: '0 auto', height: 50, borderRadius: 12, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 15, fontWeight: 700, background: selectedIds.size ? '#dc2626' : '#e2e8f0', color: selectedIds.size ? 'white' : '#475569', cursor: selectedIds.size ? 'pointer' : 'default' }}
+              >
+                {selectedIds.size ? <Trash2 size={18} aria-hidden="true" /> : null}
+                {!selectedIds.size ? t('Select items to delete')
+                  : selectedIds.size === 1 ? t('Delete 1 {product}', { product: words.product })
+                  : t('Delete {count} {products}', { count: selectedIds.size, products: words.products })}
+              </button>
+            </div>
+          </>
+        )}
+        <DeleteProductsSheet
+          open={deleteSheetOpen}
+          products={selectedProducts}
+          isListings={isListings}
+          words={words}
+          canHide={hasPermission('products.edit')}
+          busy={selectionBusy}
+          onCancel={() => setDeleteSheetOpen(false)}
+          onDelete={handleBulkDelete}
+          onHide={handleBulkHide}
+        />
 
         {/* Product Form Dialog */}
         <ProductFormDialog

@@ -1,12 +1,12 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, AlertCircle, Package, CheckCircle2, Circle, Layers } from 'lucide-react';
+import { AlertCircle, Package, CheckCircle2, Circle, Layers, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PriceDisplay from './PriceDisplay';
 import { ItemImage, formatPrice, timeAgo } from '@/components/explore/shared';
 import { useAppText } from '@/lib/appText';
+import useHoldToReorder from '@/lib/useHoldToReorder';
 
 function StockBadge({ product }) {
   const { t } = useAppText();
@@ -35,68 +35,57 @@ const countVariantGroups = (variants) => {
 
 // variant 'listing': My listings' cards in the grid (what buyers see: photo, name, price,
 // when it was listed, Hidden / Sold out).
-export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false, variant = 'product' }) {
+// Hold a card (Alvin, 20 Nov 2026): drag it, still holding, to move it within this list
+// (onMove(from, to), when canMove); let go without moving to select it (onLongPress). In select
+// mode each card has a handle that drags at once (lib/useHoldToReorder.js).
+export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMode = 'list', selectionMode = false, selectedIds = new Set(), onLongPress, onToggleSelect, tourTagFirstCard = false, variant = 'product', onMove, canMove = false }) {
   const { t } = useAppText();
+  const movable = canMove && !!onMove;
+  const hold = useHoldToReorder({ ids: products.map((p) => p.id), canMove: movable, onMove, onHold: onLongPress });
 
-  const lpState = React.useRef({ timer: null, moved: false, longPressed: false, activeId: null });
-
-  const makeLongPressProps = (productId, onEditFn) => ({
-    onTouchStart: (e) => {
-      const s = lpState.current;
-      s.moved = false;
-      s.longPressed = false;
-      s.activeId = productId;
-      clearTimeout(s.timer);
-      s.timer = setTimeout(() => {
-        if (!s.moved && s.activeId === productId) {
-          s.longPressed = true;
-          onLongPress?.(productId);
-        }
-      }, 500);
+  // A tap edits the item (select mode: ticks it); the click a hold or a drag ends with doesn't.
+  const pressProps = (product, index) => ({
+    ...hold.pressProps(product.id, index),
+    onClick: () => {
+      if (hold.clickIgnored()) return;
+      if (selectionMode) onToggleSelect?.(product.id);
+      else onEdit(product);
     },
-    onTouchMove: () => {
-      lpState.current.moved = true;
-      clearTimeout(lpState.current.timer);
-    },
-    onTouchEnd: (e) => {
-      const s = lpState.current;
-      clearTimeout(s.timer);
-      if (s.moved || s.longPressed) return;
-      e.preventDefault();
-      if (selectionMode) {
-        onToggleSelect?.(productId);
-      } else {
-        onEditFn();
-      }
-    },
-    onContextMenu: (e) => e.preventDefault(),
-    onClick: (e) => {
-      const s = lpState.current;
-      if (s.longPressed) { s.longPressed = false; return; }
-      if (selectionMode) {
-        onToggleSelect?.(productId);
-      } else {
-        onEditFn();
-      }
-    },
-    style: { userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' },
   });
+  const noDrag = { userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none', WebkitUserDrag: 'none' };
+  // The handle a list's items are dragged by in select mode.
+  const handle = (product, index, extraStyle) => {
+    if (!selectionMode || !movable) return null;
+    const props = hold.handleProps(product.id, index);
+    return (
+      <button
+        type="button"
+        aria-label={t('Move {name}', { name: product.name })}
+        title={t('Drag to move. Arrow keys move it too.')}
+        {...props}
+        style={{ ...props.style, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', padding: 0, color: '#64748b', flexShrink: 0, ...extraStyle }}
+      >
+        <GripVertical size={20} aria-hidden="true" />
+      </button>
+    );
+  };
 
   if (viewMode === 'list') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div ref={hold.listRef} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {products.map((product, index) => (
           <div
             key={product.id}
             {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
-            {...makeLongPressProps(product.id, () => onEdit(product))}
+            {...pressProps(product, index)}
             style={{
               display: 'flex', gap: '12px', background: selectedIds.has(product.id) ? 'rgba(var(--color-primary), 0.06)' : 'white',
               borderRadius: '12px', border: `0.5px solid ${selectedIds.has(product.id) ? 'rgb(var(--color-primary))' : '#e5e7eb'}`,
               padding: '12px', cursor: 'pointer',
               opacity: product.is_active === false ? 0.6 : 1,
               transition: 'all 0.15s',
-              userSelect: 'none', WebkitUserSelect: 'none',
+              ...noDrag,
+              ...hold.shiftStyle(product.id, index),
             }}
           >
             {selectionMode && (
@@ -109,7 +98,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
             )}
             <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={product.image_url} alt={product.name} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <Package className="w-8 h-8 text-slate-300" />
               )}
@@ -139,6 +128,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 </div>
               </div>
             </div>
+            {handle(product, index, { width: 40, alignSelf: 'stretch', marginRight: -6 })}
           </div>
         ))}
       </div>
@@ -147,7 +137,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
 
   if (variant === 'listing') {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div ref={hold.listRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {products.map((product, index) => {
           const hidden = product.is_active === false;
           const soldOut = product.track_inventory === true && Number(product.stock_quantity) === 0;
@@ -159,12 +149,13 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
               tabIndex={0}
               aria-label={t('Edit {name}', { name: product.name })}
               {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
-              {...makeLongPressProps(product.id, () => onEdit(product))}
+              {...pressProps(product, index)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (selectionMode) onToggleSelect?.(product.id); else onEdit(product); } }}
               className={cn(
                 'block bg-white rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow cursor-pointer',
                 selected && 'ring-2 ring-[rgb(var(--color-primary))]'
               )}
+              style={{ ...noDrag, ...hold.shiftStyle(product.id, index) }}
             >
               <div className="relative aspect-square">
                 <ItemImage src={product.image_url} name={product.name} className={`w-full h-full text-4xl ${hidden ? 'opacity-50' : ''}`} />
@@ -180,6 +171,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                       : <Circle size={22} color="white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />}
                   </div>
                 )}
+                {handle(product, index, { position: 'absolute', top: 2, left: 2, width: 40, height: 40, zIndex: 2, borderRadius: 10, background: 'rgba(255,255,255,0.92)' })}
               </div>
               <div className="px-2.5 pt-2 pb-3">
                 <p className="text-sm text-slate-800 leading-snug line-clamp-2 min-h-[2.5rem]">{product.name}</p>
@@ -195,22 +187,22 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
 
   // Grid view
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div ref={hold.listRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {products.map((product, index) => (
         <Card
           key={product.id}
           {...(index === 0 && tourTagFirstCard ? { 'data-tour': 'product-card' } : {})}
-          {...makeLongPressProps(product.id, () => onEdit(product))}
+          {...pressProps(product, index)}
           className={cn(
             "group border-0 shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer",
             !product.is_active && "opacity-60",
             selectedIds.has(product.id) && "ring-2 ring-[rgb(var(--color-primary))]"
           )}
-          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+          style={{ ...noDrag, ...hold.shiftStyle(product.id, index) }}
         >
           <div className="aspect-square bg-slate-100 relative overflow-hidden" style={{ position: 'relative' }}>
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img src={product.image_url} alt={product.name} draggable={false} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Package className="w-12 h-12 text-slate-300" />
@@ -232,6 +224,7 @@ export default function ProductGrid({ products, onEdit, currency = 'SGD', viewMo
                 }
               </div>
             )}
+            {handle(product, index, { position: 'absolute', top: 2, left: 2, width: 40, height: 40, zIndex: 2, borderRadius: 10, background: 'rgba(255,255,255,0.92)' })}
           </div>
           <div className="p-3">
             <div className="flex items-center gap-1 flex-wrap mb-1">

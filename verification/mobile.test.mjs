@@ -353,7 +353,7 @@ try {
   assert.equal(catalogWrites[0].rows[0].tenant_id, 'scan-fixture');
   assert.equal(catalogWrites[0].rows[0].sort_order, 1, 'the first of the menu in a shop with no items');
   assert.equal(catalogWrites[1].table, 'inventory_items');
-  assert.match(scan.container.textContent, /Products Added/);
+  assert.match(scan.container.textContent, /1 product added/);
   passed('Accepted capture auto-extracts; authenticated review, retries, quotas and explicit import remain intact');
 
   // Closing or retaking invalidates an old OCR response, even if the network

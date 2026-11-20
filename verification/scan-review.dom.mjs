@@ -194,7 +194,9 @@ try {
   assert.deepEqual(products.map((p) => [p.name, p.price, p.category_id, p.image_url, p.is_active]), [['Kopi', 1.8, 'cat-drinks', null, true], ['Teh Tarik', 2.2, 'cat-drinks', null, true]]);
   assert.deepEqual(products[0].variants, [{ name: 'Hot or iced', type: 'other', options: [{ label: 'Hot', price_modifier: 0 }, { label: 'Iced', price_modifier: 0.4 }] }], 'an extra price is saved as a number (checkout needs one)');
   assert.equal(typeof products[1].price, 'number', 'saved as a number');
-  assert.match(text(view.container), /Products Added!/);
+  assert.match(text(byTest(view.container, 'scan-done')[0]), /^2 products added/, 'done: how many');
+  assert.equal(text(byTest(view.container, 'scan-done-sections')[0]), 'In your menu’s order: Drinks (2).', 'and in which sections, in the menu’s order');
+  assert.ok(byTest(view.container, 'celebrate').length === 1 && button(view.container, /^See my products$/), 'the tick (confetti where the phone animates) and See my products');
   await closeAll();
   // One item: its own words.
   reset();
