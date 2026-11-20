@@ -1773,5 +1773,9 @@
   "Sample photo": "Foto contoh",
   "Photo by {name} on {site}": "Foto oleh {name} di {site}",
   "No sample photos found for this name.": "Tidak ada foto contoh untuk nama ini.",
-  "Couldn’t find sample photos": "Tidak bisa mencari foto contoh"
+  "Couldn’t find sample photos": "Tidak bisa mencari foto contoh",
+  "Photos from {site}": "Foto dari {site}",
+  "A sample photo couldn’t be saved, so its item has no photo yet.": "Satu foto contoh tidak bisa disimpan, jadi itemnya belum punya foto.",
+  "{count} sample photos couldn’t be saved, so those items have no photo yet.": "{count} foto contoh tidak bisa disimpan, jadi item-item tersebut belum punya foto.",
+  "Couldn’t save the sample photos. Please try again.": "Foto contoh tidak bisa disimpan. Silakan coba lagi."
 }

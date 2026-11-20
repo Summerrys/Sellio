@@ -15,7 +15,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { allowanceLine, allowanceSpent, lastSuggestion, functionErrorMessage } from '@/lib/aiAllowance';
 import { formatMoney } from '@/lib/money';
 import { useAppText, appT } from '@/lib/appText';
-import { reportUsedPhotos, photoSearchError } from '@/lib/samplePhotos';
+import { keepSamplePhotos, photoSearchError } from '@/lib/samplePhotos';
+import { PhotosFrom } from '@/components/ui-custom/PhotoCredit';
 
 // An error whose message is meant for the person (from our own functions).
 const friendlyError = (message) => Object.assign(new Error(message), { friendly: true });
@@ -51,7 +52,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
-  // photos: array of { previewUrl, downloadUrl, downloadLocation, alt }
+  // photos: findProductImage's answer: { id, previewUrl (Pixabay's, for a day), keepUrl, alt, credit }
   const [photos, setPhotos] = React.useState([]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [page, setPage] = React.useState(1);
@@ -124,44 +125,22 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
   };
 
   const handleAccept = async () => {
-    if (!currentPhoto) return;
-    // Unsplash's API guidelines (Alvin, 20 Nov 2026: credit the photographers): the photo is shown
-    // from Unsplash's own address, never copied; Unsplash is told it was used (findProductImage,
-    // with the key); and the photographer is credited with it (products.image_credits).
-    if (currentPhoto.url && currentPhoto.credit) {
-      reportUsedPhotos({ tenantId, photos: [currentPhoto] });
-      onResult(currentPhoto.url, currentPhoto.credit);
-      setPhotos([]);
-      setQuery('');
-      setCurrentIndex(0);
-      return;
-    }
+    if (!currentPhoto?.keepUrl) return;
+    // Pixabay's addresses only show search results (for a day): the photo is copied into this
+    // store's product photos first (findProductImage 'keep'), and the product gets the copy, with
+    // its photographer's credit (products.image_credits). Alvin, 20 Nov 2026.
     setUploading(true);
     try {
-      // Ping Unsplash download endpoint (their API policy requirement — silent)
-      fetch(currentPhoto.downloadLocation).catch(() => {});
-
-      // Fetch full-quality image and upload to Supabase Storage
-      const imgRes = await fetch(currentPhoto.downloadUrl);
-      if (!imgRes.ok) throw new Error(appT('Couldn’t get that image. Try another one.'));
-      const photo = await shrinkImage(await imgRes.blob(), { maxSide: PHOTO_MAX_SIDE });
-
-      const supabase = await (await import('@/lib/supabaseClient')).getSupabase();
-      const filename = `${tenantId}/products/stock-${Date.now()}-photo.${photo.ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filename, photo.blob, { contentType: photo.type, upsert: true, cacheControl: LONG_CACHE });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filename);
-
-      onResult(urlData.publicUrl);
+      const kept = await keepSamplePhotos({ tenantId, photos: [currentPhoto], fallback: appT('Couldn’t get that image. Try another one.') });
+      const url = kept.get(currentPhoto.keepUrl);
+      if (!url) throw friendlyError(appT('Couldn’t get that image. Try another one.'));
+      onResult(url, currentPhoto.credit);
       setPhotos([]);
       setQuery('');
       setCurrentIndex(0);
     } catch (e) {
       console.error('Accept error:', e.message);
-      onError(explainError(e, { title: t('Couldn’t save the photo'), t }).description);
-
+      onError(e.friendly ? e.message : explainError(e, { title: t('Couldn’t save the photo'), t }).description);
     } finally {
       setUploading(false);
     }
@@ -261,6 +240,7 @@ function StockImageSearch({ onResult, onError, themeColor, tenantId, allowance, 
 
           {/* Counter, centered below image */}
           <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 500, textAlign: 'center' }}>{t('{count} / {count2} · Set {page}/6', { count: currentIndex + 1, count2: photos.length, page })}</p>
+          <PhotosFrom style={{ fontSize: 11, textAlign: 'center' }} />
 
           {/* Regenerate — fetch next set of 5 (cycles 1-6, then loops) */}
           <button type="button" onClick={handleRegenerate} disabled={searching || uploading || searchesSpent} aria-label={t('Regenerate more options')}

@@ -48,7 +48,7 @@ const plugins = [
     b.onResolve({ filter: /^sonner$/ }, () => ({ path: 'sonner', namespace: 'mock' }));
     b.onLoad({ filter: /^sonner$/, namespace: 'mock' }, () => ({ loader: 'js', contents: [
       'const note = (kind) => (message, options) => { globalThis.__toasts.push({ kind, message, ...(options?.description ? { description: options.description } : {}) }); };',
-      'export const toast = Object.assign(note("toast"), { success: note("success"), error: note("error"), message: note("message"), info: note("info"), dismiss() {} });',
+      'export const toast = Object.assign(note("toast"), { success: note("success"), error: note("error"), message: note("message"), info: note("info"), warning: note("warning"), dismiss() {} });',
       'export const Toaster = () => null;',
     ].join('\n') }));
   } },
@@ -119,12 +119,16 @@ let lastItem = { data: [], error: null };
 // findProductImage (sample photos): none found unless a test says otherwise.
 const invoked = [];
 let photosFor = () => ({ data: null, error: { context: { status: 404 } } });
+// findProductImage { action: 'keep' }: copies the sample photos used into the shop's photos.
+const copyOf = (p) => `https://files.invalid/shop-1/products/${p.id}-k.jpg`;
+const keepAll = (body) => ({ data: { kept: body.photos.map((p) => ({ from: p.url, url: copyOf(p) })) }, error: null });
+let keepFor = keepAll;
 globalThis.__client = {
   auth: { getSession: async () => ({ data: { session: { access_token: 'owner-token' } } }) },
   functions: { invoke: async (name, { body }) => {
     invoked.push({ name, body });
     if (name !== 'findProductImage') return { data: null, error: { message: 'unknown function' } };
-    return body.action === 'use' ? { data: { used: body.downloadLocations.length }, error: null } : photosFor(body);
+    return body.action === 'keep' ? keepFor(body) : photosFor(body);
   } },
   from: (table) => ({
     insert: (rows) => {
@@ -154,7 +158,7 @@ globalThis.__client = {
     remove: async (paths) => { storage.removed.push(...paths); return { error: null }; },
   }) },
 };
-const reset = () => { invoked.length = 0; photosFor = () => ({ data: null, error: { context: { status: 404 } } }); described.length = 0; describe = (body) => ({ descriptions: body.items.map(() => null) }); requests.length = 0; writes.length = 0; reads.length = 0; lastItem = { data: [], error: null }; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
+const reset = () => { invoked.length = 0; keepFor = keepAll; photosFor = () => ({ data: null, error: { context: { status: 404 } } }); described.length = 0; describe = (body) => ({ descriptions: body.items.map(() => null) }); requests.length = 0; writes.length = 0; reads.length = 0; lastItem = { data: [], error: null }; cuts.length = 0; storage.uploads = []; storage.removed = []; storage.failUploads = false; revoked.length = 0; };
 
 const roots = [];
 async function open(props = {}) {
@@ -698,7 +702,7 @@ try {
   delete globalThis.__shrink;
   passed('photos in an item\'s editor: marked when from the menu; Remove photo; Box it on the menu photo; Take a photo or Choose from phone, made item-photo size and uploaded');
 
-  // ── 10. Sample photos (Unsplash), found one by one, credited, never copied ─────────────
+  // ── 10. Sample photos (Pixabay), found one by one, credited, copied when saved ───────────
   reset();
   photo = { base64: 'cGhvdG8=', mediaType: 'image/jpeg', width: 2236, height: 1677, full: FULL };
   answer = { items: [
@@ -706,26 +710,29 @@ try {
     { name: 'Laksa', price: 6, category: 'Mains', variants: [] },
     { name: 'Teh Tarik', price: 2, category: 'Drinks', variants: [] },
   ], count: 3, imageWidth: 2236, imageHeight: 1677 };
+  // Pixabay's photos, as findProductImage v24 sends them.
   const sample = (q, n) => ({
-    id: `${q}-${n}`, url: `https://images.unsplash.com/${q}-${n}?w=1080`, previewUrl: `https://images.unsplash.com/${q}-${n}?w=400`, alt: q,
-    downloadLocation: `https://api.unsplash.com/photos/${q}-${n}/download?ixid=x`,
-    credit: { source: 'unsplash', name: `Photographer ${n}`, profile: `https://unsplash.com/@p${n}?utm_source=sellio&utm_medium=referral`, photo: `https://unsplash.com/photos/${q}-${n}?utm_source=sellio&utm_medium=referral` },
+    id: `pixabay-${q.length}${n}`, previewUrl: `https://pixabay.com/get/${q}-${n}_640.jpg`, keepUrl: `https://pixabay.com/get/${q}-${n}_1280.jpg`, alt: q,
+    credit: { source: 'pixabay', name: `Photographer ${n}`, profile: `https://pixabay.com/users/p${n}-${n}/`, photo: `https://pixabay.com/photos/${q}-${n}/` },
   });
   photosFor = (body) => ({ data: { photos: [1, 2, 3].map((n) => sample(body.query.split(' ')[0].toLowerCase(), n)) }, error: null });
   view = await open({ categories: [] });
   await settle(10);
   assert.deepEqual(invoked.filter((c) => !c.body.action).map((c) => [c.body.query, c.body.tenantId]), [['Laksa', 'shop-1'], ['Teh Tarik', 'shop-1']], 'one search each, in the menu\'s order; none for the item with its own picture on the menu');
   const tile = (name) => byTest(view.container, 'scan-item').find((r) => text(r.querySelector('[data-testid="scan-item-name"]')) === name).querySelector('[data-testid="scan-item-photo"]');
-  assert.deepEqual([text(tile('Chicken Rice')), tile('Laksa').querySelector('img').getAttribute('src'), text(tile('Laksa'))], ['Menu', 'https://images.unsplash.com/laksa-1?w=400', 'Sample'], 'shown from Unsplash (its small size in the tile), marked Sample');
-  assert.equal(text(byTest(view.container, 'scan-photos-added')[0]), '2 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  assert.deepEqual([text(tile('Chicken Rice')), tile('Laksa').querySelector('img').getAttribute('src'), text(tile('Laksa'))], ['Menu', 'https://pixabay.com/get/laksa-1_640.jpg', 'Sample'], 'shown from Pixabay while choosing, marked Sample');
+  const added = byTest(view.container, 'scan-photos-added')[0];
+  assert.equal(text(added.firstChild), '2 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  assert.equal(text(added.querySelector('[data-testid="photos-from"]')), 'Photos from Pixabay', 'the results say where they\'re from');
   // Its editor: the photos found, the one shown, and its photographer credited.
   await click(tile('Laksa'));
   const samplesBox = () => byTest(view.container, 'scan-samples')[0];
   assert.deepEqual([...samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')].map((b) => b.getAttribute('aria-pressed')), ['true', 'false', 'false'], 'tapping a sample opens the item (a sample is never cropped or copied)');
-  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 1 on Unsplash');
-  assert.deepEqual([...samplesBox().querySelectorAll('[data-testid="photo-credit"] a')].map((a) => a.getAttribute('href')), ['https://unsplash.com/@p1?utm_source=sellio&utm_medium=referral', 'https://unsplash.com/?utm_source=sellio&utm_medium=referral']);
+  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 1 on Pixabay');
+  assert.deepEqual([...samplesBox().querySelectorAll('[data-testid="photo-credit"] a')].map((a) => a.getAttribute('href')), ['https://pixabay.com/users/p1-1/', 'https://pixabay.com/']);
+  assert.equal(text(samplesBox().querySelector('[data-testid="photos-from"]')), 'Photos from Pixabay');
   await click(samplesBox().querySelectorAll('button[aria-label^="Use sample photo"]')[1]);
-  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 2 on Unsplash');
+  assert.equal(text(samplesBox().querySelector('[data-testid="photo-credit"]')), 'Sample photo · Photo by Photographer 2 on Pixabay');
   await click(button(view.container, /^Done$/));
   // Removed: stays removed.
   await click(button(view.container, /^Edit Teh Tarik$/));
@@ -733,14 +740,38 @@ try {
   await click(button(view.container, /^Done$/));
   assert.equal(tile('Teh Tarik').querySelector('img'), null);
   await click(button(view.container, /^Add 3 products$/));
-  assert.deepEqual(storage.uploads.map((u) => u.pathName.replace(/\/\d+-/, '/T-')), ['shop-1/products/T-chicken-rice-0.webp'], 'a sample photo is never uploaded (copied)');
+  assert.deepEqual(storage.uploads.map((u) => u.pathName.replace(/\/\d+-/, '/T-')), ['shop-1/products/T-chicken-rice-0.webp'], 'the app uploads only the shop\'s own photo');
+  assert.deepEqual(invoked.filter((c) => c.body.action === 'keep').map((c) => [c.body.tenantId, c.body.photos]), [['shop-1', [{ id: 'pixabay-52', url: 'https://pixabay.com/get/laksa-2_1280.jpg' }]]], 'the sample used is copied into the shop\'s photos (by the function), before the products are saved');
   assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, p.image_url && p.image_url.replace(/\/\d+-/, '/T-'), p.image_credits]), [
     ['Chicken Rice', 'https://files.invalid/shop-1/products/T-chicken-rice-0.webp', null],
-    ['Laksa', 'https://images.unsplash.com/laksa-2?w=1080', { 'https://images.unsplash.com/laksa-2?w=1080': sample('laksa', 2).credit }],
+    ['Laksa', copyOf(sample('laksa', 2)), { [copyOf(sample('laksa', 2))]: sample('laksa', 2).credit }],
     ['Teh Tarik', null, null],
-  ], 'saved with Unsplash\'s address and the photographer\'s credit');
+  ], 'saved with the shop\'s copy and the photographer\'s credit, never Pixabay\'s address');
+  await closeAll();
+  // A sample that couldn't be copied (its address had expired): its item is saved without a
+  // photo, and the merchant is told; a copying that couldn't be asked for at all saves nothing.
+  reset();
+  photosFor = (body) => ({ data: { photos: [1, 2, 3].map((n) => sample(body.query.split(' ')[0].toLowerCase(), n)) }, error: null });
+  keepFor = (body) => ({ data: { kept: body.photos.filter((p) => !p.url.includes('teh')).map((p) => ({ from: p.url, url: copyOf(p) })) }, error: null });
+  toasts.length = 0;
+  view = await open({ categories: [] });
+  await settle(10);
+  await click(button(view.container, /^Add 3 products$/));
   await settle();
-  assert.deepEqual(invoked.filter((c) => c.body.action === 'use').map((c) => [c.body.tenantId, c.body.downloadLocations]), [['shop-1', ['https://api.unsplash.com/photos/laksa-2/download?ixid=x']]], 'Unsplash is told of the photo used');
+  assert.deepEqual(writes.find((w) => w.table === 'products').rows.map((p) => [p.name, Boolean(p.image_url), Boolean(p.image_credits)]), [['Chicken Rice', true, false], ['Laksa', true, true], ['Teh Tarik', false, false]], 'the item whose sample couldn\'t be copied has no photo');
+  assert.ok(!writes.find((w) => w.table === 'products').rows.some((p) => /pixabay\.com/.test(String(p.image_url))), 'never Pixabay\'s address');
+  assert.deepEqual(toasts.filter((t) => t.kind === 'warning').map((t) => t.message), ['A sample photo couldn’t be saved, so its item has no photo yet.']);
+  await closeAll();
+  reset();
+  photosFor = (body) => ({ data: { photos: [sample(body.query.split(' ')[0].toLowerCase(), 1)] }, error: null });
+  keepFor = () => ({ data: null, error: { context: { status: 500, clone() { return this; }, json: async () => ({ error: 'Pixabay API error: 503' }) } } });
+  view = await open({ categories: [] });
+  await settle(10);
+  await click(button(view.container, /^Add 3 products$/));
+  await settle();
+  assert.equal(writes.filter((w) => w.table === 'products').length, 0, 'nothing saved');
+  assert.match(text(view.container), /Couldn’t save the sample photos\. Please try again\./, 'said in plain words, to try again');
+  assert.deepEqual(storage.removed.flat().map((p) => p.replace(/\/\d+-/, '/T-')), ['shop-1/products/T-chicken-rice-0.webp'], 'the photo uploaded for it is taken away again');
   await closeAll();
   // A search refused (too many this hour) says so; the rest stay without one.
   reset();
@@ -771,7 +802,7 @@ try {
   assert.equal(byTest(view.container, 'scan-samples')[0].querySelectorAll('button[aria-pressed="true"]').length, 0, 'the sample is offered, not used');
   delete globalThis.__shrink;
   await closeAll();
-  passed('sample photos: one search per item without its own picture, in the menu\'s order; shown from Unsplash, marked Sample; another chosen in its editor with its photographer credited; removed stays removed; saved credited and never uploaded; Unsplash told of its use; a refusal stops the rest');
+  passed('sample photos: one search per item without its own picture, in the menu\'s order; shown from Pixabay while choosing ("Photos from Pixabay"), marked Sample; another chosen in its editor with its photographer credited; removed stays removed; copied into the shop\'s photos when saved, saved with the copy and its credit; one that couldn\'t be copied leaves its item without a photo, said; a copying that failed saves nothing; a refusal stops the rest');
 } finally {
   await closeAll().catch(() => {});
   await rm(temporary, { recursive: true, force: true });

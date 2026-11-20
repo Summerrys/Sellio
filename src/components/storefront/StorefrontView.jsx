@@ -1647,7 +1647,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
             )}
           </div>
 
-          {/* A sample photo: the photographer's credit, with links (Unsplash's guideline) */}
+          {/* A sample photo: the photographer's credit, with links to them and to the site it's from */}
           {creditFor(product.image_credits, activeImage) && <PhotoCredit credit={creditFor(product.image_credits, activeImage)} style={{ padding: '6px 16px 0' }} />}
           {/* Thumbnails */}
           {allImages.length > 1 && (

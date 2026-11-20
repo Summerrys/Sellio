@@ -2676,7 +2676,11 @@ const shop = {
   "Sample photo": "示例照片",
   "Photo by {name} on {site}": "照片由 {name} 拍摄，来自 {site}",
   "No sample photos found for this name.": "没有找到这个名称的示例照片。",
-  "Couldn’t find sample photos": "无法查找示例照片"
+  "Couldn’t find sample photos": "无法查找示例照片",
+  "Photos from {site}": "照片来自 {site}",
+  "A sample photo couldn’t be saved, so its item has no photo yet.": "有 1 张示例照片无法保存，因此该商品暂时没有照片。",
+  "{count} sample photos couldn’t be saved, so those items have no photo yet.": "有 {count} 张示例照片无法保存，因此这些商品暂时没有照片。",
+  "Couldn’t save the sample photos. Please try again.": "无法保存示例照片，请重试。"
 };
 const All = "全部";
 const Goods = "商品";

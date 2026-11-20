@@ -6,9 +6,11 @@
 //   • tapping a photo opens the photo editor on the whole menu with that picture boxed: Cancel
 //     there changes nothing; the box moved onto another picture gives that picture, at the
 //     photo's own pixels, and opens there next time; a photo chosen instead opens on its own;
-//   • the items with no picture on the menu get a sample photo, hotlinked (as Unsplash requires)
-//     from another site: found one by one, shown marked Sample, and in an item's editor the photos
-//     found as square tiles, five a row, with the photographer's credit, all on the screen.
+//   • the items with no picture on the menu get a sample photo from Pixabay, shown from Pixabay's
+//     address while choosing (copied into the shop's photos only when saved; scan-review.dom.mjs
+//     checks that): found one by one, shown marked Sample with "Photos from Pixabay", and in an
+//     item's editor the photos found as square tiles, five a row, with the photographer's credit
+//     and "Photos from Pixabay", all on the screen.
 // The real ScanMenuDialog (src/pages/Products.jsx) and ImageEditModal, on a menu drawn in the
 // page, with a stand-in for scanMenu that answers with the pictures' real places.
 //
@@ -100,25 +102,24 @@ window.fetch = async (url, options) => {
   };
   return { ok: true, text: async () => '   ' + JSON.stringify(answer) };
 };
-// findProductImage: sample photos (Unsplash's are hotlinked from images.unsplash.com; here from
-// images.unsplash.test, which the test serves), each with its photographer's credit.
+// findProductImage v24: sample photos from Pixabay (shown from pixabay.com/get/… while choosing;
+// here from pixabay.test, which the test serves), each with its photographer's credit.
 window.__searched = [];
-window.__used = [];
+window.__kept = [];
 const sample = (query, n) => {
   const slug = query.toLowerCase().replace(/[^a-z]+/g, '-');
   return {
-    id: slug + '-' + n, alt: query,
-    url: 'https://images.unsplash.test/photo-' + slug + '-' + n + '?w=1080',
-    previewUrl: 'https://images.unsplash.test/photo-' + slug + '-' + n + '?w=400',
-    downloadLocation: 'https://api.unsplash.com/photos/' + slug + '-' + n + '/download',
-    credit: { source: 'unsplash', name: 'Photographer ' + n, profile: 'https://unsplash.com/@p' + n + '?utm_source=sellio&utm_medium=referral', photo: 'https://unsplash.com/photos/' + slug + '-' + n + '?utm_source=sellio&utm_medium=referral' },
+    id: 'pixabay-' + n, alt: query,
+    previewUrl: 'https://pixabay.test/get/' + slug + '-' + n + '_640.jpg',
+    keepUrl: 'https://pixabay.test/get/' + slug + '-' + n + '_1280.jpg',
+    credit: { source: 'pixabay', name: 'Photographer ' + n, profile: 'https://pixabay.com/users/p' + n + '-' + n + '/', photo: 'https://pixabay.com/photos/' + slug + '-' + n + '/' },
   };
 };
 window.__client = {
   functions: {
     invoke: async (name, { body }) => {
       if (name !== 'findProductImage') return { data: null, error: { context: { status: 404 } } };
-      if (body.action === 'use') { window.__used = window.__used.concat(body.downloadLocations); return { data: { used: body.downloadLocations.length }, error: null }; }
+      if (body.action === 'keep') { window.__kept = window.__kept.concat(body.photos); return { data: { kept: body.photos.map((p) => ({ from: p.url, url: 'https://files.invalid/shop/products/' + p.id + '.jpg' })) }, error: null }; }
       window.__searched.push(body.query);
       await new Promise((r) => setTimeout(r, 120));
       return { data: { photos: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => sample(body.query, n)) }, error: null };
@@ -187,16 +188,16 @@ try {
 <body><div id="root"></div><script>window.__realFetch = window.fetch.bind(window);</script><script type="module">${js}</script></body></html>`;
 
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'en-SG' });
-  // The sample photos: one colour each, at the size asked for (w=400 is Unsplash's small size).
+  // The sample photos: one colour each, at the size asked for (_640 is Pixabay's webformat size).
   const COLOURS = ['#c2410c', '#15803d', '#1d4ed8', '#a16207', '#7e22ce', '#be123c', '#0f766e', '#4d7c0f', '#9a3412', '#334155'];
   const samplesServed = [];
   await context.route('**/*', (route) => {
     const url = new URL(route.request().url());
     if (url.hostname === 'scan.test') return route.fulfill({ status: 200, contentType: 'text/html', body: html });
-    if (url.hostname === 'images.unsplash.test') {
-      samplesServed.push(url.pathname + url.search);
-      const n = Number(url.pathname.match(/-(\d+)$/)?.[1] || 1);
-      const [w, h] = url.searchParams.get('w') === '400' ? [400, 300] : [1080, 810];
+    if (url.hostname === 'pixabay.test') {
+      samplesServed.push(url.pathname);
+      const n = Number(url.pathname.match(/-(\d+)_\d+\.jpg$/)?.[1] || 1);
+      const [w, h] = url.pathname.endsWith('_640.jpg') ? [640, 480] : [1280, 960];
       return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="${COLOURS[(n - 1) % COLOURS.length]}"/></svg>` });
     }
     return route.abort();
@@ -223,7 +224,7 @@ try {
   // 2. The review: each dish's picture, cut from the full photo at its place.
   await page.tap('#open-scan');
   await page.waitForSelector('[data-testid="scan-item"]', { timeout: 20000 });
-  const SAMPLE_HOST = 'https://images.unsplash.test/';
+  const SAMPLE_HOST = 'https://pixabay.test/';
   await page.waitForFunction((host) => [...document.querySelectorAll('[data-testid="scan-item-photo"] img')].filter((i) => !i.src.startsWith(host) && i.complete && i.naturalWidth > 0).length === 3, SAMPLE_HOST, { timeout: 20000 });
   const sent = await page.evaluate(() => window.__sent);
   assert.equal(sent.version, 2);
@@ -253,7 +254,16 @@ try {
   // 2b. Sample photos for the items with no picture on the menu: one by one, in the menu's order.
   await page.waitForSelector('[data-testid="scan-photos-added"]', { timeout: 15000 });
   assert.deepEqual(await page.evaluate(() => window.__searched), ['Kopi', 'Teh Tarik', 'Iced Lemon Tea'], 'a search for each item without a picture, one by one, in the menu\'s order');
-  assert.equal(await page.textContent('[data-testid="scan-photos-added"]'), '3 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  const added = await page.evaluate(() => {
+    const strip = document.querySelector('[data-testid="scan-photos-added"]');
+    const from = strip.querySelector('[data-testid="photos-from"]');
+    const s = strip.getBoundingClientRect();
+    const f = from.getBoundingClientRect();
+    return { said: strip.firstChild.textContent, from: from.textContent, link: from.querySelector('a').getAttribute('href'), inside: f.left >= s.left && f.right <= s.right && f.bottom <= s.bottom && from.scrollWidth <= from.clientWidth };
+  });
+  assert.equal(added.said, '3 sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.');
+  assert.deepEqual([added.from, added.link, added.inside], ['Photos from Pixabay', 'https://pixabay.com/', true], 'the results say where they\'re from, inside the note');
+  assert.deepEqual(await page.evaluate(() => window.__kept), [], 'nothing is copied before saving');
   const DRINKS = ['Kopi', 'Teh Tarik', 'Iced Lemon Tea'];
   await page.waitForFunction((names) => names.every((name) => { const img = document.querySelector(`[aria-label="Photo for ${name}"] img`); return img && img.complete && img.naturalWidth > 0; }), DRINKS, { timeout: 15000 });
   const tiles = await page.evaluate((names) => names.map((name) => {
@@ -263,16 +273,16 @@ try {
     const b = badge.getBoundingClientRect();
     return { src: tile.querySelector('img').getAttribute('src'), loaded: tile.querySelector('img').naturalWidth, badge: badge.textContent, size: [t.width, t.height], badgeInside: b.left >= t.left && b.right <= t.right && b.top >= t.top && b.bottom <= t.bottom };
   }), DRINKS);
-  assert.deepEqual(tiles.map((t) => t.src), ['https://images.unsplash.test/photo-kopi-1?w=400', 'https://images.unsplash.test/photo-teh-tarik-1?w=400', 'https://images.unsplash.test/photo-iced-lemon-tea-1?w=400'], 'each item\'s first sample, hotlinked at the small size');
+  assert.deepEqual(tiles.map((t) => t.src), ['https://pixabay.test/get/kopi-1_640.jpg', 'https://pixabay.test/get/teh-tarik-1_640.jpg', 'https://pixabay.test/get/iced-lemon-tea-1_640.jpg'], 'each item\'s first sample, shown from Pixabay while choosing');
   tiles.forEach((t, i) => {
-    assert.equal(t.loaded, 400, `${DRINKS[i]}: the photo shows`);
+    assert.equal(t.loaded, 640, `${DRINKS[i]}: the photo shows`);
     assert.equal(t.badge, 'Sample', `${DRINKS[i]}: marked Sample`);
     assert.deepEqual(t.size, [64, 64], `${DRINKS[i]}: the tile keeps its size`);
     assert.ok(t.badgeInside, `${DRINKS[i]}: the mark is on the photo`);
   });
-  assert.deepEqual(samplesServed.filter((u) => u.includes('w=1080')), [], 'the full size isn\'t loaded in the review');
+  assert.deepEqual(samplesServed.filter((u) => u.includes('_1280')), [], 'the full size isn\'t loaded in the review');
   await shoot('1b-sample-photos.png');
-  passed('items with no picture on the menu get a sample photo, one by one in the menu\'s order, hotlinked and marked Sample');
+  passed('items with no picture on the menu get a sample photo, one by one in the menu\'s order, shown from Pixabay while choosing, marked Sample, with "Photos from Pixabay"');
 
   // 3. A price is needed before saving.
   await page.click('text=Add 6 Products');
@@ -300,13 +310,17 @@ try {
     const buttons = [...box.querySelectorAll('button[aria-label^="Use sample photo"]')];
     const credit = box.querySelector('[data-testid="photo-credit"]');
     const c = credit.getBoundingClientRect();
+    const from = box.querySelector('[data-testid="photos-from"]');
+    const f = from.getBoundingClientRect();
     return {
       count: buttons.length,
       pressed: buttons.map((b) => b.getAttribute('aria-pressed') === 'true'),
       rows: [...new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().top)))].length,
       square: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.width > 40 && Math.abs(r.width - r.height) <= 1; }),
       inside: buttons.every((b) => { const r = b.getBoundingClientRect(); return r.left >= sheet.left && r.right <= sheet.right; }),
-      loaded: buttons.every((b) => { const img = b.querySelector('img'); return img.complete && img.naturalWidth === 400; }),
+      loaded: buttons.every((b) => { const img = b.querySelector('img'); return img.complete && img.naturalWidth === 640; }),
+      from: from.textContent,
+      fromInside: f.left >= sheet.left && f.right <= sheet.right && from.scrollWidth <= from.clientWidth,
       credit: credit.textContent,
       creditInside: c.left >= sheet.left && c.right <= sheet.right && credit.scrollWidth <= credit.clientWidth,
       links: [...credit.querySelectorAll('a')].map((a) => [a.textContent, a.getAttribute('href'), a.getAttribute('target')]),
@@ -317,23 +331,25 @@ try {
   let found = await samples();
   assert.deepEqual([found.count, found.rows, found.square, found.inside, found.loaded], [10, 2, true, true, true], `ten samples, square, five a row, on the sheet: ${JSON.stringify(found)}`);
   assert.deepEqual(found.pressed, [true, false, false, false, false, false, false, false, false, false]);
-  assert.equal(found.credit, 'Sample photo · Photo by Photographer 1 on Unsplash');
+  assert.equal(found.credit, 'Sample photo · Photo by Photographer 1 on Pixabay');
   assert.ok(found.creditInside, 'the credit fits the sheet');
-  assert.deepEqual(found.links, [['Photographer 1', 'https://unsplash.com/@p1?utm_source=sellio&utm_medium=referral', '_blank'], ['Unsplash', 'https://unsplash.com/?utm_source=sellio&utm_medium=referral', '_blank']]);
+  assert.deepEqual(found.links, [['Photographer 1', 'https://pixabay.com/users/p1-1/', '_blank'], ['Pixabay', 'https://pixabay.com/', '_blank']]);
+  assert.deepEqual([found.from, found.fromInside], ['Photos from Pixabay', true], 'the samples say where they\'re from, on the sheet');
   const editorBox = await page.locator('[data-testid="scan-edit"]').boundingBox();
   assert.ok(editorBox.y >= 0 && editorBox.y + editorBox.height <= 844.5, `with its samples, the editor still fits the screen: ${JSON.stringify(editorBox)}`);
   await page.click('[aria-label="Use sample photo 3"]');
   found = await samples();
-  assert.equal(found.photo, 'https://images.unsplash.test/photo-teh-tarik-3?w=400', 'the sample tapped is the item\'s photo');
+  assert.equal(found.photo, 'https://pixabay.test/get/teh-tarik-3_640.jpg', 'the sample tapped is the item\'s photo');
   assert.deepEqual(found.pressed.map((p, i) => (p ? i + 1 : 0)).filter(Boolean), [3]);
-  assert.equal(found.credit, 'Sample photo · Photo by Photographer 3 on Unsplash', 'credited to its photographer');
+  assert.equal(found.credit, 'Sample photo · Photo by Photographer 3 on Pixabay', 'credited to its photographer');
   await page.evaluate(() => document.querySelector('[data-testid="scan-samples"]').scrollIntoView({ block: 'end' }));
   await shoot('2b-item-editor.png');
   await page.click('[data-testid="scan-edit"] button:has-text("Done")');
   assert.equal(await page.locator('[data-testid="scan-edit"]').count(), 0);
   assert.equal((await page.textContent('[aria-label^="Price of Teh Tarik"]')).trim(), 'S$2.20');
-  assert.equal(await page.getAttribute('[aria-label="Photo for Teh Tarik"] img', 'src'), 'https://images.unsplash.test/photo-teh-tarik-3?w=400', 'the list shows the sample chosen');
-  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price, shows its sample photos (square, five a row) with the photographer credited, and fits the screen');
+  assert.equal(await page.getAttribute('[aria-label="Photo for Teh Tarik"] img', 'src'), 'https://pixabay.test/get/teh-tarik-3_640.jpg', 'the list shows the sample chosen');
+  assert.deepEqual(await page.evaluate(() => window.__kept), [], 'still nothing copied: only saving copies');
+  passed('descriptions are written for the items the menu printed none for; an item\'s editor opens on its price, shows its sample photos (square, five a row) with the photographer credited and "Photos from Pixabay", and fits the screen');
 
   // 4. The photo editor, on the whole menu, with the picture boxed.
   const EDITOR = 'div.fixed.inset-0';

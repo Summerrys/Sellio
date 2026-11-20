@@ -233,7 +233,7 @@ function Gallery({ images, name, onOpen, credits }) {
           </div>
         </>
       )}
-      {/* A sample photo (Unsplash): marked, and its photographer credited, with links */}
+      {/* A sample photo (Pixabay, or Unsplash before 20 Nov 2026): marked, and its photographer credited, with links */}
       {creditFor(credits, images[index]) && <SampleTag style={{ left: 12, bottom: 34 }} />}
       {creditFor(credits, images[index]) && (
         <div className="bg-white px-4 pt-1.5"><PhotoCredit credit={creditFor(credits, images[index])} /></div>

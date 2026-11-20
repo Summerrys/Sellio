@@ -6,7 +6,7 @@ import { useBackToClose } from '@/lib/useBackToClose';
 import { formatMoney, currencyPrefix } from '@/lib/money';
 import { typedPrice } from '@/lib/menuScan';
 import NativeCameraScanControl from '@/components/ui-custom/NativeCameraScanControl';
-import { PhotoCredit } from '@/components/ui-custom/PhotoCredit';
+import { PhotoCredit, PhotosFrom } from '@/components/ui-custom/PhotoCredit';
 import PhotoPickerControl from '@/components/ui-custom/PhotoPickerControl';
 
 // Scan Menu's review, redesigned (Alvin, 20 Nov 2026: the category squeezed beside the price, the
@@ -109,7 +109,10 @@ export function PhotosStrip({ progress, samples, onStop }) {
     return (
       <div data-testid="scan-finding-photos" role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 8px 20px', background: '#eff6ff', borderBottom: '1px solid #dbeafe', flexShrink: 0 }}>
         <Camera size={15} color="#1d4ed8" aria-hidden="true" />
-        <p style={{ margin: 0, flex: 1, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#1e40af' }}>{t('Finding sample photos · {done} of {total}', { done: progress.done, total: progress.total })}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: '18px', fontWeight: 600, color: '#1e40af' }}>{t('Finding sample photos · {done} of {total}', { done: progress.done, total: progress.total })}</p>
+          <PhotosFrom style={{ color: '#1e40af' }} />
+        </div>
         <button type="button" onClick={onStop} style={{ border: 'none', background: 'none', padding: '6px 4px', fontSize: 13, fontWeight: 600, color: '#1e40af', cursor: 'pointer' }}>{t('Stop')}</button>
       </div>
     );
@@ -125,6 +128,7 @@ export function PhotosStrip({ progress, samples, onStop }) {
     return (
       <div data-testid="scan-photos-added" role="status" aria-live="polite" style={{ padding: '8px 16px 8px 20px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: 12.5, lineHeight: '17px', color: '#166534', flexShrink: 0 }}>
         {samples === 1 ? t('1 sample photo added. Customers see it marked “Sample photo”, with the photographer’s credit.') : t('{count} sample photos added. Customers see each marked “Sample photo”, with the photographer’s credit.', { count: samples })}
+        <PhotosFrom style={{ color: '#166534' }} />
       </div>
     );
   }
@@ -205,7 +209,7 @@ function PhotoTile({ item, size, canEdit, onClick, label, testId = 'scan-item-ph
     return (
       <button type="button" data-testid={testId} aria-label={label} disabled={!canEdit} onClick={onClick}
         style={{ position: 'relative', width: size, height: size, padding: 0, border: 'none', borderRadius: size > 80 ? 14 : 12, overflow: 'hidden', flexShrink: 0, cursor: canEdit ? 'pointer' : 'default', background: '#f1f5f9' }}>
-        {/* A sample shows Unsplash's small size here (the tile is at most 112 px); the product keeps the full one. */}
+        {/* A sample shows Pixabay's 640 px address here, while choosing; the product keeps the shop's own copy, made when it's saved. */}
         <img src={item.picture.sample?.thumb || item.picture.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         {badge && <span style={{ position: 'absolute', left: 4, bottom: 4, padding: '1px 5px', borderRadius: 6, background: 'rgba(15,23,42,.78)', color: '#ffffff', fontSize: 10, lineHeight: '14px', fontWeight: 600 }}>{badge}</span>}
       </button>
@@ -372,6 +376,7 @@ export function ScanItemSheet({ item, items, currency, pricesAsked, focus, hasMe
                     })}
                   </div>
                 )}
+                <PhotosFrom />
                 {item.picture?.sample && <PhotoCredit credit={item.picture.sample.credit} />}
                 <p style={{ margin: 0, fontSize: 12, lineHeight: '17px', color: '#475569' }}>{t('A sample shows a similar dish, not yours. Customers see it marked “Sample photo”, with the photographer’s credit.')}</p>
               </div>

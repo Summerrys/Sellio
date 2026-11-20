@@ -2676,7 +2676,11 @@ const shop = {
   "Sample photo": "Foto contoh",
   "Photo by {name} on {site}": "Foto oleh {name} di {site}",
   "No sample photos found for this name.": "Tiada foto contoh ditemui untuk nama ini.",
-  "Couldn’t find sample photos": "Tidak dapat mencari foto contoh"
+  "Couldn’t find sample photos": "Tidak dapat mencari foto contoh",
+  "Photos from {site}": "Foto daripada {site}",
+  "A sample photo couldn’t be saved, so its item has no photo yet.": "Satu foto contoh tidak dapat disimpan, jadi itemnya belum ada foto.",
+  "{count} sample photos couldn’t be saved, so those items have no photo yet.": "{count} foto contoh tidak dapat disimpan, jadi item-item itu belum ada foto.",
+  "Couldn’t save the sample photos. Please try again.": "Tidak dapat menyimpan foto contoh. Sila cuba lagi."
 };
 const All = "Semua";
 const Goods = "Barangan";

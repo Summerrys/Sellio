@@ -40,7 +40,7 @@ import DeleteProductsSheet from '../components/products/DeleteProductsSheet';
 import { planMove, withSortOrders } from '@/lib/productOrder';
 import Celebrate from '@/components/ui-custom/Celebrate';
 import { ScanReviewList, ScanItemSheet, DescriptionsStrip, PhotosStrip, groupScanItems, SCAN_REVIEW_CSS } from '@/components/products/ScanReview';
-import { useSamplePhotoFinder, samplePicture, findSamplePhotos, reportUsedPhotos, SEARCH_FAILED } from '@/lib/samplePhotos';
+import { useSamplePhotoFinder, samplePicture, findSamplePhotos, keepSamplePhotos, SEARCH_FAILED } from '@/lib/samplePhotos';
 import useDescriptionWriter from '@/lib/useDescriptionWriter';
 import { describeItems, CANT_WRITE } from '@/lib/menuDescriptions';
 
@@ -98,7 +98,7 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
   // What the last save added: how many, and each section with its count, in the menu's order.
   const [saved, setSaved] = useState({ count: 0, sections: [] });
   const writer = useDescriptionWriter({ tenantId, setItems: setScannedItems });
-  // A sample photo (Unsplash, credited) for each item without a picture, found one by one.
+  // A sample photo (Pixabay, credited) for each item without a picture, found one by one.
   const photoFinder = useSamplePhotoFinder({ tenantId, setItems: setScannedItems });
   const activeScan = useRef({ id: 0, controller: null });
   // The photo as sent and the full photo (for cutting pictures and the editor).
@@ -351,6 +351,17 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         uploaded.push(path);
         photoUrls[item._id] = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl;
       }
+      // Sample photos are copied into the shop's product photos next (Pixabay's addresses only
+      // show search results, for a day): a product is saved with its copy, credited. One that
+      // couldn't be copied (its address had expired, say) leaves its item without a photo.
+      const sampleOf = (item) => (!photoUrls[item._id] && item.picture?.sample ? item.picture.sample : null);
+      const kept = await keepSamplePhotos({ tenantId, photos: selected.map(sampleOf).filter(Boolean) });
+      for (const url of kept.values()) {
+        const path = String(url).match(/\/product-images\/(.+)$/)?.[1];
+        if (path) uploaded.push(decodeURIComponent(path));
+      }
+      const sampleCopy = (item) => (sampleOf(item) ? kept.get(sampleOf(item).keepUrl) || null : null);
+      const samplesLost = selected.filter(item => sampleOf(item) && !sampleCopy(item)).length;
       const uniqueCats = [...new Set(selected.map(i => String(i.category || '').trim()).filter(Boolean))];
       const catMap = {};
       categories.forEach(c => { catMap[c.name.toLowerCase()] = c.id; });
@@ -371,9 +382,9 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
         price: typedPrice(item.price),
         description: String(item.description || '').trim() || null,
         category_id: catMap[String(item.category || '').trim().toLowerCase()] || null,
-        // A sample photo is shown from Unsplash, with its photographer's credit (never copied).
-        image_url: photoUrls[item._id] || item.picture?.sample?.url || item.image_url || null,
-        image_credits: !photoUrls[item._id] && item.picture?.sample ? { [item.picture.sample.url]: item.picture.sample.credit } : null,
+        // A sample photo: the shop's copy, with its photographer's credit.
+        image_url: photoUrls[item._id] || sampleCopy(item) || item.image_url || null,
+        image_credits: sampleCopy(item) ? { [sampleCopy(item)]: item.picture.sample.credit } : null,
         slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now() + Math.random().toString(36).slice(2, 5),
         is_active: true,
         variants: cleanScannedOptions(item.variants),
@@ -384,7 +395,11 @@ export function ScanMenuDialog({ open, photo, onPhoto, onOpenChange, tenantId, c
       if (insertedProducts?.length) {
         await supabase.from('inventory_items').insert(insertedProducts.map(p => ({ tenant_id: tenantId, product_id: p.id, current_stock: 0, low_stock_threshold: 5, par_level: 0, unit: 'pcs' })));
       }
-      reportUsedPhotos({ tenantId, photos: selected.map(i => i.picture?.sample).filter(Boolean) });
+      if (samplesLost) {
+        toast.warning(samplesLost === 1
+          ? t('A sample photo couldn’t be saved, so its item has no photo yet.')
+          : t('{count} sample photos couldn’t be saved, so those items have no photo yet.', { count: samplesLost }));
+      }
       const sections = groupScanItems(selected).filter(section => section.name).map(section => ({ name: section.name, count: section.items.length }));
       setSaved({ count: selected.length, sections });
       setSheet(null);

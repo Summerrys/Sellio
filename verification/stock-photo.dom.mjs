@@ -1,10 +1,12 @@
-// The product form's stock photo search (StockImageSearch in AIProductAssistant.jsx). Alvin,
-// 20 Nov 2026: credit Unsplash photographers, as Unsplash's API guidelines ask:
-//   • the photo chosen is used from Unsplash's own address with its photographer's credit
-//     (onImageCredit; the form saves it in products.image_credits): never downloaded or uploaded;
-//   • Unsplash is told it was used (findProductImage { action: 'use' }, which has the key);
+// The product form's stock photo search (StockImageSearch in AIProductAssistant.jsx), from
+// Pixabay (Alvin, 20 Nov 2026: "Let's go with using the pixabay"), as Pixabay's API rules ask:
+//   • results are shown from Pixabay's address while choosing, saying "Photos from Pixabay";
+//   • the photo chosen is copied into the shop's product photos first (findProductImage
+//     { action: 'keep' }: the app itself downloads and uploads nothing), and the form gets the
+//     copy with its photographer's credit (onImageCredit; saved in products.image_credits);
+//   • a copy that couldn't be made, or was refused, says so and sets no photo;
 //   • a search refused says so in the function's words; one that broke says so in plain words,
-//     never its technical reason (on 20 Nov 2026 "Unsplash API error: 401": the key was refused).
+//     never its technical reason ("Pixabay API error: …"; on 20 Nov 2026 Unsplash's "401").
 // Run from the app root: node verification/stock-photo.dom.mjs /tmp/sellio-verification
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -47,24 +49,24 @@ try {
   });
   const { default: AIProductAssistant } = await import(pathToFileURL(outfile).href);
 
-  // Unsplash's photos, as findProductImage v23 sends them.
-  const UTM = 'utm_source=sellio&utm_medium=referral';
+  // Pixabay's photos, as findProductImage v24 sends them.
   const photo = (n) => ({
-    id: `laksa-${n}`, url: `https://images.unsplash.com/laksa-${n}?w=1080`, previewUrl: `https://images.unsplash.com/laksa-${n}?w=400`, downloadUrl: `https://images.unsplash.com/laksa-${n}?w=1080`,
-    downloadLocation: `https://api.unsplash.com/photos/laksa-${n}/download?ixid=x`, alt: 'laksa',
-    credit: { source: 'unsplash', name: `Photographer ${n}`, profile: `https://unsplash.com/@p${n}?${UTM}`, photo: `https://unsplash.com/photos/laksa-${n}?${UTM}` },
+    id: `pixabay-${100 + n}`, previewUrl: `https://pixabay.com/get/laksa${n}_640.jpg`, keepUrl: `https://pixabay.com/get/laksa${n}_1280.jpg`, alt: 'laksa',
+    credit: { source: 'pixabay', name: `Photographer ${n}`, profile: `https://pixabay.com/users/p${n}-${n}/`, photo: `https://pixabay.com/photos/laksa-${100 + n}/` },
   });
+  const copyOf = (p) => `https://files.invalid/shop-1/products/${p.id}-1.jpg`;
   let searchAnswer = () => ({ data: { photos: [1, 2, 3, 4, 5].map(photo), keyword: 'laksa', page: 1 }, error: null });
+  let keepAnswer = (body) => ({ data: { kept: body.photos.map((p) => ({ from: p.url, url: copyOf(p) })) }, error: null });
   const invoked = [];
   const uploads = [];
   const fetched = [];
   globalThis.__toasts = [];
   globalThis.__client = {
     rpc: async () => ({ data: { photo_search: { limit: null, used: 0 }, ai_analysis: { limit: null, used: 0 } }, error: null }),
-    functions: { invoke: async (name, { body }) => { invoked.push({ name, body }); return body.action === 'use' ? { data: { used: body.downloadLocations.length }, error: null } : searchAnswer(body); } },
+    functions: { invoke: async (name, { body }) => { invoked.push({ name, body }); return body.action === 'keep' ? keepAnswer(body) : searchAnswer(body); } },
     storage: { from: () => ({ upload: async (...args) => { uploads.push(args); return { error: null }; }, getPublicUrl: (p) => ({ data: { publicUrl: 'https://files.invalid/' + p } }) }) },
   };
-  // Nothing here may reach the network (the old way downloaded the photo to upload it again).
+  // Nothing here may reach the network: the function copies the photo, not the app.
   globalThis.fetch = async (url) => { fetched.push(String(url)); throw new Error('Unexpected network request: ' + url); };
 
   const covers = [];
@@ -96,22 +98,43 @@ try {
     for (let i = 0; i < 20; i++) await act(async () => { await next(); });
   };
 
-  // ── 1. A photo chosen: Unsplash's address and its credit, nothing copied ─────────────────
+  // ── 1. A photo chosen: copied into the shop's photos, the copy and its credit to the form ──
   let view = await mount();
   await search(view, 'Laksa');
   assert.deepEqual(invoked.map((c) => [c.name, c.body]), [['findProductImage', { query: 'Laksa', page: 1, tenantId: 'shop-1' }]], 'searched for this shop');
   const shown = () => view.querySelector('img[alt="laksa"]')?.getAttribute('src');
-  assert.equal(shown(), 'https://images.unsplash.com/laksa-1?w=400', 'shown from Unsplash, at its small size');
+  assert.equal(shown(), 'https://pixabay.com/get/laksa1_640.jpg', 'shown from Pixabay while choosing');
+  const from = view.querySelector('[data-testid="photos-from"]');
+  assert.equal(from?.textContent, 'Photos from Pixabay', 'the results say where they\'re from');
+  assert.equal(from.querySelector('a')?.getAttribute('href'), 'https://pixabay.com/');
   await click(view.querySelector('button[aria-label="Next image"]'));
-  assert.equal(shown(), 'https://images.unsplash.com/laksa-2?w=400');
+  assert.equal(shown(), 'https://pixabay.com/get/laksa2_640.jpg');
   await click(view.querySelector('button[aria-label="Use this image"]'));
   for (let i = 0; i < 5; i++) await act(async () => { await next(); });
-  assert.deepEqual(credits, [['https://images.unsplash.com/laksa-2?w=1080', photo(2).credit]], 'the photo and its photographer\'s credit go to the form');
-  assert.deepEqual(covers, ['https://images.unsplash.com/laksa-2?w=1080'], 'the cover is Unsplash\'s own address (hotlinked)');
-  assert.deepEqual(uploads, [], 'never uploaded (copied)');
-  assert.deepEqual(fetched, [], 'never downloaded');
-  assert.deepEqual(invoked.slice(1).map((c) => [c.name, c.body]), [['findProductImage', { action: 'use', tenantId: 'shop-1', downloadLocations: ['https://api.unsplash.com/photos/laksa-2/download?ixid=x'] }]], 'Unsplash is told it was used (by the function, which has the key)');
-  passed('a stock photo chosen is used from Unsplash\'s address with its photographer\'s credit, never downloaded or uploaded; Unsplash is told it was used');
+  assert.deepEqual(invoked.slice(1).map((c) => [c.name, c.body]), [['findProductImage', { action: 'keep', tenantId: 'shop-1', photos: [{ id: 'pixabay-102', url: 'https://pixabay.com/get/laksa2_1280.jpg' }] }]], 'the function copies the full-size photo for this shop');
+  assert.deepEqual(credits, [[copyOf(photo(2)), photo(2).credit]], 'the copy and its photographer\'s credit go to the form');
+  assert.deepEqual(covers, [copyOf(photo(2))], 'the cover is the shop\'s own copy, never Pixabay\'s address');
+  assert.deepEqual(uploads, [], 'the app uploads nothing itself');
+  assert.deepEqual(fetched, [], 'nor downloads');
+  passed('a stock photo chosen is copied into the shop\'s photos by the function; the copy and its credit go to the form; the results say "Photos from Pixabay"');
+
+  // ── 1b. A copy that couldn't be made, or was refused: said so, no photo set ──────────────
+  for (const [answer, says] of [
+    [() => ({ data: { kept: [] }, error: null }), 'Couldn’t get that image. Try another one.'],
+    [() => ({ data: null, error: { context: { status: 429, clone() { return this; }, json: async () => ({ error: 'Too many photos this hour. Please try again later.' }) } } }), 'Too many photos this hour. Please try again later.'],
+    [() => ({ data: null, error: { context: { status: 500, clone() { return this; }, json: async () => ({ error: 'Pixabay API error: 503' }) } } }), 'Couldn’t get that image. Try another one.'],
+  ]) {
+    keepAnswer = answer;
+    const before = [covers.length, credits.length];
+    view = await mount();
+    await search(view, 'Laksa');
+    await click(view.querySelector('button[aria-label="Use this image"]'));
+    for (let i = 0; i < 5; i++) await act(async () => { await next(); });
+    assert.deepEqual(globalThis.__toasts.at(-1), ['error', says]);
+    assert.deepEqual([covers.length, credits.length], before, 'no photo set');
+    assert.ok(view.querySelector('button[aria-label="Use this image"]'), 'still choosing, to try again');
+  }
+  passed('a photo that couldn\'t be copied, or a copy refused, says so (in plain words when something broke) and sets no photo');
 
   // ── 2. A search that fails: refused in the function's words, broken in plain words ────────
   const failing = (status, error) => () => ({ data: null, error: { context: { status, clone() { return this; }, json: async () => ({ error }) } } });
@@ -119,13 +142,13 @@ try {
   view = await mount();
   await search(view, 'Laksa');
   assert.deepEqual(globalThis.__toasts.at(-1), ['error', 'Too many image searches this hour. Please try again later.'], 'a refusal, in the function\'s words');
-  searchAnswer = failing(500, 'Unsplash API error: 401');
+  searchAnswer = failing(500, 'Pixabay API error: 429');
   view = await mount();
   await search(view, 'Laksa');
-  assert.deepEqual(globalThis.__toasts.at(-1), ['error', 'Search failed. Please try again.'], 'something broke: plain words, not "Unsplash API error: 401"');
-  assert.ok(!globalThis.__toasts.some((t) => /Unsplash API error/.test(String(t[1]))), 'the technical reason is never shown');
+  assert.deepEqual(globalThis.__toasts.at(-1), ['error', 'Search failed. Please try again.'], 'something broke: plain words, not "Pixabay API error: 429"');
+  assert.ok(!globalThis.__toasts.some((t) => /API error/.test(String(t[1]))), 'the technical reason is never shown');
   assert.deepEqual([uploads.length, fetched.length], [0, 0]);
-  passed('a search refused says so in the function\'s words; one that broke (Unsplash refusing the key) in plain words');
+  passed('a search refused says so in the function\'s words; one that broke (Pixabay refusing) in plain words');
 } finally {
   for (const { root, client } of roots) {
     try { await act(async () => root.unmount()); } catch { /* already gone */ }

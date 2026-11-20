@@ -4,13 +4,23 @@ import { appT, N_ } from '@/lib/appText';
 import { explainError } from '@/lib/plainError';
 import { functionErrorMessage } from '@/lib/aiAllowance';
 
-// Sample photos from Unsplash (findProductImage v23; Alvin, 20 Nov 2026: credit the
-// photographers). Unsplash's API guidelines: a photo is shown from Unsplash's own address (never
-// copied), Unsplash is told when one is used (reportUsedPhotos), and the photographer is credited
-// wherever it's shown: products.image_credits keeps the credit by image URL, and the storefront and
-// Explore show "Sample photo" and "Photo by … on Unsplash" with it.
+// Sample photos from Pixabay (findProductImage v24; Alvin, 20 Nov 2026: "Let's go with using the
+// pixabay", after Unsplash disabled Sellio's account). Pixabay's API rules: its addresses only show
+// search results for a while (the 640 px one lasts 24 hours), so a photo the shop uses is copied
+// into its own product photos first (keepSamplePhotos) and the product saves the copy; wherever
+// results show, they say "Photos from Pixabay" (PhotosFrom). The photographer is still credited
+// with the photo: products.image_credits keeps the credit by image URL, and the storefront and
+// Explore show "Sample photo" and "Photo by … on Pixabay" with it. Products saved before this
+// keep their Unsplash photos (shown from Unsplash, credited "on Unsplash").
 export const UNSPLASH_HOME = 'https://unsplash.com/?utm_source=sellio&utm_medium=referral';
+export const PIXABAY_HOME = 'https://pixabay.com/';
+// The site a credit names, and its home page.
+export const creditSite = (credit) => (credit?.source === 'unsplash'
+  ? { name: 'Unsplash', href: UNSPLASH_HOME }
+  : { name: 'Pixabay', href: PIXABAY_HOME });
 export const SEARCH_FAILED = N_('Search failed. Please try again.');
+const KEEP_AT_ONCE = 8;
+const KEEP_FAILED = N_('Couldn’t save the sample photos. Please try again.');
 
 // The credit for the photo at `url`, or null.
 export const creditFor = (credits, url) => (url && credits && typeof credits === 'object' && !Array.isArray(credits) ? credits[url] || null : null);
@@ -27,15 +37,16 @@ export function keepCredits(credits, urls) {
 
 // What to say when a photo search fails: the function's own words for a refusal (too many this
 // hour, the month's searches used, no access), plain words when something broke. A 5xx carries
-// the technical reason (on 20 Nov 2026, "Unsplash API error: 401": Unsplash refused the key),
-// which is for the logs, not the merchant.
-export async function photoSearchError(error) {
-  const fallback = appT(SEARCH_FAILED);
+// the technical reason (on 20 Nov 2026, "Unsplash API error: 401": Unsplash refused the key; now
+// "Pixabay API error: …"), which is for the logs, not the merchant.
+export async function photoSearchError(error, fallback = appT(SEARCH_FAILED)) {
   return Number(error?.context?.status) >= 500 ? fallback : functionErrorMessage(error, fallback);
 }
 
-// Up to 5 photos for `query`: { id, url, thumb, alt, credit, downloadLocation }. None found: [].
-// Throws an Error to show (a friendly one from the function, or plain words).
+// Up to 5 photos for `query`: { id, url, thumb, keepUrl, alt, credit }. `url` and `thumb` are
+// Pixabay's 640 px address (to show it while choosing, for up to a day); `keepUrl` its 1280 px one,
+// for keepSamplePhotos. None found: []. Throws an Error to show (a friendly one from the function,
+// or plain words).
 export async function findSamplePhotos({ tenantId, query, page = 1 }) {
   const supabase = await getSupabase();
   const { data, error } = await supabase.functions.invoke('findProductImage', { body: { query: String(query || '').slice(0, 100), page, tenantId } });
@@ -44,21 +55,28 @@ export async function findSamplePhotos({ tenantId, query, page = 1 }) {
     throw Object.assign(new Error(await photoSearchError(error)), { friendly: true });
   }
   return (Array.isArray(data?.photos) ? data.photos : [])
-    .filter((photo) => photo?.url && photo?.credit?.name)
-    .map((photo) => ({ id: photo.id, url: photo.url, thumb: photo.previewUrl || photo.url, alt: photo.alt || '', credit: photo.credit, downloadLocation: photo.downloadLocation }));
+    .filter((photo) => photo?.previewUrl && photo?.keepUrl && photo?.credit?.name)
+    .map((photo) => ({ id: photo.id, url: photo.previewUrl, thumb: photo.previewUrl, keepUrl: photo.keepUrl, alt: photo.alt || '', credit: photo.credit }));
 }
 
-// Tells Unsplash these photos were used (when they're saved with a product). Never fails the save.
-export async function reportUsedPhotos({ tenantId, photos }) {
-  const locations = [...new Set((photos || []).map((photo) => photo?.downloadLocation).filter(Boolean))];
-  for (let i = 0; i < locations.length; i += 30) {
-    try {
-      const supabase = await getSupabase();
-      await supabase.functions.invoke('findProductImage', { body: { action: 'use', tenantId, downloadLocations: locations.slice(i, i + 30) } });
-    } catch (error) {
-      console.warn('Sample photos: Unsplash wasn’t told of their use:', error);
+// Copies the sample photos the shop uses into its own product photos (findProductImage 'keep', 8
+// at a time), before the products are saved: Pixabay's addresses aren't for keeping. Resolves a
+// Map from each photo's keepUrl to the shop's copy; a photo that couldn't be copied (its address
+// had expired, say) isn't in it. Throws an Error to show when the copying couldn't be asked for:
+// the function's words for a refusal, else `fallback`.
+export async function keepSamplePhotos({ tenantId, photos, fallback = appT(KEEP_FAILED) }) {
+  const wanted = [...new Map((photos || []).filter((photo) => photo?.keepUrl && photo?.id).map((photo) => [photo.keepUrl, photo])).values()];
+  const kept = new Map();
+  for (let i = 0; i < wanted.length; i += KEEP_AT_ONCE) {
+    const batch = wanted.slice(i, i + KEEP_AT_ONCE).map((photo) => ({ id: photo.id, url: photo.keepUrl }));
+    const supabase = await getSupabase();
+    const { data, error } = await supabase.functions.invoke('findProductImage', { body: { action: 'keep', tenantId, photos: batch } });
+    if (error) throw Object.assign(new Error(await photoSearchError(error, fallback)), { friendly: true });
+    for (const copy of Array.isArray(data?.kept) ? data.kept : []) {
+      if (copy?.from && copy?.url) kept.set(copy.from, copy.url);
     }
   }
+  return kept;
 }
 
 // A sample photo as a scanned item's picture.
