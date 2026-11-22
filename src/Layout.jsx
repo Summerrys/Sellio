@@ -53,6 +53,7 @@ import BillingStatusBanner from './components/subscription/BillingStatusBanner';
 import { reconcileBilling } from '@/lib/billing';
 import AppLoader from '@/components/ui-custom/AppLoader';
 import TrialReminderModal from './components/subscription/TrialReminderModal';
+import { useTrialReminder } from '@/lib/trialReminder';
 import AccountProfileModal from './components/profile/AccountProfileModal';
 import { ShopMenuContext } from './components/navigation/ShopMenu';
 import { ProfileAvatar } from './components/profile/ProfilePhoto';
@@ -523,38 +524,16 @@ function AppLayout({ children, currentPageName }) {
       });
   }, [tenantId, isOwner]);
 
-  useEffect(() => {
-    if (!isOwner || !subscription || subscription.status !== 'trial') return;
-    if (sessionStorage.getItem('trial_modal_dismissed')) return;
-    const trialEnd = subscription.current_period_end;
-    if (!trialEnd) return;
-    const hoursLeft = Math.max(0, Math.floor((new Date(trialEnd) - new Date()) / (1000 * 60 * 60)));
-    if (hoursLeft > 24) return;
-    if (!tenantId) return;
-
-    // Always check Stripe when under 24hrs to see if subscription will auto-renew
-    getSupabase().then(async supabase => {
-      try {
-        const { data, error } = await supabase.functions.invoke('reconcile-billing', {
-          body: { tenantId },
-        });
-        if (error) throw error;
-        if (data?.willAutoRenew) {
-          // Subscription is active and will auto-renew — suppress modal entirely
-          console.log('Trial will auto-renew, suppressing modal');
-          return;
-        }
-        // Not auto-renewing — show modal
-        // Disable dismiss if <=12hrs left
-        setCanDismissTrialModal(hoursLeft > 12);
-        setShowTrialModal(true);
-      } catch (e) {
-        console.warn('checkSubscriptionStatus failed, showing modal anyway:', e.message);
-        setCanDismissTrialModal(true);
-        setShowTrialModal(true);
-      }
-    });
-  }, [subscription, user, tenantId, isOwner]);
+  // "Your trial ends soon": only when no plan starts as the trial ends, as its plan was cancelled
+  // (lib/trialReminder). Never for a plan that starts by itself, and never because Stripe
+  // couldn't be asked.
+  useTrialReminder({
+    tenantId,
+    isOwner,
+    subscription,
+    show: (closable) => { setCanDismissTrialModal(closable); setShowTrialModal(true); },
+    hide: () => setShowTrialModal(false),
+  });
 
   const gracePeriodEndsAt = subscription?.grace_period_ends_at
     ? new Date(subscription.grace_period_ends_at)
@@ -836,7 +815,7 @@ function AppLayout({ children, currentPageName }) {
       <InstallBanner open={showInstallPrompt} kind={installKind} onClose={() => setShowInstallPrompt(false)} />
       <RoleSwitcher />
       <PricingModal open={showPricingModal} onOpenChange={setShowPricingModal} tenantId={tenantId} currentTier={subscription?.tier ?? null} />
-      {showTrialModal && (
+      {showTrialModal && subscription?.status === 'trial' && (
         <TrialReminderModal
           hoursLeft={Math.max(0, Math.floor((new Date(subscription.current_period_end) - new Date()) / (1000 * 60 * 60)))}
           onUpgrade={() => { setShowTrialModal(false); setShowPricingModal(true); }}

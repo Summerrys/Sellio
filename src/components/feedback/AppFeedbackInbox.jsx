@@ -261,10 +261,11 @@ export default function AppFeedbackInbox() {
     five: Number(byStars[5]) || 0,
     open: Number(summary?.low_open) || 0,
   };
+  const testsLeftOut = !includeTest && Number(summary?.tests) > 0;
   const extras = [
     summary?.dismissed ? `Maybe later: ${summary.dismissed}` : null,
     summary?.opened_play ? `Opened Google Play: ${summary.opened_play}` : null,
-    !includeTest && summary?.tests ? `${summary.tests} test ${summary.tests === 1 ? 'answer' : 'answers'} left out` : null,
+    testsLeftOut ? `${summary.tests} test ${summary.tests === 1 ? 'answer' : 'answers'} left out` : null,
   ].filter(Boolean);
 
   return (
@@ -332,7 +333,23 @@ export default function AppFeedbackInbox() {
             {items.length === 0 ? (
               <section className="bg-white rounded-2xl border border-slate-200 p-8 text-center" data-testid="feedback-empty">
                 <p className="m-0 text-sm font-semibold text-slate-900">{filter === 'open' ? 'Nothing to do' : 'No ratings here yet'}</p>
-                <p className="mt-1 mb-0 text-xs text-slate-500">People are asked on the third day they open the Android app.</p>
+                {testsLeftOut ? (
+                  // Admins' own answers are tests (22 Nov 2026: Alvin's 5★ from Cafelicious was
+                  // saved, but this said "No ratings here yet" and looked lost).
+                  <>
+                    <p className="mt-1 mb-0 text-xs text-slate-500">Answers from admin accounts, or from a phone that opened this page, are left out as tests.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIncludeTest(true)}
+                      className="mt-3 h-9 px-4 rounded-full border bg-white text-sm font-semibold"
+                      style={{ borderColor: THEME, color: THEME }}
+                    >
+                      Show tests
+                    </button>
+                  </>
+                ) : (
+                  <p className="mt-1 mb-0 text-xs text-slate-500">People are asked on the third day they open the Android app.</p>
+                )}
               </section>
             ) : (
               <div className="flex flex-col gap-2.5">

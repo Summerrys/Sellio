@@ -508,6 +508,46 @@ try {
   await close();
   passed('everyone else sees that Admin → Feedback is for Sellio’s admins');
 
+  // Only test answers so far (22 Nov 2026: Alvin's own 5★ from Cafelicious, an admin account, was
+  // saved as a test, and the list said "No ratings here yet"): the empty list says tests are left
+  // out, and Show tests shows them.
+  function useTestsOnlyServer(tests) {
+    calls = [];
+    globalThis.rpcHandler = async (name, args) => {
+      calls.push({ name, args });
+      if (name === 'am_i_sellio_admin') return { data: true, error: null };
+      if (name === 'app_feedback_admin_summary') {
+        const shown = args.p_include_test && tests;
+        return { data: { ratings: shown ? 1 : 0, average: shown ? 5 : null, by_stars: { 5: shown ? 1 : 0, 4: 0, 3: 0, 2: 0, 1: 0 }, low_open: 0, dismissed: 0, opened_play: shown ? 1 : 0, tests }, error: null };
+      }
+      if (name === 'app_feedback_admin_list') {
+        return { data: args.p_include_test && tests ? [item({ id: 't1', stars: 5, topics: [], comment: null, contact_ok: false, opened_play: true, shop_name: 'Cafelicious', is_test: true, contact_email: null, contact_phone: null })] : [], error: null };
+      }
+      if (name === 'app_feedback_admin_note_device') return { data: { status: 'noted' }, error: null };
+      return { data: null, error: null };
+    };
+  }
+  useTestsOnlyServer(1);
+  globalThis.appUserState = { appUser: { email: 'admin@example.com' } };
+  close = await show(React.createElement(AppFeedbackInbox));
+  await settle(20);
+  let empty = document.querySelector('[data-testid="feedback-empty"]');
+  assert.deepEqual([...empty.children].map(text), ['No ratings here yet', 'Answers from admin accounts, or from a phone that opened this page, are left out as tests.', 'Show tests']);
+  await click([...empty.querySelectorAll('button')].find((b) => text(b) === 'Show tests'));
+  await settle(10);
+  assert.equal(calls.filter((c) => c.name === 'app_feedback_admin_list').at(-1).args.p_include_test, true);
+  assert.equal(document.querySelector('[data-testid="feedback-empty"]'), null);
+  assert.match(text(document.querySelector('[data-testid="feedback-item"]')), /No comment\s*Opened Google Play\s*Test\s*Business · Cafelicious/);
+  assert.equal(document.querySelector('input[type="checkbox"]').checked, true, 'the Show tests box follows');
+  await close();
+  useTestsOnlyServer(0);
+  close = await show(React.createElement(AppFeedbackInbox));
+  await settle(20);
+  empty = document.querySelector('[data-testid="feedback-empty"]');
+  assert.deepEqual([...empty.children].map(text), ['No ratings here yet', 'People are asked on the third day they open the Android app.'], 'no tests: as before');
+  await close();
+  passed('only test answers so far: the empty list says tests are left out, and Show tests shows them');
+
   // Only in the Android app; the admin page is a route of its own.
   const appCode = await readFile(path.join(process.cwd(), 'src/App.jsx'), 'utf8');
   assert.match(appCode, /\{appPlatform\(\) === 'android' && <Suspense fallback=\{null\}><AppRatingPrompt \/><\/Suspense>\}/);
