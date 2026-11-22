@@ -1,6 +1,7 @@
 // Reads the shop's subscription from Stripe and saves it (the app calls this when an owner
 // comes back from Stripe's billing page, and in a trial's last day). Owner or Sellio admin only.
-// The same code is also deployed as checkSubscriptionStatus (an older name).
+// An older copy is still deployed as checkSubscriptionStatus (the old name). Nothing calls it
+// (22 Nov 2026), so it was left as it was.
 // Deploy with the paths from supabase/functions/: reconcile-billing/index.ts,
 // reconcile-billing/_shared/auth.ts and stripe-webhook/_shared/billing.ts (the webhook's billing
 // code, so both follow one grace rule), entrypoint reconcile-billing/index.ts, verify_jwt on.
@@ -16,6 +17,7 @@ import {
   retrieveInvoice,
   retrieveSubscription,
   syncBillingState,
+  toIso,
 } from "../stripe-webhook/_shared/billing.ts";
 
 const corsHeaders = {
@@ -109,16 +111,28 @@ Deno.serve(async (req: Request) => {
         !customer?.deleted &&
         Boolean(customer?.invoice_settings?.default_payment_method);
     }
-    const willAutoRenew =
-      isActive &&
-      !subscription.cancel_at_period_end &&
-      customerHasPayment;
+    // Whether the plan was cancelled (it ends instead of carrying on). Stripe records that two
+    // ways: an older ("classic") subscription sets cancel_at_period_end; a newer ("flexible") one,
+    // which Sellio's checkouts make now, sets cancel_at to the date it ends and leaves
+    // cancel_at_period_end false.
+    const cancelAt = typeof subscription.cancel_at === "number" ? subscription.cancel_at : null;
+    const cancelled = subscription.cancel_at_period_end === true || cancelAt !== null;
+    // In a free trial: whether the plan ends with it, so it never starts. The app's "Your trial
+    // ends soon" is only for that (Alvin, 22 Nov 2026; src/lib/trialReminder.js).
+    const trialEnd = typeof subscription.trial_end === "number" ? subscription.trial_end : null;
+    const endsWithTrial = subscription.status === "trialing" && (
+      subscription.cancel_at_period_end === true ||
+      (cancelAt !== null && trialEnd !== null && cancelAt <= trialEnd)
+    );
+    const willAutoRenew = isActive && !cancelled && customerHasPayment;
 
     return json({
       status: subscription.status,
       isActive,
       willAutoRenew,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      cancelAt: toIso(cancelAt),
+      endsWithTrial,
       customerHasPayment,
       subscription: synced,
     });

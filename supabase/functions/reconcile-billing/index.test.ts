@@ -80,3 +80,57 @@ Deno.test("reconcile: someone who isn't the owner → 403, nothing saved", async
   assertEquals(result.status, 403);
   assertEquals(w.rpcs.length, 0);
 });
+
+// The trial reminder (src/lib/trialReminder.js) shows only when no plan starts as the trial ends.
+// Newer ("flexible") subscriptions record a cancellation as cancel_at, not cancel_at_period_end.
+const TRIAL_END = NOW + DAY / 4;
+function trialShop(fields: Record<string, unknown>, status = "trialing") {
+  return world({
+    authEmail: "owner@example.com",
+    tables: {
+      subscriptions: [{ tenant_id: "shop_1", stripe_subscription_id: "sub_1", grace_period_ends_at: null }],
+      tenant_users: [{ id: "tu_1", tenant_id: "shop_1", user_email: "owner@example.com", status: "active", is_owner: true }],
+      super_admins: [],
+    },
+    stripe: {
+      subscriptions: {
+        sub_1: {
+          ...subscription("sub_1", status, null),
+          trial_end: status === "trialing" ? TRIAL_END : null,
+          cancel_at_period_end: false,
+          cancel_at: null,
+          default_payment_method: "pm_1",
+          ...fields,
+        },
+      },
+      invoices: {},
+    },
+  });
+}
+
+Deno.test("reconcile: a trial that carries on → not ending with the trial, renews", async () => {
+  const { status, body } = await reconcile(trialShop({}));
+  assertEquals(status, 200);
+  assertEquals([body.endsWithTrial, body.willAutoRenew, body.cancelAt], [false, true, null]);
+});
+
+Deno.test("reconcile: a trial cancelled with a cancel date (flexible) → ends with the trial", async () => {
+  const { body } = await reconcile(trialShop({ cancel_at: TRIAL_END }));
+  assertEquals([body.endsWithTrial, body.willAutoRenew, body.cancelAtPeriodEnd], [true, false, false]);
+  assertEquals(body.cancelAt, new Date(TRIAL_END * 1000).toISOString());
+});
+
+Deno.test("reconcile: a trial cancelled at period end (classic) → ends with the trial", async () => {
+  const { body } = await reconcile(trialShop({ cancel_at_period_end: true, cancel_at: TRIAL_END }));
+  assertEquals([body.endsWithTrial, body.willAutoRenew], [true, false]);
+});
+
+Deno.test("reconcile: a trial set to end months later → the plan still starts", async () => {
+  const { body } = await reconcile(trialShop({ cancel_at: TRIAL_END + 90 * DAY }));
+  assertEquals([body.endsWithTrial, body.willAutoRenew], [false, false]);
+});
+
+Deno.test("reconcile: an active plan with a cancel date → cancelled, not a trial", async () => {
+  const { body } = await reconcile(trialShop({ cancel_at: NOW + 20 * DAY }, "active"));
+  assertEquals([body.endsWithTrial, body.willAutoRenew], [false, false]);
+});
