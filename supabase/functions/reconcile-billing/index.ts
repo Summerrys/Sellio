@@ -1,7 +1,5 @@
 // Reads the shop's subscription from Stripe and saves it (the app calls this when an owner
 // comes back from Stripe's billing page, and in a trial's last day). Owner or Sellio admin only.
-// An older copy is still deployed as checkSubscriptionStatus (the old name). Nothing calls it
-// (22 Nov 2026), so it was left as it was.
 // Deploy with the paths from supabase/functions/: reconcile-billing/index.ts,
 // reconcile-billing/_shared/auth.ts and stripe-webhook/_shared/billing.ts (the webhook's billing
 // code, so both follow one grace rule), entrypoint reconcile-billing/index.ts, verify_jwt on.
