@@ -262,5 +262,5 @@ export const FAQ_ITEMS = [
   { question: 'What is Sellio World?', answer: 'Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first.' },
   { question: 'How will Sellio Coins work?', answer: 'Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch.' },
   { question: 'Are seasonal decorations available?', answer: 'Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World.' },
-  { question: 'Do customers need an account to browse or order?', answer: 'Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order.' },
+  { question: 'Do customers need an account to browse or order?', answer: 'Not to browse: anyone can look through Sellio Explore and storefronts. A business\'s customers order on the web and at its tables without an account. Buying from a home seller, or anything in the Sellio app, needs a free Sellio account, which holds the order and its QR code for collection or delivery.' },
 ];

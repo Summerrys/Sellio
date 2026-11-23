@@ -25,7 +25,7 @@ import ProductShowcase from './ProductShowcase';
 import WorldLayers from './WorldLayers';
 import ChapterTransition from './ChapterTransition';
 import { FAQ_ITEMS, landingPlans } from './landingData';
-import { LANDING_DESCRIPTION, SITE_URL, landingSchemas } from './landingSchema';
+import { LANDING_DESCRIPTION, PLAY_STORE_URL, SITE_URL, landingSchemas } from './landingSchema';
 import StructuredData from '@/components/seo/StructuredData';
 import { INDONESIA_PAYMENT_NOTE, MULTI_OUTLET_URL, SETUP_OFFER, rupiahNote } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
@@ -42,7 +42,6 @@ import './motion-refinement.css';
 const LOGO_URL = '/branding/sellio-logo.webp';
 // Layout effect in the browser (no flash between prerender and page); plain effect in the prerender build.
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-const DEMO_STORE_URL = 'https://sellio.sg/store/cafetelier';
 const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
 // Sellio's structured data, in the page's own markup (so in the prerender too): landingSchema.js.
 const LANDING_SCHEMAS = landingSchemas();
@@ -477,7 +476,7 @@ function Footer({ onCookieSettings }) {
             <span className="sellio-footer-navigation__label">Explore the platform</span>
             <div className="sellio-footer-links">
               <div><strong>Explore</strong><a href="#journey">Order journey</a><a href="#product">Merchant workspace</a><a href="#world">Sellio World</a><a href="#vision">Coins & progression</a></div>
-              <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/auth" rel="nofollow">Merchant Login</a><a href={DEMO_STORE_URL} target="_blank" rel="noopener noreferrer nofollow">Explore Demo Store</a></div>
+              <div><strong>Merchants</strong><a href="#pricing">Plans & pricing</a><a href="/auth" rel="nofollow">Merchant Login</a><a href="/explore">Explore shops</a><a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">Sellio for Android</a></div>
               <div><strong>Support</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="https://apptelier.sg" target="_blank" rel="noopener noreferrer">Apptélier Helpdesk</a><a href="mailto:sellio@apptelier.sg">Contact Sellio</a></div>
             </div>
           </div>

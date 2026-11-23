@@ -20,7 +20,7 @@ Android app: https://play.google.com/store/apps/details?id=com.base6985959ce9aac
 
 - Each shop has its own storefront at https://sellio.sg/store/<shop>, with its items and prices, and where it says so its opening hours and how it sells (self-collection, delivery, pre-orders, dine-in by table QR code).
 - Each item listed on Explore has its own page at https://sellio.sg/listing/<item>, with its price, photos, description and options.
-- Customers order straight from the shop's storefront. On the web and at a shop's tables they don't need an account; in the Sellio app they sign in first.
+- Customers order straight from the shop's storefront. A business's customers order on the web and at its tables without an account. Buying from a home seller, or anything in the Sellio app, needs a free Sellio account, which holds the order and its QR code for collection or delivery.
 - Shops set their own prices, in Singapore dollars (S$), ringgit (RM) or rupiah (Rp).
 
 ## For businesses

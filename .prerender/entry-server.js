@@ -54,7 +54,8 @@ const SCENES = [
     poster: "01-world.jpg",
     accent: "#e0449a",
     primary: { label: "Start your 7-day free trial", href: "#pricing" },
-    secondary: { label: "Explore Cafetelier", href: "https://sellio.sg/store/cafetelier", external: true }
+    // Explore rather than one demo shop: real shops and their items, and signing up from there.
+    secondary: { label: "Explore shops", href: "/explore" }
   },
   {
     id: "storefront",
@@ -1360,7 +1361,7 @@ const FAQ_ITEMS = [
   { question: "What is Sellio World?", answer: "Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first." },
   { question: "How will Sellio Coins work?", answer: "Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch." },
   { question: "Are seasonal decorations available?", answer: "Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World." },
-  { question: "Do customers need an account to browse or order?", answer: "Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order." }
+  { question: "Do customers need an account to browse or order?", answer: "Not to browse: anyone can look through Sellio Explore and storefronts. A business's customers order on the web and at its tables without an account. Buying from a home seller, or anything in the Sellio app, needs a free Sellio account, which holds the order and its QR code for collection or delivery." }
 ];
 const CALLOUT_POSITIONS = [
   { x: "5%", y: "62%", mobileX: "48%", mobileY: "63%" },
@@ -1614,6 +1615,9 @@ function landingSchemas() {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web, Android",
       description: LANDING_DESCRIPTION,
+      // The Android app on Google Play is this same app.
+      installUrl: PLAY_STORE_URL,
+      sameAs: [PLAY_STORE_URL],
       offers: [
         ...PLANS.map((plan) => ({
           "@type": "Offer",
@@ -1781,7 +1785,6 @@ function withReferral(link, code, { typed = false } = {}) {
 }
 const LOGO_URL$1 = "/branding/sellio-logo.webp";
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
-const DEMO_STORE_URL = "https://sellio.sg/store/cafetelier";
 const LANDING_TITLE = "Sellio — Storefronts, Operations & Marketplace for Modern Commerce";
 const LANDING_SCHEMAS = landingSchemas();
 const NAV_ITEMS = [
@@ -2263,7 +2266,8 @@ function Footer({ onCookieSettings }) {
             /* @__PURE__ */ jsx("strong", { children: "Merchants" }),
             /* @__PURE__ */ jsx("a", { href: "#pricing", children: "Plans & pricing" }),
             /* @__PURE__ */ jsx("a", { href: "/auth", rel: "nofollow", children: "Merchant Login" }),
-            /* @__PURE__ */ jsx("a", { href: DEMO_STORE_URL, target: "_blank", rel: "noopener noreferrer nofollow", children: "Explore Demo Store" })
+            /* @__PURE__ */ jsx("a", { href: "/explore", children: "Explore shops" }),
+            /* @__PURE__ */ jsx("a", { href: PLAY_STORE_URL, target: "_blank", rel: "noopener noreferrer", children: "Sellio for Android" })
           ] }),
           /* @__PURE__ */ jsxs("div", { children: [
             /* @__PURE__ */ jsx("strong", { children: "Support" }),

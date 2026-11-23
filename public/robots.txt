@@ -1,10 +1,10 @@
 # sellio.sg: every address may be crawled. Sellio's own pages, Explore, each shop's storefront
 # (/store/…) and each item's page (/listing/…) are public; the app's own screens (sign-in, a
 # shop's workspace) say noindex in their pages.
-# Content-Signal (contentsignals.org): search engines may index these pages and AI tools may use
-# them to answer questions.
+# Content-Signal (contentsignals.org): search engines may index these pages, AI tools may use them
+# to answer questions, and AI models may be trained on them (Alvin, 24 Nov 2026).
 User-agent: *
-Content-Signal: search=yes, ai-input=yes
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 
 Sitemap: https://sellio.sg/sitemap.xml

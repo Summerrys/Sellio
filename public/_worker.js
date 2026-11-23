@@ -158,6 +158,8 @@ const PUBLIC_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, m
 const HIDDEN_ROBOTS = 'noindex, follow';
 const PRIVATE_ROBOTS = 'noindex, nofollow';
 const SHARE_IMAGE = `${SITE}/og/sellio-share.jpg`;
+// Sellio's Android app (src/components/landing/landingSchema.js PLAY_STORE_URL).
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.base6985959ce9aaceadb8b7cc41.app';
 const ORG_ID = `${SITE}/#organization`;
 const WEBSITE_ID = `${SITE}/#website`;
 // The same Sellio entity the landing page describes in full (src/components/landing/landingSchema.js).
@@ -169,6 +171,7 @@ const ORGANIZATION = {
   logo: { '@type': 'ImageObject', url: `${SITE}/icons/sellio-pwa-512.png`, width: 512, height: 512 },
   email: 'sellio@apptelier.sg',
   parentOrganization: { '@type': 'Organization', name: 'Apptelier', url: 'https://apptelier.sg/' },
+  sameAs: [PLAY_STORE_URL],
 };
 const WEBSITE = { '@type': 'WebSite', '@id': WEBSITE_ID, name: 'Sellio', url: `${SITE}/`, inLanguage: 'en', publisher: { '@id': ORG_ID } };
 
@@ -519,7 +522,7 @@ async function loadExplore(env, ctx) {
 }
 
 // ── Writing a page ──
-function headTags({ title, description, robots, canonical = '', image = '', imageAlt = '', ogType = 'website', graph = null, meta = [] }) {
+function headTags({ title, description, robots, canonical = '', image = '', imageAlt = '', ogType = 'website', graph = null, meta = [], card = 'summary_large_image' }) {
   const edge = 'data-sellio-edge';
   const lines = [
     `<title>${esc(title)}</title>`,
@@ -544,7 +547,7 @@ function headTags({ title, description, robots, canonical = '', image = '', imag
   }
   lines.push(
     `<meta property="og:image:alt" content="${esc(image ? imageAlt || title : 'Sellio: your business, beautifully online.')}" ${edge} />`,
-    `<meta name="twitter:card" content="summary_large_image" ${edge} />`,
+    `<meta name="twitter:card" content="${esc(image ? card : 'summary_large_image')}" ${edge} />`,
     `<meta name="twitter:title" content="${esc(title)}" ${edge} />`,
     `<meta name="twitter:description" content="${esc(description)}" ${edge} />`,
     `<meta name="twitter:image" content="${esc(image || SHARE_IMAGE)}" ${edge} />`,
@@ -553,6 +556,16 @@ function headTags({ title, description, robots, canonical = '', image = '', imag
   if (graph) lines.push(`<script type="application/ld+json" ${edge}>${jsonLd({ '@context': 'https://schema.org', '@graph': graph })}</script>`);
   lines.push(`<style ${edge}>${EDGE_STYLE}</style>`);
   return lines.join('\n    ');
+}
+
+// The picture for a link preview: a banner uploaded through Sellio (photos are made small on the
+// phone before upload, so they stay under WhatsApp's 600 KB), else the logo as a small card,
+// else Sellio's own card (image '').
+const SELLIO_UPLOADS = `${SUPABASE_URL}/storage/v1/object/public/`;
+function previewPicture(banner, logo) {
+  if (banner && banner.startsWith(SELLIO_UPLOADS)) return { image: banner, card: 'summary_large_image' };
+  if (logo) return { image: logo, card: 'summary' };
+  return { image: '' };
 }
 
 function crumbsHtml(crumbs) {
@@ -575,7 +588,7 @@ function edgeBody(main) {
     + '<header><nav aria-label="Sellio"><a href="/">Sellio</a><a href="/explore">Explore shops and items</a></nav></header>'
     + `<main>${main}</main>`
     + '<footer><p>Sellio: online storefronts, ordering and a public marketplace for shops and home sellers in Singapore, Malaysia and Indonesia.</p>'
-    + '<nav aria-label="About Sellio"><a href="/">About Sellio</a><a href="/explore">Explore</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms and Conditions</a></nav></footer>'
+    + `<nav aria-label="About Sellio"><a href="/">About Sellio</a><a href="/explore">Explore</a><a href="${PLAY_STORE_URL}">Sellio for Android</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms and Conditions</a></nav></footer>`
     + '</div>';
 }
 
@@ -659,7 +672,10 @@ function storeView(data, { canonical, privateVariant, shops }) {
   const place = [shop.branch, shop.address].filter(Boolean).join(' · ');
   const title = fitTitle(`${shop.name} – Order online in ${country.name} | Sellio`, `${shop.name} – Order online | Sellio`, `${shop.name} | Sellio`);
   const lede = `${shop.name} is a ${kind} in ${country.name} on Sellio${items.length ? ` with ${plural(items.length, 'item', 'items')}` : ''}. `
-    + (data.selling?.modes.length ? `Order online for ${listWords(data.selling.modes).replace(' and ', ' or ')}.` : 'Browse and order online, straight from the seller.');
+    + (data.selling?.modes.length ? `Order online for ${listWords(data.selling.modes).replace(' and ', ' or ')}.` : 'Browse and order online, straight from the seller.')
+    // Buying from a home seller needs a Sellio account, which holds the order's QR code (Alvin,
+    // 23 Nov 2026); a business's customers order without one on the web.
+    + (shop.home ? ' Ordering needs a free Sellio account.' : '');
   const facts = [['Seller', shop.home ? 'Home seller on Sellio' : 'Shop on Sellio']];
   if (place) facts.push(['Location', place]);
   facts.push(['Country', country.name]);
@@ -784,8 +800,10 @@ function storeView(data, { canonical, privateVariant, shops }) {
       description,
       robots,
       canonical: privateVariant ? '' : canonical,
-      // Shared shop links keep Sellio's share card (per-shop previews weren't wanted: Alvin,
-      // Oct 2026), which also stays under WhatsApp's 600 KB; the shop's pictures are in its data.
+      // A shared shop link shows the shop's own picture (Alvin, 24 Nov 2026; Oct 2026 had it Sellio's
+      // card): its storefront banner, else its logo (a small square card), else Sellio's card.
+      ...previewPicture(data.banner, shop.logo),
+      imageAlt: shop.name,
       graph: privateVariant ? null : graph,
     }),
     body,
@@ -809,8 +827,9 @@ function listingView(data, { canonical }) {
   const moreHtml = data.more.length
     ? `<section aria-labelledby="sellio-edge-more"><h2 id="sellio-edge-more">More from ${esc(shop.name)}</h2><ul>${data.more.map((m) => `<li><a href="${esc(listingPath(m.id))}">${esc(m.name)}</a>${m.price != null ? ` – ${esc(money(m.price, shop.currency))}` : ''}</li>`).join('')}</ul></section>`
     : '';
-  const how = `Order ${item.name} from <a href="${esc(storePath(shop.slug))}">${esc(shop.name)}</a>’s storefront on Sellio`
-    + (data.selling ? `: ${esc(data.selling.summary)}.` : '.');
+  const how = `Order ${esc(item.name)} from <a href="${esc(storePath(shop.slug))}">${esc(shop.name)}</a>’s storefront on Sellio`
+    + (data.selling ? `: ${esc(data.selling.summary)}.` : '.')
+    + (shop.home ? ' Buying from a home seller needs a free Sellio account, which holds the order and its QR code for collection or delivery.' : '');
   const body = edgeBody(`${crumbsHtml(crumbs)}<article><h1>${esc(item.name)}</h1>`
     + `<p>${price ? `<strong>${esc(price)}</strong>${was} · ` : ''}${item.soldOut ? 'Sold out' : 'Available to order'}</p>`
     + `<p>Sold by <a href="${esc(storePath(shop.slug))}">${esc(shop.name)}</a>, a ${kind} in ${esc(country.name)} on Sellio${shop.count > 1 ? ` with ${esc(plural(shop.count, 'item', 'items'))}` : ''}.`

@@ -184,12 +184,13 @@ assert.match(meta(html, 'robots'), /^index, follow/);
 const description = unescape(meta(html, 'description'));
 assert.ok(description.length <= 160, description);
 assert.equal(description, 'Order from Beijing Dumplings, a home seller in Singapore, on Sellio: 4 items from S$2.00 to S$8.00, including Pork Dumplings and Chive Dumplings.');
-assert.equal(prop(html, 'og:image'), 'https://sellio.sg/og/sellio-share.jpg', 'Shared shop links keep Sellio\'s card');
-assert.equal(prop(html, 'og:image:width'), '1200');
+assert.equal(prop(html, 'og:image'), 'https://cdn.example.com/logo.png', 'A banner from outside Sellio gives way to the logo');
+assert.equal(meta(html, 'twitter:card'), 'summary', 'A logo is a small card');
+assert.equal(prop(html, 'og:image:alt'), 'Beijing Dumplings');
 assert.equal((block(html).match(/<h1>/g) || []).length, 1, 'One heading');
 assert.match(block(html), /<h1>Beijing Dumplings<\/h1>/);
 assert.match(block(html), /Fresh daily · Handmade in Tampines/);
-assert.match(block(html), /Beijing Dumplings is a home seller in Singapore on Sellio with 4 items\. Order online for self-collection or delivery\./);
+assert.match(block(html), /Beijing Dumplings is a home seller in Singapore on Sellio with 4 items\. Order online for self-collection or delivery\. Ordering needs a free Sellio account\.<\/p>/);
 assert.match(block(html), /<dt>Location<\/dt><dd>Tampines · 1 Tampines Ave<\/dd>/);
 assert.match(block(html), /<dt>Rating<\/dt><dd>4\.8 out of 5 from 12 buyer ratings on Sellio<\/dd>/);
 assert.match(block(html), /Self-collection \(Tampines\) · Delivery to East, S\$3\.00, free above S\$30\.00 · Pre-orders, 2 days notice/);
@@ -202,7 +203,7 @@ assert.match(block(html), /<li><a href="\/listing\/p-2">Chive Dumplings<\/a> –
 assert.match(block(html), /<li><strong>Soup of the day \$1 off<\/strong> – S\$4\.00/, 'No photo: no item page to link to');
 assert.match(block(html), /<h3>More items<\/h3><ul><li><strong>&lt;script&gt;alert\(1\)&lt;\/script&gt; Bun<\/strong>/, 'Uncategorised items last; text escaped');
 assert.doesNotMatch(block(html), /<h3>Empty<\/h3>/, 'A category with no items is left out');
-assert.deepEqual(links(html), ['/', '/explore', '/', '/explore', '/listing/p-1', '/listing/p-2', '/store/cafelicious', '/store/xie-lao-ma', '/explore', '/', '/explore', '/privacy', '/terms']);
+assert.deepEqual(links(html), ['/', '/explore', '/', '/explore', '/listing/p-1', '/listing/p-2', '/store/cafelicious', '/store/xie-lao-ma', '/explore', '/', '/explore', 'https://play.google.com/store/apps/details?id=com.base6985959ce9aaceadb8b7cc41.app', '/privacy', '/terms']);
 assert.doesNotMatch(html, /91234567|UEN-SECRET|paynow-secret|secret note|javascript:/, 'No phone, payment details, seller notes or unsafe links');
 assert.doesNotMatch(html, /<script>alert/, 'A name can\'t inject a script');
 let graph = graphOf(html);
@@ -238,6 +239,24 @@ assert.deepEqual(read, ['/rest/v1/business_hours', '/rest/v1/categories', '/rest
 const productCall = calls.find((c) => c.path === '/rest/v1/products');
 assert.match(decodeURIComponent(productCall.query), /tenant_id=eq\.shop-1&or=\(is_active\.eq\.true,is_active\.is\.null\)&order=sort_order\.asc,created_date\.desc,id\.asc&limit=250/);
 assert.match(calls[0].headers.apikey, /^eyJ/, 'The public key');
+fresh();
+db.configs = [{ banner_headline: '', banner_tagline: '', banner_bg_image_url: 'https://gzktuteedbtnaxfdylyu.supabase.co/storage/v1/object/public/storefront/banner.webp' }];
+html = await (await get('https://sellio.sg/store/beijing-dumplings')).text();
+assert.equal(prop(html, 'og:image'), 'https://gzktuteedbtnaxfdylyu.supabase.co/storage/v1/object/public/storefront/banner.webp', 'Its own banner');
+assert.equal(meta(html, 'twitter:card'), 'summary_large_image');
+fresh();
+db.configs = [];
+db.tenant = [{ ...shopRow, logo_url: null }];
+html = await (await get('https://sellio.sg/store/beijing-dumplings')).text();
+assert.equal(prop(html, 'og:image'), 'https://sellio.sg/og/sellio-share.jpg', 'No pictures: Sellio\'s card');
+assert.equal(prop(html, 'og:image:width'), '1200');
+// A business (not a home seller): no account needed, so none mentioned.
+fresh();
+db.selling = null;
+db.shops = shopsRows.map((r) => (r.shop_id === SHOP_ID ? { ...r, shop_type: 'merchant' } : r));
+html = await (await get('https://sellio.sg/store/beijing-dumplings')).text();
+assert.match(block(html), /Beijing Dumplings is a shop in Singapore on Sellio with 4 items\. Browse and order online, straight from the seller\.<\/p>/);
+assert.doesNotMatch(block(html), /Sellio account/);
 passed('storefront: its title, description, canonical, structured data, items with prices, hours, links, and nothing private');
 
 // 2. Kept: the next visit reads nothing; after 10 minutes it is answered from what was kept and
@@ -351,6 +370,7 @@ assert.match(block(html), /<p>Ten handmade dumplings\.<\/p><p>Steamed to order\.
 assert.match(block(html), /<li>Add-ons: Egg \(\+S\$2\.00\), Chilli oil<\/li>/);
 assert.doesNotMatch(block(html), /Size:/, 'A group with no options is left out');
 assert.match(block(html), /Order Pork Dumplings from <a href="\/store\/beijing-dumplings">Beijing Dumplings<\/a>’s storefront on Sellio: Self-collection \(Tampines\)/);
+assert.match(block(html), /Pre-orders, 2 days notice\. Buying from a home seller needs a free Sellio account, which holds the order and its QR code for collection or delivery\.<\/p>/);
 assert.match(block(html), /<h2 id="sellio-edge-more">More from Beijing Dumplings<\/h2><ul><li><a href="\/listing\/p-2">Chive Dumplings<\/a> – S\$7\.50<\/li>/);
 assert.doesNotMatch(html, /91234567|secret note/);
 graph = graphOf(html);
@@ -367,6 +387,22 @@ assert.deepEqual(graph[1], {
 });
 assert.deepEqual(graph[2].itemListElement.map((c) => c.name), ['Sellio', 'Explore', 'Beijing Dumplings', 'Pork Dumplings']);
 passed('item page: Product structured data with its offer and price, photos, options, how to order, more from the shop');
+
+// A seller's text can't become markup: names, descriptions, options, shop names (23 Nov 2026: the
+// item's name in "How to order" went out unescaped; fixed 24 Nov).
+fresh();
+const evil = '<img src=x onerror=alert(1)>';
+db.item = {
+  ...item,
+  product: { ...item.product, name: `Bun ${evil}`, description: `Tasty ${evil}`, variants: [{ name: `Size ${evil}`, options: [{ label: `Big ${evil}`, price_modifier: 1 }] }] },
+  shop: { ...item.shop, name: `Shop ${evil}` },
+  more: [{ id: 'p-2', name: `Other ${evil}`, price: 1 }],
+};
+html = await (await get('https://sellio.sg/listing/p-1')).text();
+assert.doesNotMatch(html, /<img src=x/, 'No seller text becomes a tag');
+assert.ok((block(html).match(/&lt;img src=x onerror=alert\(1\)&gt;/g) || []).length >= 6, 'Every one of them written as text');
+assert.match(block(html), /Order Bun &lt;img src=x onerror=alert\(1\)&gt; from <a href/);
+passed('item page: a seller\'s text (names, description, options) is always text, never markup');
 
 // Long names: a title search results show whole (65 characters at most).
 fresh();

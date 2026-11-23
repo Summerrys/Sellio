@@ -21,7 +21,8 @@ const SCENES = [
     poster: '01-world.jpg',
     accent: '#e0449a',
     primary: { label: 'Start your 7-day free trial', href: '#pricing' },
-    secondary: { label: 'Explore Cafetelier', href: 'https://sellio.sg/store/cafetelier', external: true },
+    // Explore rather than one demo shop: real shops and their items, and signing up from there.
+    secondary: { label: 'Explore shops', href: '/explore' },
   },
   {
     id: 'storefront',

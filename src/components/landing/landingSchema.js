@@ -14,7 +14,7 @@ export const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ord
 const ORG_ID = `${SITE_URL}#organization`;
 const WEBSITE_ID = `${SITE_URL}#website`;
 // Sellio's Android app on Google Play (the listing kept from Base44's build).
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.base6985959ce9aaceadb8b7cc41.app';
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.base6985959ce9aaceadb8b7cc41.app';
 const APPTELIER = { '@type': 'Organization', name: 'Apptelier', url: 'https://apptelier.sg/' };
 
 export function landingSchemas() {
@@ -58,6 +58,9 @@ export function landingSchemas() {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web, Android',
       description: LANDING_DESCRIPTION,
+      // The Android app on Google Play is this same app.
+      installUrl: PLAY_STORE_URL,
+      sameAs: [PLAY_STORE_URL],
       offers: [
         ...PLANS.map((plan) => ({
           '@type': 'Offer',

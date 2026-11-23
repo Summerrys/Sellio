@@ -126,7 +126,7 @@ for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/res
 // robots.txt: open to every crawler, with the sitemap and the content signals.
 const robots = await readFile('dist/robots.txt', 'utf8').catch(() => '');
 if (!robots.includes('Sitemap: https://sellio.sg/sitemap.xml')) failures.push('robots.txt: the Sitemap line is missing');
-if (!/^Content-Signal: search=yes, ai-input=yes$/m.test(robots)) failures.push('robots.txt: the Content-Signal line is missing');
+if (!/^Content-Signal: search=yes, ai-input=yes, ai-train=yes$/m.test(robots)) failures.push('robots.txt: the Content-Signal line is missing or changed');
 if (/^Disallow:\s*\/\s*$/m.test(robots)) failures.push('robots.txt: must not shut crawlers out');
 
 // IndexNow (scripts/indexnow.mjs): the key file at the top of the site, holding the key.
