@@ -364,7 +364,7 @@ function TenantSettingsContent() {
 
       {settingsTour.eligible && (
         <TourGuide
-          steps={getSettingsSteps()}
+          steps={getSettingsSteps({ hasUsersTab: canSeeUsersTab })}
           run={settingsTour.eligible}
           onFinish={settingsTour.completeStage}
           tour={settingsTour}

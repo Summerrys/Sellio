@@ -1,8 +1,52 @@
-import Joyride, { STATUS } from 'react-joyride';
+import { useEffect, useState } from 'react';
+import Joyride, { EVENTS, STATUS } from 'react-joyride';
 import { AlertTriangle } from 'lucide-react';
 import { useAppText } from '@/lib/appText';
 
 const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
+
+// The part of the screen a step's target can be seen in: below the app's header and above the
+// tab bar, which both stay put as the page scrolls (data-app-header: Layout's headers and
+// Explore's; the tab bar is data-tour="bottom-nav").
+function clearArea() {
+  const box = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null; };
+  let top = 0;
+  let bottom = window.innerHeight;
+  document.querySelectorAll('[data-app-header]').forEach((el) => {
+    const r = box(el);
+    if (r && r.top <= 1) top = Math.max(top, r.bottom);
+  });
+  document.querySelectorAll('[data-tour="bottom-nav"]').forEach((el) => {
+    const r = box(el);
+    if (r && r.bottom >= window.innerHeight - 1) bottom = Math.min(bottom, r.top);
+  });
+  return { top, bottom };
+}
+
+function inFixedBar(el) {
+  for (let node = el; node && node !== document.body; node = node.parentElement) {
+    if (getComputedStyle(node).position === 'fixed') return true;
+  }
+  return false;
+}
+
+// Joyride can't scroll Sellio's pages itself: it takes the page wrapper (overflow-x hidden, so
+// its overflow-y counts as auto) for the thing that scrolls, scrolls that, and nothing moves.
+// Its scrolling only ever moved the page for targets in a fixed bar (the Counter button, the tab
+// bar, the sidebar), which never needs it, and then left the next step's target off the screen.
+// So Joyride's scrolling is off and each step brings its target into the clear area here, by as
+// little as it takes. The spotlight and the tooltip are placed on the page, so they move with it.
+export function showStepTarget(target) {
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!(el instanceof HTMLElement) || el === document.body || inFixedBar(el)) return;
+  const r = el.getBoundingClientRect();
+  const { top, bottom } = clearArea();
+  const room = 16; // the spotlight reaches 10px past its target
+  let by = 0;
+  if (r.top < top + room || r.height > bottom - top - 2 * room) by = r.top - (top + room);
+  else if (r.bottom > bottom - room) by = r.bottom - (bottom - room);
+  if (Math.abs(by) >= 1) window.scrollBy({ top: by, behavior: 'smooth' });
+}
 
 // Shared wrapper around react-joyride, used identically by all 4 stages
 // (Dashboard/Products/Orders/Settings). Every step gets a Skip button; tapping
@@ -10,9 +54,19 @@ const BRAND_GRADIENT = 'linear-gradient(135deg, #fb923c, #e0449a, #8b5cf6)';
 // doesn't silently lose someone's place.
 export default function TourGuide({ steps, run, onFinish, tour }) {
   const { t } = useAppText();
+  // A page slides in as it opens (.sellio-page-enter, 180ms). Measured during that, the first
+  // step's spotlight stays a few pixels to the right of its target, so the tour starts after it.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 250);
+    return () => clearTimeout(timer);
+  }, []);
   const handleCallback = (data) => {
-    const { status, action } = data;
-    if (status === STATUS.FINISHED) {
+    const { status, action, type } = data;
+    if (type === EVENTS.TOOLTIP) showStepTarget(data.step?.target);
+    // Joyride reports "finished" more than once at the end (step:after, then tour:end): the
+    // stage is saved once.
+    if (status === STATUS.FINISHED && type === EVENTS.TOUR_END) {
       onFinish();
     } else if (action === 'skip') {
       tour.requestSkip();
@@ -31,18 +85,14 @@ export default function TourGuide({ steps, run, onFinish, tour }) {
     <>
       <Joyride
         steps={stepsWithoutBeacon}
-        run={run}
+        run={run && settled}
         continuous
         showSkipButton
         showProgress
-        disableScrolling={false}
+        // Each step scrolls its own target into view (showStepTarget, from the callback).
+        disableScrolling
+        // Leaves the page wrapper's overflow alone (Joyride's "fix" sets it to initial).
         disableScrollParentFix
-        // FIX: the fixed top header (logo/bell/menu bar) was overlapping the top
-        // of whatever element Joyride scrolled into view, since it only scrolls
-        // a target to the very top of the viewport with no allowance for that
-        // sticky bar — which is what cropped the stat cards. This offset reserves
-        // space for it.
-        scrollOffset={80}
         callback={handleCallback}
         locale={{ back: t('Back'), close: t('Close'), last: t('Done'), next: t('Next'), skip: t('Skip') }}
         // FIX: the gradient border only ever applied to the tooltip box itself —

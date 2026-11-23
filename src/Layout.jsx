@@ -694,6 +694,7 @@ function AppLayout({ children, currentPageName }) {
       {/* Desktop workspace controls share the mobile notification provider. */}
       {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
         <header
+          data-app-header
           aria-label={t('Desktop workspace controls')}
           className="hidden lg:flex fixed right-0 top-0 h-16 items-center justify-end border-b border-slate-100 bg-white z-30 transition-[left] duration-300"
           style={{ left: collapsed ? '72px' : '260px' }}
@@ -719,7 +720,7 @@ function AppLayout({ children, currentPageName }) {
 
       {/* Mobile Header — hidden on public storefront routes */}
       {!setupScreen && !window.location.pathname.startsWith('/store/') && !window.location.pathname.startsWith('/order/') && (
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
+      <div data-app-header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-100 z-30 flex items-center px-4 justify-between"
         style={{ height: 'calc(56px + env(safe-area-inset-top, 0px))', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* No on-screen back arrow: the phone's own Back (button or swipe) goes back. */}
         <div className="flex items-center gap-2">

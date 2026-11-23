@@ -1314,7 +1314,7 @@ export default function Orders() {
       )}
       {ordersTour.eligible && (
         <TourGuide
-          steps={getOrdersSteps({ tier: subscription?.tier, listings: isShop, isDesktop: window.matchMedia('(min-width: 1024px)').matches })}
+          steps={getOrdersSteps({ tier: subscription?.tier, listings: isShop, isDesktop: window.matchMedia('(min-width: 1024px)').matches, hasKitchenDisplay: isFnB && canUseFeature('can_use_kitchen_display') })}
           run={ordersTour.eligible}
           onFinish={ordersTour.completeStage}
           tour={ordersTour}

@@ -26,6 +26,9 @@ export function getDashboardSteps({ hasTakeOrders, hasAiAssistant, hasDesignStor
     },
     {
       target: isDesktop ? '[data-tour="desktop-nav"]' : '[data-tour="avatar-menu-btn"]',
+      // The sidebar is the screen's full height: below it (Joyride's default) the tooltip
+      // can only go over its top.
+      ...(isDesktop ? { placement: 'right' } : {}),
       content: isDesktop
         ? appT('Use the sidebar for your workspace pages, storefront link, and account settings.')
         : appT('Tap your logo anytime to open the full menu — your pages, storefront link, and account settings all live there.'),
@@ -144,7 +147,9 @@ export function getProductsSteps({ tier, listings = false }) {
   return steps;
 }
 
-export function getOrdersSteps({ tier, listings = false, isDesktop = false }) {
+// hasKitchenDisplay: the page shows Kitchen Display (an F&B shop whose plan has it). A step
+// whose target isn't on the page is skipped, but it would still count in "Step 3 of 7".
+export function getOrdersSteps({ tier, listings = false, isDesktop = false, hasKitchenDisplay = true }) {
   const steps = [
     {
       target: '[data-tour="order-status-cards"]',
@@ -154,10 +159,10 @@ export function getOrdersSteps({ tier, listings = false, isDesktop = false }) {
       target: '[data-tour="order-tabs"]',
       content: appT('Filter the list by stage, or check Done for completed orders.'),
     },
-    {
+    ...(hasKitchenDisplay ? [{
       target: '[data-tour="kitchen-display-btn"]',
       content: appT('Open a dedicated, always-on screen for your kitchen — perfect for a second device.'),
-    },
+    }] : []),
     {
       target: '[data-tour="sound-alerts-toggle"]',
       content: appT('Turn this on to get an audible ping whenever a new order comes in.'),
@@ -193,7 +198,8 @@ export function getOrdersSteps({ tier, listings = false, isDesktop = false }) {
   return steps;
 }
 
-export function getSettingsSteps() {
+// hasUsersTab: Settings shows the Users tab (staff logins are on the shop's plan).
+export function getSettingsSteps({ hasUsersTab = true } = {}) {
   return [
     {
       target: '[data-tour="settings-business-tab"]',
@@ -207,10 +213,10 @@ export function getSettingsSteps() {
       target: '[data-tour="settings-theme-tab"]',
       content: appT('Pick a color theme that matches your brand — it updates your storefront instantly.'),
     },
-    {
+    ...(hasUsersTab ? [{
       target: '[data-tour="settings-users-tab"]',
       content: appT('Invite staff and assign them roles from here — each role controls exactly what they can see and do.'),
-    },
+    }] : []),
     {
       target: 'body',
       placement: 'center',
