@@ -291,6 +291,7 @@ export default function Terms() {
       description="Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use."
       path="/terms"
       lastUpdated="12 November 2026"
+      dateModified="2026-11-12"
       sections={sections}
     />
   );

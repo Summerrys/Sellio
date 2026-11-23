@@ -23,7 +23,7 @@ import {
 import ZoomableImage from '@/components/ui-custom/ZoomableImage';
 import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
 import { creditFor } from '@/lib/samplePhotos';
-import { applyPageMeta, SITE, snippet } from '@/lib/pageMeta';
+import { applyPageMeta, hasEdgeHead, SITE, snippet } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { useAppText, N_ } from '@/lib/appText';
 
@@ -300,6 +300,8 @@ function Listing({ productId }) {
   // Its own title, description and address for search results; an item that's gone isn't kept
   // in them.
   useEffect(() => {
+    // Opened at this address on the website: its head is written already (public/_worker.js).
+    if (hasEdgeHead()) return undefined;
     if (state.status === 'missing') return applyPageMeta({ robots: 'noindex, nofollow' });
     if (!item) return undefined;
     return applyPageMeta({

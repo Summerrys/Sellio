@@ -12,9 +12,13 @@ site.
 | `/` | the landing page (`index.html`, prerendered) |
 | `/privacy`, `/terms` | their prerendered pages |
 | `/Privacy`, `/privacy/`, `/Terms`, `/terms/`, `/index.html` | a permanent redirect (301) to `/privacy`, `/terms`, `/` |
-| `/store/<shop>` | the storefront (`store.html`) |
+| `/store/<shop>` | the storefront (`store.html`), with the shop written in (**Pages written at the edge** below); 404 if there's no such shop |
+| `/explore`, `/listing/<item>` | Explore and an item's page (`explore.html`), written in the same way; 404 for an item that isn't listed |
+| `/store/<shop>/`, `/listing/<item>/`, `/explore/` | a permanent redirect (301) to the same address without the last `/` |
+| `/sitemap.xml` | every public page, shop and item, from the database (the fixed file if it can't be reached) |
+| `/llms.txt` | the file, with the shops on Explore added |
 | any other address (`/Auth`, `/Orders`, `/explore/…`, `/order/<shop>/<table>`…) | the app (`app.html`) |
-| files: `/assets/…`, `/icons/…`, `/branding/…`, `/og/…`, `/.well-known/assetlinks.json`, `/sw.js`, `/manifest.json`, `/robots.txt`, `/sitemap.xml`, `/llms.txt` | the file, or a 404 page if it isn't there |
+| files: `/assets/…`, `/icons/…`, `/branding/…`, `/og/…`, `/.well-known/assetlinks.json`, `/sw.js`, `/manifest.json`, `/robots.txt`, IndexNow's key file | the file, or a 404 page if it isn't there |
 
 The files that do this, all in `public/` (so they're in the build, `dist/`):
 
@@ -96,8 +100,9 @@ old app there (the landing page at every address, open to search engines). Not m
 - files (`_routes.json`): Pages serves them on every address as they are;
 - preview deployments (`<id>.sellio-f1t.pages.dev`).
 
-Keep the move for at least 180 days, as Google asks. The start page, `/privacy` and
-`/terms` name their sellio.sg address as canonical in the HTML, and `/sitemap.xml` lists them.
+Keep the move for at least 180 days, as Google asks. Every public page names its sellio.sg
+address as canonical in the HTML (the start page, `/privacy` and `/terms` from the prerender;
+storefronts, items and Explore from the worker), and `/sitemap.xml` lists them.
 
 In Google Search Console (same Google account for both):
 
@@ -107,6 +112,60 @@ In Google Search Console (same Google account for both):
    `apptelier.sg` Domain property: a change of address there would move Apptelier's own site.
 4. In the sellio.apptelier.sg property: **Settings** → **Change of address** → sellio.sg.
 5. **URL inspection** → `https://sellio.sg/` → **Request indexing**.
+
+## Pages written at the edge (search engines and AI tools)
+
+Storefronts, items and Explore are drawn by the app in the visitor's browser. Search engines'
+and AI tools' crawlers mostly don't run it, so until 23 Nov 2026 they found an empty page at
+each of those addresses: no heading, no text, no links, no canonical. Ahrefs' Site Audit scored
+the site 29 for it (every shop and item page an orphan and a dead end; "machine readability" 0).
+Since then `_worker.js` writes each one as the page is asked for:
+
+- **In the head:** the page's own title, description, canonical address, robots rule, Open Graph
+  and Twitter tags, and schema.org structured data (JSON-LD): a storefront is a `CollectionPage`
+  about the shop (`FoodEstablishment`, `Store` or `LocalBusiness` when it has a street address,
+  else `OnlineStore`) with its items as an `ItemList` of offers; an item is an `ItemPage` with a
+  `Product` and its `Offer` (price, currency, in stock or not, the shop as seller); Explore is a
+  `CollectionPage` with the shops and the latest items as `ItemList`s. Every page has its
+  breadcrumbs and names Sellio's `WebSite` and `Organization`, which the start page describes in
+  full (`src/components/landing/landingSchema.js`).
+- **In the page:** a block before the app's root with the page's one H1, its text (the shop's
+  location, prices, hours, how it sells, rating; an item's price, photos, description, options)
+  and links: shop → its items and other shops, item → its shop and more of its items, Explore →
+  every shop and the latest items. Browsers never show it: `index.html` hides it before it is
+  drawn and `src/main.jsx` removes it, then the app draws the page.
+- **Kept out of search results:** a shop that isn't taking orders, one with no items yet (the
+  sitemap leaves it out too, until it has some), previews and staff orders (`?preview=true`,
+  `?staff=true`); a shop or item that isn't there answers 404.
+- **Never written:** phone numbers, payment details, sellers' notes or collection addresses. Only
+  what the storefront and Explore show anyone already, read with the public key.
+- **Fast:** what is read is kept per Cloudflare location for 10 minutes, then still answered
+  with (for up to a day) while it is read again behind the answer. A shop or item that isn't
+  there is asked about again after a minute.
+- **If the database can't be reached** (and nothing is kept): the page goes out as before, with
+  its own address as canonical. The response header `X-Sellio-Edge` says `written` or `fallback`.
+- **The app and the written head:** the head tags carry `data-sellio-edge`. While the visitor is
+  on that page the app leaves them as they are (`hasEdgeHead`, `src/lib/pageMeta.js`); once the
+  visitor moves on in the app they go (`App.jsx` RouteIndexingGuard) and each page sets its own.
+- **Shells:** `scripts/prerender-routes.mjs` makes `store.html` and `explore.html` with
+  `<!-- SELLIO_EDGE_HEAD -->` markers around the title, where the head is written;
+  `scripts/check-prerender.mjs` checks they're there.
+- **Tests:** `verification/edge-pages.test.mjs` (the worker, with stand-ins);
+  `verification/edge-pages.browser.mjs` (the built site through the worker in Chrome, with the
+  app taking over).
+- **Checking the live site:** **Actions → SEO check** crawls sellio.sg as Ahrefs does
+  (`scripts/seo-audit.mjs`) and fails on what Ahrefs counts as errors.
+- **Limits:** Explore lists at most 50 shops (`explore_shops`). Past that, the shops beyond 50
+  are still in the sitemap but need another page linking them (a shop directory, say).
+
+## Telling search engines what changed (IndexNow)
+
+**Actions → IndexNow** (`scripts/indexnow.mjs`) sends the pages whose sitemap date changed in the
+last 7 hours, every 6 hours, to IndexNow, which passes them to Bing (whose index ChatGPT search
+and Copilot draw on), Yandex, Naver, Seznam and Yep. Run it by hand with **all** after a change
+to every page. The key is `public/1f3882ad422aa7f69880e733ef9d710f.txt`: public by design,
+search engines check it there. In Bing Webmaster Tools (bing.com/webmasters), **Import** the site
+from Google Search Console to see what Bing has.
 
 ## Live updates for the apps
 
@@ -177,6 +236,8 @@ browser alerts: no token from Firebase` in its console.
 - Page requests run the worker. The free plan has 100,000 worker runs a day. Files (scripts,
   pictures and the rest) don't count. If Sellio ever gets near that, Workers Paid ($5 a month)
   raises it to 10 million a month.
+- A storefront written at the edge reads the database at most every 10 minutes per Cloudflare
+  location, with up to 9 reads at once; the free plan allows 50 per run.
 - Each file can be at most 25 MiB, and a site can have up to 20,000 files. Sellio's build is
   about 200 files, the largest a few MB (the apps' update zip). The landing page's videos are
   on assets.apptelier.sg.
@@ -189,4 +250,7 @@ npx wrangler@4.151.3 pages dev dist
 ```
 
 Then open http://localhost:8788. This is Cloudflare's own local copy of Pages: it serves the site
-as Pages would.
+as Pages would. Storefronts, items and Explore read Sellio's database from there. To use a
+stand-in on your computer instead, add `--binding SELLIO_SUPABASE_URL=http://127.0.0.1:<port>`
+(the worker accepts only a local address there), then crawl it as a search engine would:
+`node scripts/seo-audit.mjs http://127.0.0.1:8788`. Delete the `.wrangler/` folder it leaves.

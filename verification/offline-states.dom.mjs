@@ -112,7 +112,7 @@ const stubs = {
   likes: 'export const likeErrorMessage = () => ""; export const likesText = () => ""; export const needsSignIn = () => false; export const setListingLike = async () => {}; export const toggleKnownLike = async () => {}; export const useKnownLike = () => null; export const useLikesFor = () => {};',
   ratings: 'export const useRatingSummaries = () => [{}];',
   sell: 'export const useSell = () => ({ openSell() {} });',
-  meta: 'export const applyPageMeta = () => () => {}; export const SITE = "https://sellio.sg";',
+  meta: 'export const applyPageMeta = () => () => {}; export const hasEdgeHead = () => false; export const dropEdgeHead = () => {}; export const snippet = (t) => t; export const SITE = "https://sellio.sg";',
   authNav: 'export const rememberReturnPath = () => {};',
 };
 const mock = { name: 'offline-states-fixtures', setup(b) {

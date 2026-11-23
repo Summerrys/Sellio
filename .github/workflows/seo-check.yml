@@ -1,0 +1,43 @@
+name: SEO check
+
+# Crawls sellio.sg as a search engine's or AI tool's crawler does, without running scripts
+# (scripts/seo-audit.mjs): robots.txt, llms.txt, the sitemap, every page in it and every page they
+# link to. It fails on what Ahrefs' Site Audit counts as errors: a sitemap page that doesn't
+# answer, is noindex or names another canonical; an orphan or dead-end page; a page without one
+# H1, a canonical or the structured data its kind needs (Product on an item, ItemList on a
+# storefront and Explore, Organization on the start page). Then where the pages' outside links
+# lead. Run by hand: Actions → SEO check → Run workflow. Changes nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: The site to crawl
+        default: https://sellio.sg
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ORIGIN: ${{ inputs.origin }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: As Ahrefs' Site Audit
+        run: node scripts/seo-audit.mjs "$ORIGIN" --ua ahrefs --external
+      # The same pages as AI tools' crawlers ask for them (from GitHub's machines, not theirs, so a
+      # block here may not be a block for them: a hint, not a verdict).
+      - name: As GPTBot (OpenAI)
+        if: always()
+        continue-on-error: true
+        run: node scripts/seo-audit.mjs "$ORIGIN" --ua gptbot | tail -8
+      - name: As ClaudeBot (Anthropic)
+        if: always()
+        continue-on-error: true
+        run: node scripts/seo-audit.mjs "$ORIGIN" --ua claude | tail -8

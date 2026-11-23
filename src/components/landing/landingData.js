@@ -253,3 +253,14 @@ export const SUPPORTING_ICONS = {
   School,
   Truck,
 };
+
+// The questions on the start page, and its FAQPage structured data (landingSchema.js).
+export const FAQ_ITEMS = [
+  { question: 'How do customers find my shop?', answer: 'Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings.' },
+  { question: 'What happens when a customer selects my storefront?', answer: 'They land on your branded storefront, where they can browse your products and order directly from you.' },
+  { question: 'Can my storefront keep its own branding?', answer: 'Yes. Your storefront keeps its own colours, logo, products, imagery and content.' },
+  { question: 'What is Sellio World?', answer: 'Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first.' },
+  { question: 'How will Sellio Coins work?', answer: 'Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch.' },
+  { question: 'Are seasonal decorations available?', answer: 'Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World.' },
+  { question: 'Do customers need an account to browse or order?', answer: 'Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order.' },
+];

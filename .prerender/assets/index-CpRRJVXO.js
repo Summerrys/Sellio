@@ -2920,6 +2920,7 @@ const explore = {
   "Log in to like listings.": "Masuk untuk menyukai produk.",
   "Liked. Find it in Me › My likes.": "Disukai. Lihat di Saya › Produk Disukai.",
   "Explore shops and items · Sellio": "Jelajahi toko dan produk · Sellio",
+  "Explore shops and items on Sellio": "Jelajahi toko dan produk di Sellio",
   "Browse shops and home sellers on Sellio, and order from them directly.": "Jelajahi toko dan penjual rumahan di Sellio, lalu pesan langsung dari mereka.",
   "Merchants on Sellio": "Merchant di Sellio",
   "Fresh finds": "Temuan terbaru",

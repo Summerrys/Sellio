@@ -1062,9 +1062,9 @@ const APP_LANGUAGES = [
 ];
 Object.fromEntries(APP_LANGUAGES.map(({ code, locale }) => [code, locale]));
 const LOADERS = {
-  zh: () => import("./assets/index-Ch8blvwB.js"),
-  ms: () => import("./assets/index-BcTEgJPB.js"),
-  id: () => import("./assets/index-D0ly40Fx.js")
+  zh: () => import("./assets/index-KDselgcR.js"),
+  ms: () => import("./assets/index-Bl2wqvRK.js"),
+  id: () => import("./assets/index-CpRRJVXO.js")
 };
 const TRANSLATED = Object.keys(LOADERS);
 const CHOICE_KEY = "sellio_app_language";
@@ -1353,6 +1353,15 @@ function landingPlans(region = "SG") {
   }));
 }
 const PLANS = landingPlans("SG");
+const FAQ_ITEMS = [
+  { question: "How do customers find my shop?", answer: "Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings." },
+  { question: "What happens when a customer selects my storefront?", answer: "They land on your branded storefront, where they can browse your products and order directly from you." },
+  { question: "Can my storefront keep its own branding?", answer: "Yes. Your storefront keeps its own colours, logo, products, imagery and content." },
+  { question: "What is Sellio World?", answer: "Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first." },
+  { question: "How will Sellio Coins work?", answer: "Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch." },
+  { question: "Are seasonal decorations available?", answer: "Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World." },
+  { question: "Do customers need an account to browse or order?", answer: "Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order." }
+];
 const CALLOUT_POSITIONS = [
   { x: "5%", y: "62%", mobileX: "48%", mobileY: "63%" },
   // Phones: cards 02-05 share the clear lower-right floor, just below 03 and right of 01 and 02, so
@@ -1558,6 +1567,105 @@ function ChapterTransition({ children, className = "", label }) {
     }
   );
 }
+const SITE_URL$1 = "https://sellio.sg/";
+const LANDING_DESCRIPTION = "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.";
+const ORG_ID = `${SITE_URL$1}#organization`;
+const WEBSITE_ID = `${SITE_URL$1}#website`;
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.base6985959ce9aaceadb8b7cc41.app";
+const APPTELIER = { "@type": "Organization", name: "Apptelier", url: "https://apptelier.sg/" };
+function landingSchemas() {
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": ORG_ID,
+      name: "Sellio",
+      url: SITE_URL$1,
+      logo: { "@type": "ImageObject", url: `${SITE_URL$1}icons/sellio-pwa-512.png`, width: 512, height: 512 },
+      image: `${SITE_URL$1}og/sellio-share.jpg`,
+      description: LANDING_DESCRIPTION,
+      slogan: "Your business, beautifully online.",
+      email: "sellio@apptelier.sg",
+      address: { "@type": "PostalAddress", addressCountry: "SG" },
+      areaServed: ["Singapore", "Malaysia", "Indonesia"].map((name) => ({ "@type": "Country", name })),
+      contactPoint: [
+        { "@type": "ContactPoint", contactType: "customer support", email: "sellio@apptelier.sg" },
+        { "@type": "ContactPoint", contactType: "sales", telephone: "+65-8222-8103", url: sellioWhatsAppUrl() }
+      ],
+      parentOrganization: APPTELIER,
+      sameAs: [PLAY_STORE_URL]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": WEBSITE_ID,
+      name: "Sellio",
+      url: SITE_URL$1,
+      description: LANDING_DESCRIPTION,
+      inLanguage: "en-SG",
+      publisher: { "@id": ORG_ID }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_URL$1}#app`,
+      name: "Sellio",
+      url: SITE_URL$1,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web, Android",
+      description: LANDING_DESCRIPTION,
+      offers: [
+        ...PLANS.map((plan) => ({
+          "@type": "Offer",
+          name: `${plan.name} plan`,
+          price: String(plan.monthly),
+          priceCurrency: "SGD",
+          url: plan.links.monthly,
+          priceSpecification: {
+            "@type": "UnitPriceSpecification",
+            price: String(plan.monthly),
+            priceCurrency: "SGD",
+            billingDuration: "P1M",
+            unitText: "month"
+          }
+        })),
+        {
+          "@type": "Offer",
+          name: "Free personal shop",
+          price: "0",
+          priceCurrency: "SGD",
+          description: "For selling from home: up to 10 listings and 100 orders a month."
+        },
+        {
+          "@type": "Offer",
+          name: "Done-for-you setup",
+          price: String(SETUP_OFFER.price),
+          priceCurrency: "SGD",
+          description: `One-time: ${SETUP_OFFER.includes}.`
+        }
+      ],
+      publisher: { "@id": ORG_ID },
+      creator: APPTELIER
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "@id": `${SITE_URL$1}#faq`,
+      mainEntity: FAQ_ITEMS.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: { "@type": "Answer", text: item.answer }
+      }))
+    }
+  ];
+}
+function jsonLdText(data) {
+  return JSON.stringify(data).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+function StructuredData({ data }) {
+  const list = Array.isArray(data) ? data : [data];
+  return list.map((item, index) => /* @__PURE__ */ jsx("script", { type: "application/ld+json", dangerouslySetInnerHTML: { __html: jsonLdText(item) } }, index));
+}
 function usePlanRegion(shop = null) {
   const [visitor] = useState(() => typeof window === "undefined" ? null : visitorCountry());
   return planRegionFor(shop || { country: visitor });
@@ -1671,12 +1779,11 @@ function withReferral(link, code, { typed = false } = {}) {
     return link;
   }
 }
-const SITE_URL$1 = "https://sellio.sg/";
 const LOGO_URL$1 = "/branding/sellio-logo.webp";
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 const DEMO_STORE_URL = "https://sellio.sg/store/cafetelier";
 const LANDING_TITLE = "Sellio — Storefronts, Operations & Marketplace for Modern Commerce";
-const LANDING_DESCRIPTION = "Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.";
+const LANDING_SCHEMAS = landingSchemas();
 const NAV_ITEMS = [
   { label: "Sellio World", href: "#world" },
   { label: "How it flows", href: "#journey" },
@@ -1684,15 +1791,6 @@ const NAV_ITEMS = [
   { label: "Vision", href: "#vision" },
   { label: "Pricing", href: "#pricing" },
   { label: "Explore", href: "/explore" }
-];
-const FAQ_ITEMS = [
-  { question: "How do customers find my shop?", answer: "Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings." },
-  { question: "What happens when a customer selects my storefront?", answer: "They land on your branded storefront, where they can browse your products and order directly from you." },
-  { question: "Can my storefront keep its own branding?", answer: "Yes. Your storefront keeps its own colours, logo, products, imagery and content." },
-  { question: "What is Sellio World?", answer: "Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first." },
-  { question: "How will Sellio Coins work?", answer: "Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch." },
-  { question: "Are seasonal decorations available?", answer: "Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World." },
-  { question: "Do customers need an account to browse or order?", answer: "Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order." }
 ];
 const SNAP_PAGE_SELECTORS = ["#sellio-film", "#world-experience", "#journey", "#connected", "#product", "#vision"];
 function useImmersiveReleaseSnap() {
@@ -2230,61 +2328,6 @@ function LandingPage() {
     }
     canonical.setAttribute("href", SITE_URL$1);
     document.title = LANDING_TITLE;
-    const schemas = [
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: "Sellio",
-        url: SITE_URL$1,
-        description: LANDING_DESCRIPTION,
-        inLanguage: "en-SG",
-        publisher: {
-          "@type": "Organization",
-          name: "Apptelier",
-          url: "https://apptelier.sg/"
-        }
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        name: "Sellio",
-        url: SITE_URL$1,
-        applicationCategory: "BusinessApplication",
-        operatingSystem: "Web",
-        description: LANDING_DESCRIPTION,
-        offers: PLANS.map((plan) => ({
-          "@type": "Offer",
-          name: plan.name,
-          price: String(plan.monthly),
-          priceCurrency: "SGD",
-          url: plan.links.monthly
-        })),
-        creator: {
-          "@type": "Organization",
-          name: "Apptelier",
-          url: "https://apptelier.sg/"
-        }
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          "@type": "Question",
-          name: item.question,
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: item.answer
-          }
-        }))
-      }
-    ].map((schema, index) => {
-      const script = document.createElement("script");
-      script.type = "application/ld+json";
-      script.dataset.sellioLandingSchema = String(index);
-      script.text = JSON.stringify(schema);
-      document.head.appendChild(script);
-      return script;
-    });
     return () => {
       document.title = previousTitle;
       restored.forEach(({ node, attribute, previous, created }) => {
@@ -2294,7 +2337,6 @@ function LandingPage() {
       });
       if (createdCanonical) canonical.remove();
       else if (previousCanonical) canonical.setAttribute("href", previousCanonical);
-      schemas.forEach((script) => script.remove());
     };
   }, []);
   return /* @__PURE__ */ jsxs("div", { className: "sellio-landing sellio-landing--phase1b sellio-landing--scrollworld", children: [
@@ -2339,7 +2381,8 @@ function LandingPage() {
       cookieReturnFocus.current = event.currentTarget;
       setCookieOpen(true);
     } }) }),
-    /* @__PURE__ */ jsx(CookieConsent, { open: cookieOpen, onOpenChange: setCookieOpen, returnFocusRef: cookieReturnFocus })
+    /* @__PURE__ */ jsx(CookieConsent, { open: cookieOpen, onOpenChange: setCookieOpen, returnFocusRef: cookieReturnFocus }),
+    /* @__PURE__ */ jsx(StructuredData, { data: LANDING_SCHEMAS })
   ] });
 }
 const HREF = "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap";
@@ -2353,7 +2396,7 @@ function loadExtraFonts() {
 }
 const LOGO_URL = "/branding/sellio-logo.webp";
 const SITE_URL = "https://sellio.sg";
-function useLegalMetadata({ title, description, path, dateModified }) {
+function useLegalMetadata({ title, description, path }) {
   useEffect(() => {
     const previousTitle = document.title;
     const descriptionNode = document.querySelector('meta[name="description"]');
@@ -2394,29 +2437,6 @@ function useLegalMetadata({ title, description, path, dateModified }) {
     ogUrl == null ? void 0 : ogUrl.setAttribute("content", canonicalUrl);
     twitterTitle == null ? void 0 : twitterTitle.setAttribute("content", title + " | Sellio");
     twitterDescription == null ? void 0 : twitterDescription.setAttribute("content", description);
-    const schema = document.createElement("script");
-    schema.type = "application/ld+json";
-    schema.dataset.sellioLegalSchema = path;
-    schema.text = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      name: title,
-      description,
-      url: canonicalUrl,
-      dateModified,
-      isPartOf: {
-        "@type": "WebSite",
-        name: "Sellio",
-        url: SITE_URL
-      },
-      inLanguage: "en-SG",
-      publisher: {
-        "@type": "Organization",
-        name: "Apptelier",
-        url: "https://apptelier.sg"
-      }
-    });
-    document.head.appendChild(schema);
     return () => {
       document.title = previousTitle;
       if (descriptionNode && previousDescription) descriptionNode.setAttribute("content", previousDescription);
@@ -2429,9 +2449,8 @@ function useLegalMetadata({ title, description, path, dateModified }) {
       if (ogUrl && previousOgUrl) ogUrl.setAttribute("content", previousOgUrl);
       if (twitterTitle && previousTwitterTitle) twitterTitle.setAttribute("content", previousTwitterTitle);
       if (twitterDescription && previousTwitterDescription) twitterDescription.setAttribute("content", previousTwitterDescription);
-      schema.remove();
     };
-  }, [dateModified, description, path, title]);
+  }, [description, path, title]);
 }
 function backToSellio(event) {
   var _a;
@@ -2447,6 +2466,28 @@ function backToSellio(event) {
     window.history.back();
   }
 }
+function legalSchema({ title, description, path, dateModified }) {
+  const url = SITE_URL + path;
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${url}#webpage`,
+    name: title,
+    description,
+    url,
+    dateModified,
+    inLanguage: "en-SG",
+    isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "Sellio", url: `${SITE_URL}/` },
+    publisher: { "@type": "Organization", name: "Apptelier", url: "https://apptelier.sg/" },
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Sellio", item: `${SITE_URL}/` },
+        { "@type": "ListItem", position: 2, name: title, item: url }
+      ]
+    }
+  };
+}
 function LegalPage({
   title,
   eyebrow,
@@ -2460,8 +2501,7 @@ function LegalPage({
   useLegalMetadata({
     title,
     description,
-    path,
-    dateModified
+    path
   });
   useEffect(() => {
     loadExtraFonts();
@@ -2569,7 +2609,8 @@ function LegalPage({
         /* @__PURE__ */ jsx("span", { children: "Built in Singapore · Ready for the world" })
       ] })
     ] }),
-    /* @__PURE__ */ jsx(CookieConsent, { open: cookieOpen, onOpenChange: setCookieOpen, returnFocusRef: cookieReturnFocus })
+    /* @__PURE__ */ jsx(CookieConsent, { open: cookieOpen, onOpenChange: setCookieOpen, returnFocusRef: cookieReturnFocus }),
+    /* @__PURE__ */ jsx(StructuredData, { data: legalSchema({ title, description, path, dateModified }) })
   ] });
 }
 const sections$1 = [
@@ -3076,6 +3117,7 @@ function Terms() {
       description: "Read Sellio's Terms and Conditions for merchant accounts, storefront orders, Stripe subscriptions, AI features, Sellio Coins and platform use.",
       path: "/terms",
       lastUpdated: "12 November 2026",
+      dateModified: "2026-11-12",
       sections
     }
   );

@@ -196,9 +196,10 @@ const StorefrontHeader = forwardRef(function StorefrontHeader({ tenant, primaryC
           </div>
         )}
         <div style={{ minWidth: 0 }}>
-          <div style={{ color: '#111827', fontWeight: 700, fontSize: sfType(17), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {/* The page's heading (search engines and screen readers): the shop's name. */}
+          <h1 style={{ margin: 0, color: '#111827', fontWeight: 700, fontSize: sfType(17), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tenant?.name || ''}
-          </div>
+          </h1>
           {rating && (
             <button
               type="button"

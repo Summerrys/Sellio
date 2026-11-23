@@ -53,6 +53,26 @@ export function applyPageMeta({ title, description, canonical, robots } = {}, do
   return () => { undo.reverse().forEach((step) => step()); };
 }
 
+// The website's storefront, item and Explore pages arrive with their own head already written by
+// public/_worker.js (title, description, canonical, robots, Open Graph and structured data, each
+// tag marked data-sellio-edge), better than the page can make in the browser. While the visitor
+// is on that page, the page leaves them as they are (hasEdgeHead); once the visitor moves to
+// another page in the app, they go (dropEdgeHead, from App.jsx RouteIndexingGuard) and each page
+// sets its own again. The apps' pages never have them.
+export function hasEdgeHead(doc = document) {
+  return !!doc.head?.querySelector('[data-sellio-edge]');
+}
+
+export function dropEdgeHead(doc = document) {
+  doc.head?.querySelectorAll('[data-sellio-edge]').forEach((node) => node.remove());
+}
+
+// schema.org JSON-LD as text for a <script type="application/ld+json">: "<" written as <,
+// so nothing in it (a shop's name, say) can end the script.
+export function jsonLdText(data) {
+  return JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+
 // One line of an item's own description for search results: its words, at most `max`
 // characters, cut at a word.
 export function snippet(text, max = 155) {

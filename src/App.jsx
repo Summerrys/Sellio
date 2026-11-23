@@ -25,6 +25,7 @@ import ConnectionStatus from '@/components/ui-custom/ConnectionStatus';
 import PermissionHelp from '@/components/ui-custom/PermissionHelp';
 import SignedOutNotice from '@/components/ui-custom/SignedOutNotice';
 import { captureReferral } from '@/lib/referral';
+import { dropEdgeHead, hasEdgeHead } from '@/lib/pageMeta';
 
 // Pages the app never starts on load on demand, so its first download stays small.
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -63,11 +64,20 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const PUBLIC_INDEX_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 const PRIVATE_ROBOTS = 'noindex, nofollow';
+// The address this visit opened at. The website may have written that page's head (a storefront,
+// an item, Explore: lib/pageMeta.js); it stays only while the visitor is on that page.
+const OPENED_AT = typeof window === 'undefined' ? '' : window.location.pathname;
 
 function RouteIndexingGuard() {
   const location = useLocation();
 
   useEffect(() => {
+    // Moved on in the app: the head the website wrote for the first page goes, so this page's own
+    // title, canonical, robots and structured data stand alone.
+    if (location.pathname !== OPENED_AT) dropEdgeHead();
+    // Still on that page: its robots rule stands (the website knows the page: a shop that's gone
+    // or has no items yet, a preview).
+    else if (hasEdgeHead()) return;
     const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
     const params = new URLSearchParams(location.search);
     const isStorefront = /^\/store\/[^/]+$/.test(path);

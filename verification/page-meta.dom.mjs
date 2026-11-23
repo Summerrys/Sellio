@@ -9,7 +9,7 @@ import path from 'node:path';
 const deps = process.argv[2] || '/tmp/sellio-verification';
 const require = createRequire(path.join(deps, 'package.json'));
 const { JSDOM } = require('jsdom');
-const { applyPageMeta, snippet, SITE } = await import(pathToFileURL(path.resolve('src/lib/pageMeta.js')).href);
+const { applyPageMeta, snippet, SITE, hasEdgeHead, dropEdgeHead, jsonLdText } = await import(pathToFileURL(path.resolve('src/lib/pageMeta.js')).href);
 
 const passed = (name) => console.log(`PASS ${name}`);
 const head = (doc) => ({
@@ -74,3 +74,30 @@ assert.ok(line.length <= 155, `at most 155 characters (${line.length})`);
 assert.ok(line.endsWith('…') && !line.endsWith(' …') && !/[,.]…$/.test(line), line);
 assert.ok(long.startsWith(line.slice(0, -1)), 'cut at a word, from the start');
 passed('pageMeta: item descriptions become one search-result line');
+
+// The head the website writes for a storefront, an item or Explore (public/_worker.js, each tag
+// data-sellio-edge): seen while there, removed on moving on; nothing else in the head goes.
+{
+  const { document } = new JSDOM('<!doctype html><html><head><meta charset="utf-8"><title>Shop | Sellio</title>'
+    + '<meta name="description" content="Written" data-sellio-edge><link rel="canonical" href="https://sellio.sg/store/a" data-sellio-edge>'
+    + '<script type="application/ld+json" data-sellio-edge>{}</script><link rel="manifest" href="/manifest.json"></head><body></body></html>').window;
+  assert.equal(hasEdgeHead(document), true);
+  dropEdgeHead(document);
+  assert.equal(hasEdgeHead(document), false);
+  assert.equal(document.head.querySelectorAll('meta[name="description"], link[rel="canonical"], script').length, 0);
+  assert.ok(document.head.querySelector('link[rel="manifest"]'), 'The page\'s own tags stay');
+  assert.ok(document.head.querySelector('meta[charset]'));
+  const { document: plain } = new JSDOM('<!doctype html><html><head><title>Sellio</title></head><body></body></html>').window;
+  assert.equal(hasEdgeHead(plain), false);
+  dropEdgeHead(plain);
+  passed('pageMeta: the website-written head is seen while there and removed on moving on');
+}
+
+// Structured data as script text: "</script>" can't end the script; the JSON is unchanged.
+{
+  const data = { name: 'Bun </script><script>alert(1)</script>', note: 'a\u2028b' };
+  const text = jsonLdText(data);
+  assert.doesNotMatch(text, /<\/script/i);
+  assert.deepEqual(JSON.parse(text), data);
+  passed('pageMeta: structured data text can\'t end its script and parses back the same');
+}

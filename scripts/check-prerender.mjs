@@ -7,8 +7,29 @@ const routes = {
   '/privacy': ['Privacy Policy', 'https://sellio.sg/privacy'],
   '/terms': ['Terms and Conditions', 'https://sellio.sg/terms'],
 };
+// The structured data (schema.org JSON-LD) each prerendered page carries for crawlers that run no
+// scripts: the start page says who Sellio is (src/components/landing/landingSchema.js).
+const schemaTypes = {
+  '/': ['Organization', 'WebSite', 'SoftwareApplication', 'FAQPage'],
+  '/privacy': ['WebPage'],
+  '/terms': ['WebPage'],
+};
+// Every JSON-LD block in a page, parsed; a block that isn't valid JSON is a failure.
+function jsonLdTypes(html, label) {
+  const types = [];
+  for (const match of html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) {
+    try {
+      const data = JSON.parse(match[1]);
+      for (const node of data['@graph'] || [data]) types.push(...[].concat(node['@type']));
+    } catch (error) {
+      failures.push(`${label}: structured data is not valid JSON (${error.message})`);
+    }
+  }
+  return types;
+}
 
 const SHARE_IMAGE = 'https://sellio.sg/og/sellio-share.jpg';
+const INDEXNOW_KEY = '1f3882ad422aa7f69880e733ef9d710f'; // scripts/indexnow.mjs
 const failures = [];
 
 for (const [path, [signature, canonical]] of Object.entries(routes)) {
@@ -41,6 +62,11 @@ for (const [path, [signature, canonical]] of Object.entries(routes)) {
   if (!/<h1[\s>]/i.test(html)) failures.push(`${path}: H1 missing`);
   if (!/<a[\s>]/i.test(html)) failures.push(`${path}: outgoing/internal links missing`);
   if (/name="robots"[^>]*content="[^"]*noindex/i.test(html)) failures.push(`${path}: public route is noindex`);
+  const types = jsonLdTypes(html, path);
+  for (const type of schemaTypes[path]) {
+    if (!types.includes(type)) failures.push(`${path}: ${type} structured data missing`);
+  }
+  if (types.length !== new Set(types).size) failures.push(`${path}: the same structured data twice (${types.join(', ')})`);
   if (!/<script[^>]+type="module"[^>]+src="\/assets\//i.test(html)) failures.push(`${path}: client bundle missing`);
 }
 
@@ -56,13 +82,17 @@ const appShell = await readFile('dist/app.html', 'utf8');
 if (!appShell.includes('<div id="root"></div>')) failures.push('app.html: SPA root should stay empty');
 if (!/name="robots"[^>]*content="noindex, nofollow"/i.test(appShell)) failures.push('app.html: noindex missing');
 
-const storeShell = await readFile('dist/store.html', 'utf8');
-if (!storeShell.includes('<div id="root"></div>')) failures.push('store.html: SPA root should stay empty');
-if (/name="robots"[^>]*content="[^"]*noindex/i.test(storeShell)) failures.push('store.html: public storefront shell must not be noindex');
-
-const exploreShell = await readFile('dist/explore.html', 'utf8').catch(() => '');
-if (!exploreShell.includes('<div id="root"></div>')) failures.push('explore.html: missing, or its SPA root is not empty');
-if (/name="robots"[^>]*content="[^"]*noindex/i.test(exploreShell)) failures.push('explore.html: public Explore shell must not be noindex');
+// The storefront and Explore shells: public/_worker.js writes each page's head between the
+// SELLIO_EDGE_HEAD markers and its content before the empty root.
+for (const file of ['store.html', 'explore.html']) {
+  const shell = await readFile(`dist/${file}`, 'utf8').catch(() => '');
+  if (!shell.includes('<div id="root"></div>')) failures.push(`${file}: missing, or its SPA root is not empty`);
+  if (/name="robots"[^>]*content="[^"]*noindex/i.test(shell)) failures.push(`${file}: a public page's shell must not be noindex`);
+  if (!/<!-- SELLIO_EDGE_HEAD -->\s*<title>[^<]+<\/title>\s*<!-- \/SELLIO_EDGE_HEAD -->/.test(shell)) {
+    failures.push(`${file}: the SELLIO_EDGE_HEAD markers (around its title) are missing`);
+  }
+  if (/rel="canonical"|property="og:url"/.test(shell)) failures.push(`${file}: served at many addresses, so it must name no canonical itself`);
+}
 
 const redirects = await readFile('dist/_redirects', 'utf8');
 for (const line of ['/ /index.html 200', '/privacy /privacy/index.html 200', '/terms /terms/index.html 200', '/store/* /store.html 200', '/explore /explore.html 200', '/listing/* /explore.html 200', '/* /app.html 200']) {
@@ -81,13 +111,27 @@ try {
   }
   // The worker makes /sitemap.xml from the database; listed here, Pages would serve the fixed file.
   if (routes.exclude?.includes('/sitemap.xml')) failures.push('_routes.json: /sitemap.xml must go through _worker.js');
+  // And /llms.txt, with the shops on Explore added.
+  if (routes.exclude?.includes('/llms.txt')) failures.push('_routes.json: /llms.txt must go through _worker.js');
+  if (!routes.exclude?.includes(`/${INDEXNOW_KEY}.txt`)) failures.push(`_routes.json: /${INDEXNOW_KEY}.txt (IndexNow's key) should be left to Pages`);
 } catch (error) {
   failures.push(`_routes.json: ${error.message}`);
 }
 const worker = await readFile('dist/_worker.js', 'utf8').catch(() => '');
-for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/rest/v1/rpc/sitemap_pages", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'"]) {
+for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/rest/v1/rpc/sitemap_pages", "'/Privacy': '/privacy'", "'sellio.apptelier.sg'", "const SITE = 'https://sellio.sg'",
+  "'/llms.txt'", '<!-- SELLIO_EDGE_HEAD -->', "'get_storefront_tenant'", "'explore_item'", "'explore_shops'", "'explore_feed'"]) {
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
+
+// robots.txt: open to every crawler, with the sitemap and the content signals.
+const robots = await readFile('dist/robots.txt', 'utf8').catch(() => '');
+if (!robots.includes('Sitemap: https://sellio.sg/sitemap.xml')) failures.push('robots.txt: the Sitemap line is missing');
+if (!/^Content-Signal: search=yes, ai-input=yes$/m.test(robots)) failures.push('robots.txt: the Content-Signal line is missing');
+if (/^Disallow:\s*\/\s*$/m.test(robots)) failures.push('robots.txt: must not shut crawlers out');
+
+// IndexNow (scripts/indexnow.mjs): the key file at the top of the site, holding the key.
+const indexNowKey = await readFile(`dist/${INDEXNOW_KEY}.txt`, 'utf8').catch(() => '');
+if (indexNowKey !== INDEXNOW_KEY) failures.push(`${INDEXNOW_KEY}.txt: IndexNow's key file is missing or wrong`);
 
 // The ChatGPT ads Pixel (index.html's #sellio-openai-pixel) is in every website page's head, once;
 // the script itself decides where it runs. scripts/build-app.mjs takes it out of the apps' copy.

@@ -14,7 +14,7 @@ import { useRatingSummaries } from '@/lib/ratings';
 import { RatingPill } from '@/components/ratings/RatingParts';
 import { useSell } from '@/lib/sell';
 import { listingUrl, ExploreDesktopTabs, timeAgo } from '@/components/explore/shared';
-import { applyPageMeta, SITE } from '@/lib/pageMeta';
+import { applyPageMeta, hasEdgeHead, SITE } from '@/lib/pageMeta';
 import LoadingShapes from '@/components/ui-custom/LoadingShapes';
 import { onReconnect, useOnline } from '@/lib/network';
 import { keepSnapshot, loadSnapshot } from '@/lib/offlineStore';
@@ -539,6 +539,8 @@ export default function Explore() {
 
   useEffect(() => {
     markExploreHome();
+    // Opened at this address on the website: its head is written already (public/_worker.js).
+    if (hasEdgeHead()) return undefined;
     return applyPageMeta({
       title: t('Explore shops and items · Sellio'),
       description: t('Browse shops and home sellers on Sellio, and order from them directly.'),
@@ -674,6 +676,8 @@ export default function Explore() {
       />
 
       <main className="max-w-6xl mx-auto px-2 sm:px-4 pb-32">
+        {/* The page's heading for search engines and screen readers (the header shows the search). */}
+        <h1 className="sr-only">{t('Explore shops and items on Sellio')}</h1>
         {!filtered && shops.length > 0 && (
           <section className="pt-2.5 mb-3" aria-labelledby="explore-shops-heading">
             <h2 id="explore-shops-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{t('Shops on Sellio')}</h2>

@@ -24,7 +24,9 @@ import ConnectedCommerce from './ConnectedCommerce';
 import ProductShowcase from './ProductShowcase';
 import WorldLayers from './WorldLayers';
 import ChapterTransition from './ChapterTransition';
-import { PLANS, landingPlans } from './landingData';
+import { FAQ_ITEMS, landingPlans } from './landingData';
+import { LANDING_DESCRIPTION, SITE_URL, landingSchemas } from './landingSchema';
+import StructuredData from '@/components/seo/StructuredData';
 import { INDONESIA_PAYMENT_NOTE, MULTI_OUTLET_URL, SETUP_OFFER, rupiahNote } from '@/lib/plans';
 import { usePlanRegion } from '@/lib/usePlanRegion';
 import { useKeptReferral, withReferral } from '@/lib/referral';
@@ -37,13 +39,13 @@ import './mobile-native.css';
 import './ux-corrections.css';
 import './motion-refinement.css';
 
-const SITE_URL = 'https://sellio.sg/';
 const LOGO_URL = '/branding/sellio-logo.webp';
 // Layout effect in the browser (no flash between prerender and page); plain effect in the prerender build.
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 const DEMO_STORE_URL = 'https://sellio.sg/store/cafetelier';
 const LANDING_TITLE = 'Sellio — Storefronts, Operations & Marketplace for Modern Commerce';
-const LANDING_DESCRIPTION = 'Sellio connects branded storefronts, F&B ordering and merchant operations with an evolving sector-based marketplace world.';
+// Sellio's structured data, in the page's own markup (so in the prerender too): landingSchema.js.
+const LANDING_SCHEMAS = landingSchemas();
 
 const NAV_ITEMS = [
   { label: 'Sellio World', href: '#world' },
@@ -52,16 +54,6 @@ const NAV_ITEMS = [
   { label: 'Vision', href: '#vision' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'Explore', href: '/explore' },
-];
-
-const FAQ_ITEMS = [
-  { question: 'How do customers find my shop?', answer: 'Through your own storefront link, your table QR codes and Sellio Explore, a public feed where anyone can browse items from Sellio shops without an account. Your shop is listed on Explore by default and you can switch it off in Settings.' },
-  { question: 'What happens when a customer selects my storefront?', answer: 'They land on your branded storefront, where they can browse your products and order directly from you.' },
-  { question: 'Can my storefront keep its own branding?', answer: 'Yes. Your storefront keeps its own colours, logo, products, imagery and content.' },
-  { question: 'What is Sellio World?', answer: 'Sellio World is a marketplace map we are building, where merchants get a storefront in an F&B, Retail or Services district. It is coming soon, with F&B opening first.' },
-  { question: 'How will Sellio Coins work?', answer: 'Sellio Coins are coming with Sellio World. The plan is for merchants to earn coins through marketplace activity and milestones and spend them on cosmetic storefront upgrades. Details will be shared before launch.' },
-  { question: 'Are seasonal decorations available?', answer: 'Not yet. Seasonal storefront decorations for occasions such as Chinese New Year and Christmas are planned alongside Sellio World.' },
-  { question: 'Do customers need an account to browse or order?', answer: 'Not to browse: anyone can look through Sellio Explore and storefronts. On the web and at your tables, customers order without an account; in the Sellio app, they sign in before placing an order.' },
 ];
 
 const SNAP_PAGE_SELECTORS = ['#sellio-film', '#world-experience', '#journey', '#connected', '#product', '#vision'];
@@ -547,62 +539,6 @@ export default function LandingPage() {
     canonical.setAttribute('href', SITE_URL);
     document.title = LANDING_TITLE;
 
-    const schemas = [
-      {
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: 'Sellio',
-        url: SITE_URL,
-        description: LANDING_DESCRIPTION,
-        inLanguage: 'en-SG',
-        publisher: {
-          '@type': 'Organization',
-          name: 'Apptelier',
-          url: 'https://apptelier.sg/',
-        },
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'SoftwareApplication',
-        name: 'Sellio',
-        url: SITE_URL,
-        applicationCategory: 'BusinessApplication',
-        operatingSystem: 'Web',
-        description: LANDING_DESCRIPTION,
-        offers: PLANS.map((plan) => ({
-          '@type': 'Offer',
-          name: plan.name,
-          price: String(plan.monthly),
-          priceCurrency: 'SGD',
-          url: plan.links.monthly,
-        })),
-        creator: {
-          '@type': 'Organization',
-          name: 'Apptelier',
-          url: 'https://apptelier.sg/',
-        },
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: FAQ_ITEMS.map((item) => ({
-          '@type': 'Question',
-          name: item.question,
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: item.answer,
-          },
-        })),
-      },
-    ].map((schema, index) => {
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.dataset.sellioLandingSchema = String(index);
-      script.text = JSON.stringify(schema);
-      document.head.appendChild(script);
-      return script;
-    });
-
     return () => {
       document.title = previousTitle;
       restored.forEach(({ node, attribute, previous, created }) => {
@@ -612,7 +548,6 @@ export default function LandingPage() {
       });
       if (createdCanonical) canonical.remove();
       else if (previousCanonical) canonical.setAttribute('href', previousCanonical);
-      schemas.forEach((script) => script.remove());
     };
   }, []);
 
@@ -631,6 +566,7 @@ export default function LandingPage() {
       </main>
       <ChapterTransition className="sl-chapter-transition--footer" label="Sellio footer"><Footer onCookieSettings={(event) => { cookieReturnFocus.current = event.currentTarget; setCookieOpen(true); }} /></ChapterTransition>
       <CookieConsent open={cookieOpen} onOpenChange={setCookieOpen} returnFocusRef={cookieReturnFocus} />
+      <StructuredData data={LANDING_SCHEMAS} />
     </div>
   );
 }

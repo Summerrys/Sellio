@@ -4,11 +4,12 @@ import CookieConsent from '@/components/landing/CookieConsent';
 import { getCookieConsent } from '@/lib/cookieConsent';
 import './legal.css';
 import { loadExtraFonts } from '@/lib/extraFonts';
+import StructuredData from '@/components/seo/StructuredData';
 
 const LOGO_URL = '/branding/sellio-logo.webp';
 const SITE_URL = 'https://sellio.sg';
 
-function useLegalMetadata({ title, description, path, dateModified }) {
+function useLegalMetadata({ title, description, path }) {
   useEffect(() => {
     const previousTitle = document.title;
     const descriptionNode = document.querySelector('meta[name="description"]');
@@ -54,30 +55,6 @@ function useLegalMetadata({ title, description, path, dateModified }) {
     twitterTitle?.setAttribute('content', title + ' | Sellio');
     twitterDescription?.setAttribute('content', description);
 
-    const schema = document.createElement('script');
-    schema.type = 'application/ld+json';
-    schema.dataset.sellioLegalSchema = path;
-    schema.text = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      name: title,
-      description,
-      url: canonicalUrl,
-      dateModified,
-      isPartOf: {
-        '@type': 'WebSite',
-        name: 'Sellio',
-        url: SITE_URL,
-      },
-      inLanguage: 'en-SG',
-      publisher: {
-        '@type': 'Organization',
-        name: 'Apptelier',
-        url: 'https://apptelier.sg',
-      },
-    });
-    document.head.appendChild(schema);
-
     return () => {
       document.title = previousTitle;
       if (descriptionNode && previousDescription) descriptionNode.setAttribute('content', previousDescription);
@@ -90,9 +67,8 @@ function useLegalMetadata({ title, description, path, dateModified }) {
       if (ogUrl && previousOgUrl) ogUrl.setAttribute('content', previousOgUrl);
       if (twitterTitle && previousTwitterTitle) twitterTitle.setAttribute('content', previousTwitterTitle);
       if (twitterDescription && previousTwitterDescription) twitterDescription.setAttribute('content', previousTwitterDescription);
-      schema.remove();
     };
-  }, [dateModified, description, path, title]);
+  }, [description, path, title]);
 }
 
 // "Back to Sellio": opened from a Sellio page (inside the app, or a link on the site),
@@ -109,6 +85,31 @@ export function backToSellio(event) {
   }
 }
 
+// The page's structured data, in its own markup (StructuredData), so the prerendered copy carries
+// it for crawlers and the page has it once after the app takes over.
+function legalSchema({ title, description, path, dateModified }) {
+  const url = SITE_URL + path;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': `${url}#webpage`,
+    name: title,
+    description,
+    url,
+    dateModified,
+    inLanguage: 'en-SG',
+    isPartOf: { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, name: 'Sellio', url: `${SITE_URL}/` },
+    publisher: { '@type': 'Organization', name: 'Apptelier', url: 'https://apptelier.sg/' },
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Sellio', item: `${SITE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: title, item: url },
+      ],
+    },
+  };
+}
+
 export default function LegalPage({
   title,
   eyebrow,
@@ -123,7 +124,6 @@ export default function LegalPage({
     title,
     description,
     path,
-    dateModified,
   });
   useEffect(() => { loadExtraFonts(); }, []);
 
@@ -232,6 +232,7 @@ export default function LegalPage({
       </footer>
 
       <CookieConsent open={cookieOpen} onOpenChange={setCookieOpen} returnFocusRef={cookieReturnFocus} />
+      <StructuredData data={legalSchema({ title, description, path, dateModified })} />
     </div>
   );
 }

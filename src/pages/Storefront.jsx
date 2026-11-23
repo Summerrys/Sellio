@@ -33,6 +33,7 @@ import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes
 // Open/closed from the posted hours, including hours that close at or past midnight.
 import { computeStoreOpenState } from '@/lib/storeHours';
 import { formatMoney } from '@/lib/money';
+import { hasEdgeHead } from '@/lib/pageMeta';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
 const RATE_PROMPT_KEY = 'sellio_rate_prompt_dismissed';
@@ -463,6 +464,9 @@ function StorefrontInner() {
 
     const primaryColor = storefrontConfig?.banner_bg_color || theme?.primary_color || '#6366f1';
     document.documentElement.style.setProperty('--sf-primary', primaryColor);
+    // The website wrote this page's head already (title, description, canonical, robots and
+    // structured data: public/_worker.js), fuller than this one; it stays while the visitor is here.
+    if (hasEdgeHead()) return undefined;
 
     const canonicalUrl = `https://sellio.sg/store/${encodeURIComponent(tenantSlug)}`;
     const title = `${tenant.name} | Sellio Storefront`;

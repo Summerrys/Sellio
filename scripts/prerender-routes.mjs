@@ -51,22 +51,18 @@ const appShell = template
 
 await writeFile('dist/app.html', appShell);
 
-// Public storefronts remain client-rendered because their metadata/content is
-// tenant-specific. Keep this shell crawlable by default; preview/staff variants
-// are still switched to noindex by RouteIndexingGuard in the browser.
-const storeShell = template
-  .replace(SEO_BLOCK, '<title>Sellio Storefront</title>')
+// Public storefronts (/store/<slug>), Explore and its item pages (/listing/<id>) are drawn by
+// the app, from the database. public/_worker.js writes each one's own head (title, description,
+// canonical, robots, structured data) between these markers, and its content before the empty
+// root, as the visitor asks for it. The title here is only for when it can't (the database
+// can't be reached). Neither shell says noindex: Google may not run a page whose HTML says
+// noindex, so it would never see the page itself (Alvin, 6 Nov 2026). Preview and staff
+// variants of a storefront are kept out by the worker and by RouteIndexingGuard in the browser.
+const edgeShell = (title) => template
+  .replace(SEO_BLOCK, `<!-- SELLIO_EDGE_HEAD -->\n<title>${title}</title>\n<!-- /SELLIO_EDGE_HEAD -->`)
   .replace(ROOT, ROOT);
-await writeFile('dist/store.html', storeShell);
-
-// Explore and its item pages (/listing/…) are public too (RouteIndexingGuard marks them
-// index, follow), so their shell mustn't say noindex either: Google may not run a page whose
-// HTML says noindex, so it would never see the page's own title, description and canonical,
-// nor follow its links to the shops (Alvin, 6 Nov 2026).
-const exploreShell = template
-  .replace(SEO_BLOCK, '<title>Explore shops and items · Sellio</title>')
-  .replace(ROOT, ROOT);
-await writeFile('dist/explore.html', exploreShell);
+await writeFile('dist/store.html', edgeShell('Sellio Storefront'));
+await writeFile('dist/explore.html', edgeShell('Explore shops and items · Sellio'));
 
 for (const path of PRERENDER_ROUTES) {
   const { html, head } = renderRoute(path);

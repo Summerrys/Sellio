@@ -1,0 +1,55 @@
+name: IndexNow
+
+# Tells the search engines that take IndexNow (Bing, which ChatGPT search and Copilot draw on,
+# Yandex, Naver, Seznam and Yep) which sellio.sg pages changed, so they read them again soon
+# rather than on their own schedule (scripts/indexnow.mjs; the key file is
+# public/1f3882ad422aa7f69880e733ef9d710f.txt).
+#   - Every 6 hours: the pages whose sitemap date is in the last 7 hours (shops and items that
+#     changed).
+#   - By hand (Actions → IndexNow → Run workflow), with "all" for every page: after a change to
+#     every page (a new page layout, say).
+#   - When this file, the script or the key changes on main: every page, once that deploy is live.
+# If the repository goes private, each run is about a minute of GitHub Actions (about 120 a month).
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Every page in the sitemap, not only those changed in the last 7 hours
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - public/1f3882ad422aa7f69880e733ef9d710f.txt
+      - scripts/indexnow.mjs
+      - .github/workflows/indexnow.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexnow
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Tell search engines which pages changed
+        env:
+          EVENT: ${{ github.event_name }}
+          ALL: ${{ inputs.all }}
+        run: |
+          if [ "$EVENT" = push ] || [ "$ALL" = true ]; then
+            node scripts/indexnow.mjs --all --wait-for-key
+          else
+            node scripts/indexnow.mjs --hours 7
+          fi

@@ -7,6 +7,7 @@
 // - the landing page's media (assets/immersive*);
 // - the files only a web host or a search engine reads (_redirects, .htaccess, Cloudflare
 //   Pages' _worker.js, _routes.json, _headers and 404.html, robots.txt, sitemap.xml, llms.txt,
+//   IndexNow's key file,
 //   the share image), the prerendered /privacy and /terms copies, store.html and explore.html
 //   (the web host's shells for those addresses; the app shows those pages itself, from its own
 //   index.html), sw.js (the app registers no service worker), web-push.json (browser alerts'
@@ -35,6 +36,7 @@ const LEFT_OUT = new Set([
   'robots.txt',
   'sitemap.xml',
   'llms.txt',
+  '1f3882ad422aa7f69880e733ef9d710f.txt', // IndexNow's key (scripts/indexnow.mjs), for search engines
   'web-push.json', // browser alerts' settings, the website's only (scripts/web-push-config.mjs)
   'og',
   'privacy',
