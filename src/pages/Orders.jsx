@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { loadPrinterConfig, buildOrderReceipt, buildOrderChit, buildTableReceipt, sendViaBluetooth, sendViaEpsonEPos } from '@/lib/printerUtils';
 import { usePrintWords, readyPrintWords, ENGLISH_PRINT } from '@/lib/printWords';
 import { loadTableBillForOrder, paymentText, tableReceiptHtml } from '@/lib/tableBill';
@@ -14,7 +14,7 @@ import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode } from 'lucide-react';
+import { Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode, ScanLine, CheckCircle2, Bike } from 'lucide-react';
 import EditOrderModal from '@/components/orders/EditOrderModal';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -28,8 +28,8 @@ import DummyOrderCard from '@/components/tour/DummyOrderCard';
 import { toast } from 'sonner';
 import { blockedOffline, showError } from '@/lib/plainError';
 import { createPageUrl } from '../utils';
-import { useNavigate } from 'react-router-dom';
-import { appTimeAgo } from '@/lib/appDates';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { appTimeAgo, formatAppDate } from '@/lib/appDates';
 import ShopOrderInfo, { ShopMethodBadge } from '@/components/shop/ShopOrderInfo';
 import { isShopTenant, shopMethod, shopNextAction, shopStatusLabel, shopStatusTabs } from '@/lib/shopSelling';
 import { inAppFiles, saveFileInApp } from '@/lib/appFiles';
@@ -40,6 +40,9 @@ import OfflineNote, { listNoteWords } from '@/components/ui-custom/OfflineNote';
 import { currencyDecimals, formatMoney } from '@/lib/money';
 import { paymentQrName } from '@/lib/countries';
 import { useAppText, appT, N_ } from '@/lib/appText';
+import HandoverSheet, { handoverVerified } from '@/components/handover/HandoverSheet';
+import CourierLinkSheet from '@/components/handover/CourierLinkSheet';
+import { fetchShopHandovers } from '@/lib/handover';
 
 // The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
 const KEPT_ORDERS = 100;
@@ -127,7 +130,7 @@ function printTableReceipt(bill, currency, merchantName, words = ENGLISH_PRINT) 
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, tourTag = false }) {
+function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, onHandover, onCourierLink, handover = null, tourTag = false }) {
   const { t } = useAppText();
   const { hasPermission, tenant, canUseFeature } = useTenant();
   // A receipt and a chit are in the shop's language (printWords.js), and so are their previews.
@@ -146,6 +149,12 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   const isShop = isShopTenant(tenant);
   const shopFood = isFnBIndustry(tenant?.industry);
   const action = isShop ? shopNextAction(order.status, shopMethod(order), shopFood) : STATUS_NEXT[order.status];
+  // A home seller's order whose buyer has a QR is collected / delivered only by scanning it
+  // (lib/handover.js): its last step opens the scanner instead of marking it done; there is no
+  // Mark collected / delivered. A delivery can also be handed to a courier with a one-time link.
+  const qrOpen = isShop && !!handover?.has_qr && !handover.verified_at && !isFinal;
+  const scansQr = qrOpen && action?.next === 'completed' && !!onHandover;
+  const courierLink = qrOpen && shopMethod(order) === 'delivery' && canEditOrders && !!onCourierLink;
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = appTimeAgo(new Date(order.created_date || order.created_at));
   const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
@@ -339,6 +348,45 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{t('Cancelled')}</span>
             )}
           </div>
+          {isShop && handover?.verified_at && (
+            <p data-testid="handover-record" className="-mt-1.5 mb-3 text-xs flex items-start gap-1 text-emerald-700">
+              <CheckCircle2 className="w-3.5 h-3.5 mt-px flex-shrink-0" />
+              <span>
+                {t(handoverVerified(handover.verified_via))}
+                {' · '}{formatAppDate(new Date(handover.verified_at), 'MMM d, h:mm a')}
+                {handover.verified_by_courier
+                  ? ` · ${handover.verified_by_name ? t('Courier ({name})', { name: handover.verified_by_name }) : t('Courier')}`
+                  : (handover.verified_by_name ? ` · ${handover.verified_by_name}` : '')}
+              </span>
+            </p>
+          )}
+          {qrOpen && (
+            <p data-testid="handover-track" className="-mt-1.5 mb-3 text-xs flex items-start gap-1 text-slate-500">
+              <QrCode className="w-3.5 h-3.5 mt-px flex-shrink-0" />
+              <span>
+                {t('QR issued {when}', { when: formatAppDate(new Date(handover.issued_at), 'h:mm a') })}
+                {' · '}
+                {handover.first_shown_at
+                  ? t('Shown on the buyer’s phone {when}', { when: formatAppDate(new Date(handover.last_shown_at || handover.first_shown_at), 'h:mm a') })
+                  : t('Not opened by the buyer yet')}
+              </span>
+            </p>
+          )}
+          {courierLink && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onCourierLink(order); }}
+              className="-mt-1 mb-3 w-full h-9 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 inline-flex items-center justify-center gap-1.5"
+              data-testid="order-courier-link"
+            >
+              <Bike className="w-4 h-4" />
+              {handover.courier_link
+                ? (handover.courier_opened_at
+                  ? t('Courier link · opened {when}', { when: formatAppDate(new Date(handover.courier_opened_at), 'h:mm a') })
+                  : t('Courier link · not opened yet'))
+                : t('Send a courier link')}
+            </button>
+          )}
 
           {/* Action buttons — one consistent horizontal row across every status
               (wraps only if it truly has to on a very narrow screen), instead of the
@@ -404,7 +452,8 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             {action && canEditOrders && (
               <button
                 data-tour="order-status-btn"
-                onClick={(e) => { e.stopPropagation(); onStatusUpdate(order.id, action.next); }}
+                data-testid={scansQr ? 'order-scan-qr' : undefined}
+                onClick={(e) => { e.stopPropagation(); if (scansQr) onHandover(order); else onStatusUpdate(order.id, action.next); }}
                 className="flex-1 h-11 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform"
                 style={{
                   ...(useThemeButton
@@ -413,7 +462,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   animation: 'orderActionPulse 2s ease-in-out infinite',
                 }}
               >
-                {t(action.label)}
+                {scansQr ? <><ScanLine className="inline-block w-4 h-4 -mt-0.5 mr-1" />{t('Scan QR')}</> : t(action.label)}
               </button>
             )}
           </div>
@@ -652,10 +701,11 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
 
 export default function Orders() {
   const { t } = useAppText();
-  const { tenantId, tenant, hasPermission, subscription, canUseFeature } = useTenant();
+  const { tenantId, tenant, hasPermission, subscription, canUseFeature, isLoading: tenantLoading } = useTenant();
   const ordersTour = useProductTour('orders');
   const { appUser } = useAppUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   // The last load failed (the list then says so, rather than "No orders yet").
@@ -678,6 +728,16 @@ export default function Orders() {
   const statusTabs = isShop ? shopStatusTabs(isFnB) : STATUS_TABS;
   const currency = tenant?.settings?.currency || tenant?.currency || 'SGD';
   const canViewOrders = hasPermission?.('orders.view');
+  const canHandOver = isShop && !!hasPermission?.('orders.edit');
+
+  // Handover QR (lib/handover.js): what the shop may know about its orders' QRs (whether the
+  // buyer has one, whether its code waits, issued / shown / verified, the courier link), the
+  // scanner ({ order } from a card, { token } from a sellio.sg/Orders?qr= link, {} from Scan QR)
+  // and the courier link sheet (the order it's for).
+  const [handovers, setHandovers] = useState(null);
+  const [scanner, setScanner] = useState(null);
+  const [courierFor, setCourierFor] = useState(null);
+  const [handoversTick, setHandoversTick] = useState(0);
 
   // Sound alerts and their reminders (src/lib/useOrderAlerts.js). Here a new order rings and is
   // reminded about until someone accepts it; an order becoming ready rings once.
@@ -759,6 +819,37 @@ export default function Orders() {
       if (supabaseClient && channel) supabaseClient.removeChannel(channel);
     };
   }, [tenantId, fetchOrders, ringAlert, seenOrder]);
+
+  // The QRs' state follows the orders: loaded again when one is added or changes step, and every
+  // 30 seconds while the page is open (it shows when a buyer opened their QR).
+  const handoverKey = useMemo(() => (isShop
+    ? orders.slice(0, 500).map((o) => `${o.id}:${o.status}`).join(',')
+    : ''), [orders, isShop]);
+  useEffect(() => {
+    if (!isShop || !tenantId) return undefined;
+    const ids = handoverKey ? handoverKey.split(',').map((part) => part.split(':')[0]) : [];
+    if (!ids.length) { setHandovers({}); return undefined; }
+    let live = true;
+    fetchShopHandovers(tenantId, ids)
+      .then((map) => { if (live) setHandovers(map); })
+      .catch((e) => console.warn('Handover QRs failed to load:', e?.message || e));
+    return () => { live = false; };
+  }, [isShop, tenantId, handoverKey, handoversTick]);
+  useEffect(() => {
+    if (!isShop || !tenantId) return undefined;
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') setHandoversTick((n) => n + 1);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [isShop, tenantId]);
+
+  // A buyer's QR scanned with the phone's own camera opens sellio.sg/Orders?qr=<token>.
+  useEffect(() => {
+    const token = new URLSearchParams(location.search).get('qr');
+    if (!token || !tenantId || !tenant || tenantLoading) return;
+    if (canHandOver) setScanner({ token });
+    navigate(location.pathname, { replace: true });
+  }, [location.search, tenantId, tenant, tenantLoading, canHandOver]);
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (blockedOffline(t('Couldn’t update the order'), t('Updating an order needs the internet.'), t)) return;
@@ -963,6 +1054,16 @@ export default function Orders() {
                 style={{ '--tw-ring-color': 'rgba(var(--color-primary),0.3)' }}
               />
             </div>
+            {canHandOver && (
+              <button
+                onClick={() => setScanner({})}
+                data-testid="orders-scan-qr"
+                className="flex items-center gap-1.5 px-3 h-9 text-sm font-semibold rounded-lg text-white transition-colors flex-shrink-0"
+                style={{ background: 'var(--color-primary-gradient, rgb(var(--color-primary)))' }}
+              >
+                <ScanLine className="w-4 h-4" />{' '}{t('Scan QR')}
+              </button>
+            )}
             <button
               onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 h-9 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex-shrink-0"
@@ -1071,12 +1172,36 @@ export default function Orders() {
                   onStatusUpdate={handleStatusUpdate}
                   onMarkPaid={handleMarkPaid}
                   onOrderUpdated={(updatedOrder) => setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
+                  onHandover={canHandOver ? (o) => setScanner({ order: o }) : undefined}
+                  onCourierLink={canHandOver ? (o) => setCourierFor(o) : undefined}
+                  handover={handovers?.[order.id] || null}
                   tourTag={index === 0 && ordersTour.eligible}
                 />
               ))}
             </div>
           )}
         </div>
+      {scanner && (
+        <HandoverSheet
+          tenantId={tenantId}
+          orders={orders}
+          handovers={handovers}
+          startOrder={scanner.order || null}
+          startToken={scanner.token || null}
+          onDone={() => { fetchOrders(); setHandoversTick((n) => n + 1); }}
+          onClose={() => setScanner(null)}
+        />
+      )}
+      {courierFor && (
+        <CourierLinkSheet
+          tenantId={tenantId}
+          order={courierFor}
+          info={handovers?.[courierFor.id] || null}
+          shopName={tenant?.name}
+          onChanged={() => setHandoversTick((n) => n + 1)}
+          onClose={() => setCourierFor(null)}
+        />
+      )}
       {ordersTour.eligible && (
         <TourGuide
           steps={getOrdersSteps({ tier: subscription?.tier, listings: isShop, isDesktop: window.matchMedia('(min-width: 1024px)').matches })}

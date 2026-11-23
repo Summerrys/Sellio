@@ -5,6 +5,7 @@ import {
 } from '@/lib/shopSelling';
 import { mapLinkProps, outsideLinkProps } from '@/lib/nativeApp';
 import { formatMoney } from '@/lib/money';
+import HandoverPass from '@/components/handover/HandoverPass';
 
 // Free-shop parts of the store page: checkout (how to get the order, name, mobile,
 // address, date), the details shown after ordering, and the buyer's order history.
@@ -202,6 +203,47 @@ export function ShopOrderDetails({ order, currency, lang, food, sellerPhone }) {
   );
 }
 
+// The buyer's handover QR (lib/handover.js) for a home seller's order still to be collected or
+// delivered: from the server, for the signed-in account that placed it (the store page asks home
+// sellers' buyers to sign in). The QR clears with "Collected ✓" / "Delivered ✓" once the seller
+// scans it.
+export const handoverQrFor = (order) => !!order?.id && order.status !== 'completed' && order.status !== 'cancelled';
+
+export function ShopHandoverPass({ order, lang, size, onHandedOver, onNone }) {
+  const T = (k) => shopT(lang, k);
+  const delivery = shopMethod(order) === 'delivery';
+  const when = (iso) => new Date(iso).toLocaleString(lang === 'zh' ? 'zh-SG' : lang === 'ms' ? 'ms-MY' : lang === 'id' ? 'id-ID' : 'en-SG',
+    { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  return (
+    <HandoverPass
+      orderId={order.id}
+      size={size}
+      onHandedOver={onHandedOver}
+      onNone={onNone}
+      words={{
+        title: T(delivery ? 'deliveryQr' : 'collectionQr'),
+        hint: T(delivery ? 'deliveryQrHint' : 'collectionQrHint'),
+        codeLabel: T('qrCode'),
+        done: T(delivery ? 'qrDelivered' : 'qrCollected'),
+        verifiedQr: T('qrVerifiedScan'),
+        verifiedPin: T('qrVerifiedCode'),
+        when,
+      }}
+    />
+  );
+}
+
+// The same, as a card of its own (the order-placed screen); gone when there's no QR to show.
+export function ShopHandoverCard({ order, lang, size = 180 }) {
+  const [none, setNone] = useState(false);
+  if (none || !handoverQrFor(order)) return null;
+  return (
+    <div data-testid="order-handover-card" style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
+      <ShopHandoverPass order={order} lang={lang} size={size} onNone={() => setNone(true)} />
+    </div>
+  );
+}
+
 const STATUS_STYLE = {
   pending: { bg: '#fef3c7', color: '#92400e' },
   confirmed: { bg: '#dbeafe', color: '#1e40af' },
@@ -212,9 +254,10 @@ const STATUS_STYLE = {
   cancelled: { bg: '#fee2e2', color: '#991b1b' },
 };
 
-export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, paymentQrUrl, renderExtra }) {
+export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, paymentQrUrl, renderExtra, showHandoverQr = false }) {
   const T = (k) => shopT(lang, k);
   const [qrFor, setQrFor] = useState(null);
+  const [passFor, setPassFor] = useState(null);
   if (!orders.length) {
     return <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ color: '#94a3b8', fontSize: 14 }}>{T('noOrders')}</p></div>;
   }
@@ -259,6 +302,15 @@ export function ShopOrderHistory({ orders, currency, lang, food, primaryColor, p
           qrFor === order.id
             ? <img src={paymentQrUrl} alt="Payment QR" style={{ width: 180, height: 180, objectFit: 'contain', display: 'block', margin: '10px auto 0', background: 'white', borderRadius: 10, padding: 8, border: '1px solid #e2e8f0' }} />
             : <button type="button" onClick={() => setQrFor(order.id)} style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: primaryColor, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{T('showQr')}</button>
+        )}
+        {showHandoverQr && handoverQrFor(order) && (
+          passFor === order.id
+            ? <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid #e5e7eb' }}><ShopHandoverPass order={order} lang={lang} size={180} /></div>
+            : (
+              <button type="button" data-testid="shop-history-show-qr" onClick={() => setPassFor(order.id)} style={{ display: 'block', marginTop: 8, fontSize: 12, fontWeight: 600, color: primaryColor, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                {T(shopMethod(order) === 'delivery' ? 'showDeliveryQr' : 'showCollectionQr')}
+              </button>
+            )
         )}
         {renderExtra?.(order)}
       </div>

@@ -5,7 +5,7 @@
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Sellio uses the camera to take photos of items you sell.</string>
+	<string>Sellio uses the camera to take photos of items you sell and to scan buyers’ collection QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Sellio uses your photos so you can add them to your listings.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>

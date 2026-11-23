@@ -19,7 +19,7 @@ import { fetchStorefrontCatalog } from '@/lib/storefrontCatalog';
 import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { likeErrorMessage, needsSignIn, setListingLike, toggleKnownLike, useLikesFor } from '@/lib/likes';
 import { toast } from 'sonner';
-import { ShopCheckout, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
+import { ShopCheckout, ShopHandoverCard, ShopOrderDetails, ShopOrderHistory } from '@/components/shop/ShopStorefront';
 import { shopMethod, shopT } from '@/lib/shopSelling';
 import OrderTracker from '@/components/storefront/OrderTracker';
 import OrderPlacedCheck from '@/components/storefront/OrderPlacedCheck';
@@ -161,13 +161,15 @@ function StorefrontInner() {
     if (!showCheckout) { setCheckoutProblem(null); setShowOrderToStaff(false); }
   }, [showCheckout]);
 
-  // In the Android app, buying from a store page needs a Sellio sign-in. Table QR
-  // orders, staff taking orders and previews stay as they are; the cart is kept and
-  // signing in comes back here. onOpen (Buy now on an item) closes the item's screen in
-  // the same moment the checkout opens, so its Back step becomes the checkout's.
+  // In the Android app, buying from a store page needs a Sellio sign-in; so does buying from a
+  // home seller anywhere (Alvin, 23 Nov 2026): the order's handover QR is shown only to the
+  // buyer's account, from the server (lib/handover.js). Table QR orders, staff taking orders and
+  // previews stay as they are; the cart is kept and signing in comes back here. onOpen (Buy now
+  // on an item) closes the item's screen in the same moment the checkout opens, so its Back step
+  // becomes the checkout's.
   const beginCheckout = async (fromLink, onOpen) => {
     if (ownShop) { blockOwnShop(); return; }
-    if (!isDineIn && !isStaffMode && !isPreview && isNativeApp()) {
+    if (!isDineIn && !isStaffMode && !isPreview && (isNativeApp() || shopSelling)) {
       try {
         const supabase = await getSupabase();
         const { data: { session } } = await supabase.auth.getSession();
@@ -1086,7 +1088,7 @@ function StorefrontInner() {
               <button onClick={() => setShowOrderHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 22, lineHeight: 1 }}>✕</button>
             </div>
             {shopSelling ? (
-              <ShopOrderHistory orders={orderHistory} currency={currency} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url}
+              <ShopOrderHistory orders={orderHistory} currency={currency} lang={lang} food={isFnB} primaryColor={primaryColor} paymentQrUrl={tenant.payment_qr_url} showHandoverQr={signedIn}
                 renderExtra={(order) => <OrderRateRow order={order} rating={myRatings[order.id]} onPick={(n) => pickRating(order, n)} accent={primaryColor} />} />
             ) : orderHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0' }}><p style={{ fontSize: 36, margin: '0 0 8px' }}>🍽️</p><p style={{ color: '#94a3b8', fontSize: 14 }}>{t('noOrdersYet')}</p></div>
@@ -1312,6 +1314,8 @@ function StorefrontInner() {
                 <ShopOrderDetails order={lastOrder} currency={currency} lang={lang} food={isFnB} sellerPhone={tenant.phone} />
               </div>
             )}
+
+            {shopSelling && lastOrder && <ShopHandoverCard order={lastOrder} lang={lang} />}
 
             {/* Order summary card */}
             <div style={{ width: '100%', background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>

@@ -609,5 +609,13 @@
   "Copy": "复制",
   "Show my WhatsApp on my invite page": "在我的邀请页面显示我的 WhatsApp",
   "Owners who open your link can message you for help with setting up.": "打开您链接的店主可以发消息给您，请您协助设置。",
-  "Owners who open your link can message you for help with setting up. Add your mobile number to your profile first.": "打开您链接的店主可以发消息给您，请您协助设置。请先在个人资料中添加您的手机号码。"
+  "Owners who open your link can message you for help with setting up. Add your mobile number to your profile first.": "打开您链接的店主可以发消息给您，请您协助设置。请先在个人资料中添加您的手机号码。",
+  "Collection QR": "自取二维码",
+  "Show this when you collect your order. The seller scans it to confirm you’ve got it.": "自取时出示此二维码，卖家扫描后即确认您已取货。",
+  "Or read out this code": "或报出此号码",
+  "Show collection QR": "显示自取二维码",
+  "Verified with your code": "已用您的号码确认",
+  "Delivery QR": "送货二维码",
+  "Show delivery QR": "显示送货二维码",
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。"
 }

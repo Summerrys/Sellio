@@ -31,6 +31,8 @@ const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Terms = lazy(() => import('./pages/Terms'));
 const AccountDeletion = lazy(() => import('./pages/AccountDeletion'));
+// A courier's one-time delivery page (sellio.sg/courier/…): public, no account.
+const CourierHandover = lazy(() => import('./pages/CourierHandover'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const PageNotFound = lazy(() => import('./lib/PageNotFound'));
 const ListingPage = lazy(() => import('@/components/explore/ListingPage'));
@@ -211,6 +213,7 @@ function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/delete-account" element={<AccountDeletion />} />
               <Route path="/r/:code" element={<ReferralInvite />} />
+              <Route path="/courier/:link" element={<CourierHandover />} />
               <Route path="/distributor-terms" element={<DistributorTerms />} />
               <Route path="/*" element={<AuthenticatedApp />} />
             </Routes>

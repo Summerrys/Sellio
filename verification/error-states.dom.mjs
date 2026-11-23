@@ -100,7 +100,7 @@ const stubs = {
   push: 'export const offerPushAlerts = () => {};',
   device: 'export const rememberThisPhone = () => {};',
   ratingParts: 'export const OrderRateRow = () => null; export const RateOrderSheet = () => null; export const RatePrompt = () => null; export const RatingSheet = () => null;',
-  shopStore: 'export const ShopCheckout = () => null; export const ShopOrderDetails = () => null; export const ShopOrderHistory = () => null;',
+  shopStore: 'export const ShopCheckout = () => null; export const ShopOrderDetails = () => null; export const ShopOrderHistory = () => null; export const ShopHandoverCard = () => null;',
   native: 'export const isNativeApp = () => false; export const isCapacitorApp = () => false; export const appPlatform = () => "web";',
   authNav: 'export const rememberReturnPath = () => {};',
   back: 'export const useBackToClose = () => {}; export const handOverBackStep = () => false;',

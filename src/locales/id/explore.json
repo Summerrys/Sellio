@@ -609,5 +609,13 @@
   "Copy": "Salin",
   "Show my WhatsApp on my invite page": "Tampilkan WhatsApp saya di halaman undangan saya",
   "Owners who open your link can message you for help with setting up.": "Pemilik toko yang membuka tautan Anda bisa mengirim pesan untuk minta bantuan menyiapkan tokonya.",
-  "Owners who open your link can message you for help with setting up. Add your mobile number to your profile first.": "Pemilik toko yang membuka tautan Anda bisa mengirim pesan untuk minta bantuan menyiapkan tokonya. Tambahkan nomor ponsel Anda ke profil terlebih dahulu."
+  "Owners who open your link can message you for help with setting up. Add your mobile number to your profile first.": "Pemilik toko yang membuka tautan Anda bisa mengirim pesan untuk minta bantuan menyiapkan tokonya. Tambahkan nomor ponsel Anda ke profil terlebih dahulu.",
+  "Collection QR": "QR ambil sendiri",
+  "Show this when you collect your order. The seller scans it to confirm you’ve got it.": "Tunjukkan ini saat mengambil pesanan Anda. Penjual akan memindainya untuk memastikan pesanan sudah Anda terima.",
+  "Or read out this code": "Atau sebutkan kode ini",
+  "Show collection QR": "Tampilkan QR ambil sendiri",
+  "Verified with your code": "Dikonfirmasi dengan kode Anda",
+  "Delivery QR": "QR pengiriman",
+  "Show delivery QR": "Tampilkan QR pengiriman",
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini saat pesanan Anda diantar. Penjual atau kurirnya akan memindainya untuk memastikan pesanan sudah Anda terima."
 }

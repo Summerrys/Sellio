@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, ChevronRight, Loader2, MapPin, MessageCircle, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, ChevronRight, Loader2, MapPin, MessageCircle, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { showError } from '@/lib/plainError';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -10,6 +10,8 @@ import { buyerStatusLabel, formatShopDate, shopMethod } from '@/lib/shopSelling'
 import { myOrderRatings, removeMyComment } from '@/lib/ratings';
 import { cancelMyOrder, claimDeviceOrders, fetchPurchase, fetchPurchases } from '@/lib/purchases';
 import { mapLinkProps } from '@/lib/nativeApp';
+import { fetchMyHandover, handoverMethod } from '@/lib/handover';
+import HandoverPass from '@/components/handover/HandoverPass';
 import { OrderRateRow, RateOrderSheet } from '@/components/ratings/RatingParts';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_COLOR, BRAND_GRADIENT, ShopAvatar, chatUrl, formatPrice, goBack, newChatUrl, storeUrl } from './shared';
@@ -66,6 +68,52 @@ const itemsLine = (items, t) => (items || []).map((i) => `${Number(i.quantity) |
 // 14 Nov, 6:30 am; in Indonesian 14 Nov, 06.30 (the app's times: lib/appDates.js).
 const when = (iso, locale) => (iso ? new Date(iso).toLocaleString(locale, { day: 'numeric', month: 'short', hour: locale === 'id-ID' ? '2-digit' : 'numeric', minute: '2-digit' }) : '');
 const unpaid = (o) => o.payment_status !== 'paid' && o.status !== 'cancelled';
+
+// How the seller verified the handover (lib/handover.js), as the buyer reads it.
+const VERIFIED = {
+  qr: N_('Verified by QR scan'),
+  pin: N_('Verified with your code'),
+};
+
+// The buyer's handover QR for a home seller's order still to be collected or delivered, from the
+// server: shown at once when it's ready (or out for delivery), a tap away before that. When the
+// seller scans it, it clears to "Collected ✓" / "Delivered ✓" and the order reloads.
+function HandoverCard({ order, onHandedOver }) {
+  const { t, locale } = useAppText('explore');
+  const ready = order.status === 'ready' || order.status === 'served';
+  const [open, setOpen] = useState(ready);
+  const [none, setNone] = useState(false);
+  useEffect(() => { if (ready) setOpen(true); }, [ready]);
+  const delivery = handoverMethod(order) === 'delivery';
+  if (none) return null;
+  return (
+    <Card testId="purchase-handover">
+      {open ? (
+        <HandoverPass
+          orderId={order.id}
+          onHandedOver={onHandedOver}
+          onNone={() => setNone(true)}
+          words={{
+            title: delivery ? t('Delivery QR') : t('Collection QR'),
+            hint: delivery
+              ? t('Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.')
+              : t('Show this when you collect your order. The seller scans it to confirm you’ve got it.'),
+            codeLabel: t('Or read out this code'),
+            done: delivery ? t('Delivered') : t('Collected'),
+            verifiedQr: t(VERIFIED.qr),
+            verifiedPin: t(VERIFIED.pin),
+            when: (iso) => when(iso, locale),
+          }}
+          testId="purchase-handover-pass"
+        />
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} data-testid="purchase-show-qr" className="w-full text-sm font-semibold" style={{ color: BRAND_COLOR }}>
+          {delivery ? t('Show delivery QR') : t('Show collection QR')}
+        </button>
+      )}
+    </Card>
+  );
+}
 
 function SubHeader({ title, onBack }) {
   const { t } = useAppText('explore');
@@ -383,6 +431,7 @@ export function PurchaseDetail() {
   const [rating, setRating] = useState(null);
   const [rateStars, setRateStars] = useState(null);
   const [opening, setOpening] = useState(false);
+  const [verified, setVerified] = useState(null);
   const confirmRef = useRef(null);
   // Bring "Cancel this order?" into view above the bottom bar.
   useEffect(() => {
@@ -421,6 +470,18 @@ export function PurchaseDetail() {
     const id = setInterval(reload, 30 * 1000);
     return () => clearInterval(id);
   }, [ongoing, reload]);
+
+  // A home seller's order, collected or delivered: when and how the seller verified the handover.
+  const homeOrder = isHomeSeller(order);
+  const orderDone = order?.status === 'completed';
+  useEffect(() => {
+    if (!homeOrder || !orderDone) { setVerified(null); return undefined; }
+    let cancelled = false;
+    fetchMyHandover(order.id)
+      .then((answer) => { if (!cancelled) setVerified(answer?.verified_at ? answer : null); })
+      .catch((e) => console.warn('Handover failed to load:', e?.message || e));
+    return () => { cancelled = true; };
+  }, [homeOrder, orderDone, order?.id]);
 
   // The buyer's rating, once the order is done.
   const done = order?.status === 'completed';
@@ -524,9 +585,18 @@ export function PurchaseDetail() {
           {order.status === 'pending' && (
             <p className="text-xs text-slate-500">{home ? t('The seller will accept your order soon.') : t('The shop will accept your order soon.')}</p>
           )}
+          {verified && VERIFIED[verified.verified_via] && (
+            <p data-testid="purchase-verified" className="mt-1 text-xs font-semibold flex items-center gap-1 text-emerald-700">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {t(VERIFIED[verified.verified_via])} · {when(verified.verified_at, locale)}
+            </p>
+          )}
           <Timeline order={order} />
         </section>
 
+        {homeOrder && order.status !== 'completed' && order.status !== 'cancelled' && (
+          <HandoverCard order={order} onHandedOver={reload} />
+        )}
         {home && order.fulfilment && <HowYouGetIt order={order} />}
         {!home && order.table_name && (
           <Card title={t('Table')}><p className="text-sm text-slate-700">{order.table_name}</p></Card>
