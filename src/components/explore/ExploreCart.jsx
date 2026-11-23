@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
-import { cartCount, heldInCart, setShopCartQuantity, stockLimit, useShopCarts } from '@/lib/shopCart';
+import { cartCount, heldInCart, setShopCartQuantity, stockLeft, stockLimit, useShopCarts } from '@/lib/shopCart';
 import { useStockInfo } from '@/lib/stockInfo';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_COLOR, BRAND_GRADIENT, ExploreTabHeader, ItemImage, ShopAvatar, formatPrice, storeUrl } from './shared';
@@ -101,6 +101,7 @@ function ShopCart({ cart, details, stock = {} }) {
           const price = Number(line.price) || 0;
           // The seller's stock, when they count it (and once it's loaded), across the item's lines.
           const limit = stockLimit(stock[line.product_id]);
+          const left = stockLeft(stock[line.product_id]) ?? limit;
           const most = Math.max(0, limit - heldInCart(lines, line.product_id, line.key));
           const over = heldInCart(lines, line.product_id) > limit;
           return (
@@ -119,7 +120,7 @@ function ShopCart({ cart, details, stock = {} }) {
                 </div>
                 {over && (
                   <p className="mt-1.5 text-xs text-amber-800" data-testid="cart-line-stock">
-                    {limit === 0 ? t('Sold out') : t('The seller has only {count} left.', { count: limit })}
+                    {left === 0 ? t('Sold out') : left === 1 ? t('Only 1 item left') : t('Only {count} items left', { count: left })}
                   </p>
                 )}
               </div>

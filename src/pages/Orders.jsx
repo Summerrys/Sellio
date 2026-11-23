@@ -14,7 +14,7 @@ import TableCallAlerts from '../components/orders/TableCallAlerts';
 import { useOrderAlerts, REMIND_EVERY } from '@/lib/useOrderAlerts';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode, ScanLine, CheckCircle2, Bike } from 'lucide-react';
+import { Bell, BellOff, Monitor, Search, Download, Printer, Loader2, QrCode, ScanLine, CheckCircle2, Bike, Camera } from 'lucide-react';
 import EditOrderModal from '@/components/orders/EditOrderModal';
 import ChitPreviewSheet from '@/components/orders/ChitPreviewSheet';
 import { SkeletonList } from '@/components/ui-custom/AppLoader';
@@ -42,7 +42,10 @@ import { paymentQrName } from '@/lib/countries';
 import { useAppText, appT, N_ } from '@/lib/appText';
 import HandoverSheet, { handoverVerified } from '@/components/handover/HandoverSheet';
 import CourierLinkSheet from '@/components/handover/CourierLinkSheet';
+import PackingPhotoSheet from '@/components/handover/PackingPhotoSheet';
+import { PackingPhotoViewer } from '@/components/handover/PackingPhotoView';
 import { fetchShopHandovers } from '@/lib/handover';
+import { PACKING_REQUIRED, fetchShopPackingPhotos, photoLinks } from '@/lib/packingPhoto';
 
 // The latest orders kept on the phone, for opening Orders with no connection (UX states, 4).
 const KEPT_ORDERS = 100;
@@ -130,7 +133,7 @@ function printTableReceipt(bill, currency, merchantName, words = ENGLISH_PRINT) 
   win.document.close();
 }
 
-function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, onHandover, onCourierLink, handover = null, tourTag = false }) {
+function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel, tenantId, onStatusUpdate, onMarkPaid, onOrderUpdated, onHandover, onCourierLink, onPackingPhoto, handover = null, packing = null, packingUrl = null, tourTag = false }) {
   const { t } = useAppText();
   const { hasPermission, tenant, canUseFeature } = useTenant();
   // A receipt and a chit are in the shop's language (printWords.js), and so are their previews.
@@ -154,7 +157,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   // Mark collected / delivered. A delivery can also be handed to a courier with a one-time link.
   const qrOpen = isShop && !!handover?.has_qr && !handover.verified_at && !isFinal;
   const scansQr = qrOpen && action?.next === 'completed' && !!onHandover;
-  const courierLink = qrOpen && shopMethod(order) === 'delivery' && canEditOrders && !!onCourierLink;
+  // Such an order is marked packed (ready / out for delivery) only with a photo of it packed, its
+  // order number in the picture (lib/packingPhoto.js): its "Ready for collection" / "Out for
+  // delivery" opens Sellio's camera instead. The buyer sees the photo.
+  const takesPhoto = qrOpen && action?.next === 'ready' && order.status === 'preparing' && !packing && !!onPackingPhoto;
+  // A courier link once it's packed (the courier's scan needs the order packed first).
+  const courierLink = qrOpen && order.status === 'ready' && shopMethod(order) === 'delivery' && canEditOrders && !!onCourierLink;
+  const [viewPhoto, setViewPhoto] = useState(false);
   const accent = STATUS_ACCENT[order.status] || STATUS_ACCENT.completed;
   const elapsed = appTimeAgo(new Date(order.created_date || order.created_at));
   const customerName = order.customer_name && order.customer_name.toLowerCase() !== 'nil' ? order.customer_name : null;
@@ -173,6 +182,7 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
   useBackToClose(showReceipt, () => { if (receiptPrinting) return false; setShowReceipt(false); });
   useBackToClose(showChit, () => { if (chitPrinting) return false; setShowChit(false); });
   useBackToClose(showPaymentQR, () => { if (payBusy) return false; setShowPaymentQR(false); });
+  const packedWhen = packing?.taken_at ? formatAppDate(new Date(packing.taken_at), 'MMM d, h:mm a') : '';
   // The shop's own country's QR: PayNow, DuitNow or QRIS (lib/countries.js).
   const qrPayLabel = `QR · ${paymentQrName(tenant)}`;
 
@@ -360,6 +370,33 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
               </span>
             </p>
           )}
+          {isShop && packing && (
+            <div data-testid="packing-record" className="-mt-1 mb-3 flex items-center gap-2.5">
+              {packingUrl ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setViewPhoto(true); }}
+                  aria-label={t('Open the packing photo of order #{number}', { number: order.order_number })}
+                  className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0"
+                  data-testid="packing-thumb"
+                >
+                  <img src={packingUrl} alt="" className="w-full h-full object-cover" />
+                </button>
+              ) : (
+                <span className="w-12 h-12 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0"><Camera className="w-5 h-5" /></span>
+              )}
+              <p className="text-xs text-slate-600 min-w-0">
+                <span className="font-semibold text-slate-800">{t('Packing photo')}</span>
+                <span className="block">{t('Packed {when}', { when: packedWhen })}{packing.taken_by_name ? ` · ${packing.taken_by_name}` : ''}</span>
+              </p>
+            </div>
+          )}
+          {takesPhoto && (
+            <p data-testid="packing-hint" className="-mt-1.5 mb-3 text-xs flex items-start gap-1 text-slate-500">
+              <Camera className="w-3.5 h-3.5 mt-px flex-shrink-0" />
+              <span>{t('The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.', { number: order.order_number })}</span>
+            </p>
+          )}
           {qrOpen && (
             <p data-testid="handover-track" className="-mt-1.5 mb-3 text-xs flex items-start gap-1 text-slate-500">
               <QrCode className="w-3.5 h-3.5 mt-px flex-shrink-0" />
@@ -452,8 +489,13 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
             {action && canEditOrders && (
               <button
                 data-tour="order-status-btn"
-                data-testid={scansQr ? 'order-scan-qr' : undefined}
-                onClick={(e) => { e.stopPropagation(); if (scansQr) onHandover(order); else onStatusUpdate(order.id, action.next); }}
+                data-testid={scansQr ? 'order-scan-qr' : takesPhoto ? 'order-packing-photo' : undefined}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scansQr) onHandover(order);
+                  else if (takesPhoto) onPackingPhoto(order);
+                  else onStatusUpdate(order.id, action.next);
+                }}
                 className="flex-1 h-11 rounded-lg text-sm font-semibold text-white active:scale-95 transition-transform"
                 style={{
                   ...(useThemeButton
@@ -462,7 +504,9 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
                   animation: 'orderActionPulse 2s ease-in-out infinite',
                 }}
               >
-                {scansQr ? <><ScanLine className="inline-block w-4 h-4 -mt-0.5 mr-1" />{t('Scan QR')}</> : t(action.label)}
+                {scansQr ? <><ScanLine className="inline-block w-4 h-4 -mt-0.5 mr-1" />{t('Scan QR')}</>
+                  : takesPhoto ? <><Camera className="inline-block w-4 h-4 -mt-0.5 mr-1" />{t('Packed · take photo')}</>
+                    : t(action.label)}
               </button>
             )}
           </div>
@@ -475,6 +519,15 @@ function OrderCard({ order, currency, merchantName, paymentQrUrl, paymentQrLabel
           50% { box-shadow: 0 0 0 6px rgba(15, 23, 42, 0); }
         }
       `}</style>
+
+      {/* The packing photo, full screen (outside the card: a tap on it isn't the card's). */}
+      {viewPhoto && packingUrl && (
+        <PackingPhotoViewer
+          src={packingUrl}
+          words={{ title: t('Packing photo for order #{number}', { number: order.order_number }), close: t('Close photo') }}
+          onClose={() => setViewPhoto(false)}
+        />
+      )}
 
       {/* Edit Order Sheet */}
       {showEditOrder && (
@@ -738,6 +791,11 @@ export default function Orders() {
   const [scanner, setScanner] = useState(null);
   const [courierFor, setCourierFor] = useState(null);
   const [handoversTick, setHandoversTick] = useState(0);
+  // Packing photos (lib/packingPhoto.js): each order's latest, links to show them (an hour each,
+  // made again after 45 minutes), and the camera sheet (the order it's for).
+  const [packing, setPacking] = useState({});
+  const [packingLinks, setPackingLinks] = useState({});
+  const [packingFor, setPackingFor] = useState(null);
 
   // Sound alerts and their reminders (src/lib/useOrderAlerts.js). Here a new order rings and is
   // reminded about until someone accepts it; an order becoming ready rings once.
@@ -842,6 +900,36 @@ export default function Orders() {
     }, 30000);
     return () => clearInterval(timer);
   }, [isShop, tenantId]);
+  // The packing photos follow the orders the same way (only orders with a QR have them).
+  const photoKey = useMemo(() => (handovers
+    ? Object.values(handovers).filter((h) => h?.has_qr).map((h) => h.order_id).sort().join(',')
+    : ''), [handovers]);
+  useEffect(() => {
+    if (!isShop || !tenantId || !photoKey) { setPacking({}); return undefined; }
+    let live = true;
+    fetchShopPackingPhotos(tenantId, photoKey.split(','))
+      .then((map) => { if (live) setPacking(map); })
+      .catch((e) => console.warn('Packing photos failed to load:', e?.message || e));
+    return () => { live = false; };
+  }, [isShop, tenantId, photoKey, handoversTick]);
+  useEffect(() => {
+    const now = Date.now();
+    const paths = Object.values(packing).map((p) => p?.path).filter((path) => path && !(packingLinks[path]?.at > now - 45 * 60000));
+    if (!paths.length) return undefined;
+    let live = true;
+    photoLinks(paths)
+      .then((links) => {
+        if (!live) return;
+        const at = Date.now();
+        setPackingLinks((prev) => {
+          const next = { ...prev };
+          for (const [path, url] of Object.entries(links)) next[path] = { url, at };
+          return next;
+        });
+      })
+      .catch((e) => console.warn('Packing photo links failed:', e?.message || e));
+    return () => { live = false; };
+  }, [packing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A buyer's QR scanned with the phone's own camera opens sellio.sg/Orders?qr=<token>.
   useEffect(() => {
@@ -858,6 +946,9 @@ export default function Orders() {
       .from('orders')
       .update({ status: newStatus, updated_date: new Date().toISOString() })
       .eq('id', orderId);
+    // Packed only with its photo (the server's rule): the camera, instead of an error.
+    const waiting = error?.hint === PACKING_REQUIRED ? orders.find((o) => o.id === orderId) : null;
+    if (waiting && isShop && canHandOver) { setPackingFor(waiting); return; }
     if (error) { showError(error, t('Couldn’t update the order'), { t }); return; }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast.success(t('Order updated'));
@@ -1174,7 +1265,10 @@ export default function Orders() {
                   onOrderUpdated={(updatedOrder) => setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))}
                   onHandover={canHandOver ? (o) => setScanner({ order: o }) : undefined}
                   onCourierLink={canHandOver ? (o) => setCourierFor(o) : undefined}
+                  onPackingPhoto={canHandOver ? (o) => setPackingFor(o) : undefined}
                   handover={handovers?.[order.id] || null}
+                  packing={packing[order.id] || null}
+                  packingUrl={packingLinks[packing[order.id]?.path]?.url || null}
                   tourTag={index === 0 && ordersTour.eligible}
                 />
               ))}
@@ -1190,6 +1284,20 @@ export default function Orders() {
           startToken={scanner.token || null}
           onDone={() => { fetchOrders(); setHandoversTick((n) => n + 1); }}
           onClose={() => setScanner(null)}
+        />
+      )}
+      {packingFor && (
+        <PackingPhotoSheet
+          tenantId={tenantId}
+          order={packingFor}
+          shopName={tenant?.name}
+          onDone={(answer) => {
+            setOrders((prev) => prev.map((o) => (o.id === answer.order_id ? { ...o, status: answer.status } : o)));
+            setPacking((prev) => ({ ...prev, [answer.order_id]: { order_id: answer.order_id, path: answer.path, taken_at: answer.taken_at, taken_by_name: answer.taken_by_name, photos: 1 } }));
+            fetchOrders();
+            setHandoversTick((n) => n + 1);
+          }}
+          onClose={() => setPackingFor(null)}
         />
       )}
       {courierFor && (

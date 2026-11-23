@@ -314,10 +314,12 @@
   "optional": "选填",
   "Anything the seller should know?": "有什么需要告诉卖家的吗？",
   "All in your cart": "已全部在购物车里",
-  "That’s all the seller has left.": "卖家只剩这么多了。",
-  "That’s all the seller has left, counting what’s in your cart.": "算上您购物车里的，卖家只剩这么多了。",
   "Everything the seller has left is in your cart.": "卖家剩下的都已在您的购物车里。",
-  "The seller has only {count} left.": "卖家只剩 {count} 件。",
+  "1 item left": "剩 1 件",
+  "{count} items left": "剩 {count} 件",
+  "{count} in your cart": "购物车里有 {count} 件",
+  "Only 1 item left": "只剩 1 件",
+  "Only {count} items left": "只剩 {count} 件",
   "Quantity": "数量",
   "One less": "减一份",
   "One more": "加一份",
@@ -623,5 +625,8 @@
   "Verified with your code": "已用您的号码确认",
   "Delivery QR": "送货二维码",
   "Show delivery QR": "显示送货二维码",
-  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。"
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。",
+  "Open the packing photo": "打开包装照片",
+  "Your order, packed": "您的订单，已包装好",
+  "Packed {when}. The seller took this photo in Sellio.": "{when} 包装好。卖家在 Sellio 里拍了这张照片。"
 }

@@ -11,9 +11,11 @@ import { useAppText } from '@/lib/appText';
 // Choosing an item's options (size, add-ons), a special request and how many, before
 // it goes into the cart (mode 'cart') or straight to checkout (mode 'buy'). The same
 // rules as the shop page's item screen (see itemOptions.js).
-// limitFor(variant, notes) → { max, held }: the most this choice can take, from the seller's
-// stock and the cart (Alvin, 23 Nov 2026), and how many of the item the cart already counts
-// against it. None: up to MAX_LINE_QUANTITY.
+// limitFor(variant, notes) → { max, held, left, inCart }: the most this choice can take, from
+// the seller's stock and the cart (Alvin, 23 Nov 2026); how many of the item the cart already
+// counts against it; how many the seller has left (null: not counted) and how many of the item
+// the cart holds, for "2 items left · 1 in your cart" under the quantity (Alvin, 24 Nov 2026).
+// None: up to MAX_LINE_QUANTITY.
 export default function ItemOptionsSheet({ open, mode, item, currency, image, onClose, onConfirm, limitFor = null }) {
   const { t, language } = useAppText('explore');
   const groups = useMemo(() => normaliseVariants(item?.variants, item?.price), [item]);
@@ -35,7 +37,8 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
   const room = limitFor ? limitFor(variant, notes.trim() || null) : null;
   const max = room ? Math.max(0, Math.min(MAX_LINE_QUANTITY, Math.floor(Number(room.max) || 0))) : MAX_LINE_QUANTITY;
   const full = max < 1; // the cart already holds all the seller has
-  const atStock = !full && quantity >= max && max < MAX_LINE_QUANTITY;
+  const left = room?.left ?? null;
+  const inCart = Math.max(0, Math.floor(Number(room?.inCart) || 0));
 
   // The stock (or the cart) changed under the chosen number: down to what's left.
   useEffect(() => {
@@ -158,11 +161,10 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           </button>
         </div>
       </div>
-      {(atStock || full) && (
+      {left > 0 && (
         <p className="mt-2 text-right text-xs text-slate-500" data-testid="item-options-stock">
-          {room?.held > 0
-            ? t('That’s all the seller has left, counting what’s in your cart.')
-            : full ? t('Sold out') : t('That’s all the seller has left.')}
+          {left === 1 ? t('1 item left') : t('{count} items left', { count: left })}
+          {inCart > 0 && ` · ${t('{count} in your cart', { count: inCart })}`}
         </p>
       )}
     </BottomSheet>

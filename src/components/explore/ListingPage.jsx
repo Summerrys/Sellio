@@ -11,7 +11,7 @@ import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { useRatingSummaries } from '@/lib/ratings';
 import { likeErrorMessage, likesText, needsSignIn, noteLikes, setListingLike } from '@/lib/likes';
 import {
-  CART_FULL, addToShopCart, cartLineKey, ensureInShopCart, heldInCart, lineRoom, readShopCart, stockLimit, useCartCount,
+  CART_FULL, addToShopCart, cartLineKey, ensureInShopCart, heldInCart, lineRoom, readShopCart, stockLeft, stockLimit, useCartCount,
 } from '@/lib/shopCart';
 import { useStockInfo } from '@/lib/stockInfo';
 import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
@@ -487,13 +487,15 @@ function Listing({ productId }) {
   // The most the choice in the options sheet can take: Add to cart adds on top of all the
   // item's lines; Buy now fills its own line, next to the item's other lines.
   const cartLines = optionsMode ? readShopCart(shop.slug) : [];
+  // left / inCart: "2 items left · 1 in your cart" under its quantity.
   const limitFor = (variant, notes) => {
+    const left = stockLeft(cartProduct);
+    const inCart = heldInCart(cartLines, item.id);
     if (optionsMode === 'buy') {
       const key = cartLineKey(item.id, variant, notes);
-      return { max: lineRoom(cartLines, cartProduct, key), held: heldInCart(cartLines, item.id, key) };
+      return { max: lineRoom(cartLines, cartProduct, key), held: heldInCart(cartLines, item.id, key), left, inCart };
     }
-    const held = heldInCart(cartLines, item.id);
-    return { max: Math.max(0, stockLimit(cartProduct) - held), held };
+    return { max: Math.max(0, stockLimit(cartProduct) - inCart), held: inCart, left, inCart };
   };
 
   const putInCart = (variant, notes, quantity) => {

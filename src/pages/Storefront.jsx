@@ -4,9 +4,9 @@ import { Clock, Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { forgetCheckout, submitCheckout } from '@/lib/mobileCheckout';
 import { isOffline, useOnline } from '@/lib/network';
-import { CheckoutProblem, CheckoutProblemActions, OrderForStaff, checkoutProblemFor } from '@/components/storefront/CheckoutProblem';
+import { CheckoutProblem, CheckoutProblemActions, OrderForStaff, checkoutProblemFor, outOfStockReason } from '@/components/storefront/CheckoutProblem';
 import { offerPushAlerts } from '@/lib/pushOffer';
-import StorefrontView from '@/components/storefront/StorefrontView';
+import StorefrontView, { storeStockText } from '@/components/storefront/StorefrontView';
 import MenuAssistantWidget from '@/components/storefront/MenuAssistantWidget';
 import { LanguageProvider, useLanguage, prewarmTranslations } from '@/lib/LanguageContext';
 import { shopCountry } from '@/lib/countries';
@@ -33,7 +33,7 @@ import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes
 // Open/closed from the posted hours, including hours that close at or past midnight.
 import { computeStoreOpenState } from '@/lib/storeHours';
 import { formatMoney } from '@/lib/money';
-import { MAX_LINE_QUANTITY, cartLineKey, heldInCart, lineRoom, stockLimit } from '@/lib/shopCart';
+import { MAX_LINE_QUANTITY, cartLineKey, heldInCart, lineRoom, stockLeft } from '@/lib/shopCart';
 import { hasEdgeHead } from '@/lib/pageMeta';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
@@ -118,6 +118,8 @@ function StorefrontInner() {
   // An order that didn't go through stays on the checkout (components/storefront/CheckoutProblem.jsx),
   // with the order shown large for staff when asked.
   const [checkoutProblem, setCheckoutProblem] = useState(null);
+  // The items' latest stock again (after checkout is refused over it); set by the catalog's effect.
+  const catalogRefresh = useRef(null);
   const [showOrderToStaff, setShowOrderToStaff] = useState(false);
   const online = useOnline();
   const [lastCart, setLastCart] = useState([]);
@@ -390,6 +392,7 @@ function StorefrontInner() {
 
     window.addEventListener('focus', refreshCatalog);
     document.addEventListener('visibilitychange', handleVisibility);
+    catalogRefresh.current = refreshCatalog;
 
     getSupabase().then(supabase => {
       if (cancelled) return;
@@ -402,6 +405,7 @@ function StorefrontInner() {
 
     return () => {
       cancelled = true;
+      if (catalogRefresh.current === refreshCatalog) catalogRefresh.current = null;
       window.removeEventListener('focus', refreshCatalog);
       document.removeEventListener('visibilitychange', handleVisibility);
       if (channel) channel.unsubscribe();
@@ -600,12 +604,19 @@ function StorefrontInner() {
     const item = stockItem(product.id, product);
     const have = cart.find((i) => i.key === key)?.quantity || 0;
     const room = lineRoom(cart, item, key);
+    const left = stockLeft(item);
     if (room <= have) {
-      // Nothing more fits: say why instead of adding nothing silently.
-      toast.info(t(stockLimit(item) === 0 ? 'soldOut' : heldInCart(cart, product.id) > 0 ? 'stockAllInCart' : 'stockAllLeft'));
+      // Nothing more fits: say why instead of adding nothing silently (an item whose stock
+      // isn't counted stops at MAX_LINE_QUANTITY).
+      toast.info(left === null ? t('mostOfItem').replace('{count}', String(MAX_LINE_QUANTITY))
+        : t(left === 0 ? 'soldOut' : 'stockAllInCart'));
       return;
     }
-    if (have + qty > room) toast.info(t(heldInCart(cart, product.id) > 0 ? 'stockLeftWithCart' : 'stockAllLeft'));
+    // Fewer than chosen fit: "Only 3 items left · 1 in your cart".
+    if (have + qty > room) {
+      toast.info(left === null ? t('mostOfItem').replace('{count}', String(MAX_LINE_QUANTITY))
+        : storeStockText(t, left, heldInCart(cart, product.id), true));
+    }
     setCart(prev => {
       const existing = prev.find(i => i.key === key);
       const before = existing ? existing.quantity : 0;
@@ -871,6 +882,11 @@ function StorefrontInner() {
         setShowLimitReachedModal(true);
       } else if (isLimitReached) {
         toast.error("This store has reached its monthly order limit. Please contact your Manager to upgrade the plan.");
+      } else if (error?.hint === 'out_of_stock') {
+        // An item sold out or ran low while the buyer chose: which, and how many are left (its
+        // stock is fetched again, so the cart's + and the item's count follow).
+        setCheckoutProblem({ kind: 'rejected', reason: outOfStockReason(error, t), offline: false });
+        catalogRefresh.current?.();
       } else {
         // Anything else stays on the checkout: whether the order reached the shop, and
         // what to do (place_order's own reasons, e.g. "An item in your cart is no longer

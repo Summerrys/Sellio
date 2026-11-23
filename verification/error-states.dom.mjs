@@ -78,7 +78,8 @@ await writeFile(entry, [
   "export * from '@/lib/plainError';",
   "export { isNetworkError, isOffline, useOnline } from '@/lib/network';",
   "export { counterSendNote } from '@/lib/counterSendNote';",
-  "export { CheckoutProblem, CheckoutProblemActions, OrderForStaff, checkoutProblemFor, problemWords } from '@/components/storefront/CheckoutProblem';",
+  "export { CheckoutProblem, CheckoutProblemActions, OrderForStaff, checkoutProblemFor, outOfStockReason, problemWords } from '@/components/storefront/CheckoutProblem';",
+  "export { __DICTIONARY as DICTIONARY } from '@/lib/LanguageContext';",
   "export { default as ErrorNote } from '@/components/ui-custom/ErrorNote';",
   "export { submitCheckout, forgetCheckout, getPendingCheckouts } from '@/lib/mobileCheckout';",
   "export { LanguageProvider, useLanguage } from '@/lib/LanguageContext';",
@@ -91,8 +92,8 @@ const stubs = {
     'export const Toaster = () => null;',
   ].join('\n'),
   supabase: 'export const getSupabase = async () => globalThis.supabaseFixture; export const SUPABASE_URL = "https://project.example.invalid";',
-  catalog: 'export const fetchStorefrontCatalog = async () => ({ products: [], categories: [] });',
-  view: 'export default function StorefrontView() { return null; }',
+  catalog: 'export const fetchStorefrontCatalog = async () => { globalThis.catalogFetches = (globalThis.catalogFetches || 0) + 1; return { products: [], categories: [] }; };',
+  view: 'export default function StorefrontView() { return null; } export const storeStockText = () => "";',
   assistant: 'export default function MenuAssistantWidget() { return null; }',
   ratings: 'export const fetchRatingSummaries = async () => ({}); export const forgetRatingSummary = () => {}; export const isSignedIn = async () => false; export const myOrderRatings = async () => ({});',
   chat: 'export const useChatUser = () => ({ user: null });',
@@ -125,6 +126,11 @@ const mock = { name: 'error-states-fixtures', setup(b) {
   route(/lib\/useBackToClose$/, 'back');
   route(/ui-custom\/LoadingShapes$/, 'loading');
   b.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: stubs[args.path] }));
+  // The store page's words, to check each language has them.
+  b.onLoad({ filter: /src\/lib\/LanguageContext\.jsx$/ }, async (args) => ({
+    loader: 'jsx', resolveDir: path.dirname(args.path),
+    contents: `${await readFile(args.path, 'utf8')}\nexport { DICTIONARY as __DICTIONARY };\n`,
+  }));
 } };
 const outfile = path.join(tmp, 'bundle.mjs');
 await build({ entryPoints: [entry], outfile, bundle: true, packages: 'external', format: 'esm', platform: 'node', jsx: 'automatic',
@@ -488,6 +494,44 @@ try {
     await click(button(body, 'Proceed to checkout'));
     assert.equal(body.querySelector('[data-testid="checkout-problem"]'), null, 'a reopened checkout starts afresh');
     passed('The shop’s reason: not sent, not paid; Change my order opens the cart');
+
+    // An item ran low while the buyer chose (place_order's out_of_stock, 24 Nov 2026): which item
+    // and how many are left, in the page's words, and the items' stock is fetched again.
+    const fetchesBefore = globalThis.catalogFetches || 0;
+    globalThis.placeOrder = () => ({ data: null, error: { code: '22023', message: 'Only 1 left of Kaya toast set.', hint: 'out_of_stock',
+      details: JSON.stringify({ product_id: 'kaya', name: 'Kaya toast set', left: 1 }) } });
+    await click(button(body, 'Place order · S$10.80'));
+    await wait();
+    problem = body.querySelector('[data-testid="checkout-problem"]');
+    assert.equal(problem.getAttribute('data-kind'), 'rejected');
+    assert.equal(text(problem), 'Your order wasn’t sent Only 1 left of Kaya toast set. Nothing was sent, and you haven’t paid.');
+    assert.deepEqual(buttons(body.querySelector('[data-testid="checkout-problem-actions"]')), ['Change my order', 'Show my order to staff']);
+    assert.ok((globalThis.catalogFetches || 0) > fetchesBefore, 'the stock is fetched again');
+    assert.equal(sessionStorage.length, 0, 'a refused order leaves no key behind: the changed order gets its own');
+    await click(button(body, 'Change my order'));
+    assert.ok(button(body, 'Proceed to checkout'), 'the cart, to change it');
+    await click(button(body, 'Proceed to checkout'));
+    // A lower-case name (the database's own sentence wouldn't pass as plain words): still told.
+    globalThis.placeOrder = () => ({ data: null, error: { code: '22023', message: 'kopi C is sold out.', hint: 'out_of_stock',
+      details: JSON.stringify({ product_id: 'kopi', name: 'kopi C', left: 0 }) } });
+    await click(button(body, 'Place order · S$10.80'));
+    await wait();
+    assert.equal(text(body.querySelector('[data-testid="checkout-problem"]')), 'Your order wasn’t sent kopi C is sold out. Nothing was sent, and you haven’t paid.');
+    await click(button(body, 'Change my order'));
+    await click(button(body, 'Proceed to checkout'));
+    const D = app.DICTIONARY;
+    const tIn = (code) => (key) => D[code][key] ?? D.en[key];
+    const refusal = (name, left) => ({ hint: 'out_of_stock', details: JSON.stringify({ product_id: 'x', name, left }) });
+    assert.equal(app.outOfStockReason(refusal('Butter cookies', 2), tIn('en')), 'Only 2 left of Butter cookies.');
+    assert.equal(app.outOfStockReason(refusal('牛油饼干', 0), tIn('zh')), '牛油饼干 已售罄。');
+    assert.equal(app.outOfStockReason(refusal('Biskut mentega', 3), tIn('ms')), 'Hanya tinggal 3 lagi untuk Biskut mentega.');
+    assert.equal(app.outOfStockReason(refusal('Kue kering', 1), tIn('id')), 'Hanya sisa 1 untuk Kue kering.');
+    assert.equal(app.outOfStockReason({ hint: 'out_of_stock', details: 'not json' }, tIn('en')), 'An item in your cart has fewer left than you chose.');
+    assert.equal(app.outOfStockReason(refusal('Kaya $& toast $1', 1), tIn('en')), 'Only 1 left of Kaya $& toast $1.', 'a name as it is, whatever it has in it');
+    for (const key of ['outOfStockLeft', 'outOfStockNone', 'outOfStockSome']) {
+      for (const code of ['zh', 'ms', 'id']) assert.ok(D[code][key] && D[code][key] !== D.en[key], `${code} has its own ${key}`);
+    }
+    passed('An item ran low while choosing: “Only 1 left of …” / “… is sold out.”, not sent, not paid, in four languages; the stock is fetched again');
 
     // No answer, then a different order: it may have arrived; Send this order uses a new key.
     globalThis.placeOrder = () => ({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } });

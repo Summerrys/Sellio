@@ -392,6 +392,7 @@ try {
       { ...ready(35), status: 'preparing' },
       ready(36, deliveryTo),
       { ...ready(37, deliveryTo), status: 'completed', payment_status: 'paid' },
+      { ...ready(38, deliveryTo), status: 'preparing' },
     ];
     const shown = new Date(Date.now() - 2 * minute).toISOString();
     const LINK = 'abcdefabcdefabcdefabcdefabcdef12';
@@ -409,6 +410,7 @@ try {
             courier_link_expires_at: '2026-11-24T08:30:00Z', courier_opened_at: '2026-11-23T08:52:00Z' },
           { order_id: 'o37', has_qr: true, issued_at: '2026-11-23T07:02:00Z', verified_at: '2026-11-23T08:10:00Z', verified_via: 'qr',
             verified_by_name: 'Ahmad', verified_by_courier: true },
+          { order_id: 'o38', has_qr: true, issued_at: '2026-11-23T07:02:00Z', verified_at: null },
         ].filter((r) => args.p_order_ids.includes(r.order_id)), error: null };
       }
       if (name === 'shop_handover_scan') return { data: { ok: false, reason: 'unknown' }, error: null };
@@ -429,12 +431,16 @@ try {
     assert.equal(text(byTestId(card('ORD-000032'), 'order-scan-qr')), 'Scan QR', 'out for delivery: scan too');
     assert.ok(!buttonNamed(card('ORD-000031'), 'Mark collected') && !buttonNamed(card('ORD-000032'), 'Mark delivered'));
     assert.equal(text(card('ORD-000033').querySelector('[data-tour="order-status-btn"]')), 'Mark collected', 'no buyer QR (placed signed out / before): as before');
-    assert.equal(text(card('ORD-000035').querySelector('[data-tour="order-status-btn"]')), 'Ready for collection', 'earlier steps: as before');
+    // Packing (24 Nov 2026): with a QR, Ready for collection / Out for delivery is the packing photo
+    // (verification/packing-photo.dom.mjs checks it); the courier link only once it's packed.
+    assert.equal(text(card('ORD-000035').querySelector('[data-tour="order-status-btn"]')), 'Packed · take photo', 'preparing: the packing photo');
+    assert.ok(byTestId(card('ORD-000035'), 'order-packing-photo'));
+    assert.ok(!byTestId(card('ORD-000038'), 'order-courier-link'), 'out for delivery not packed yet: no courier link');
     assert.match(text(byTestId(card('ORD-000031'), 'handover-track')), /^QR issued \d{1,2}:02 (AM|PM) · Shown on the buyer’s phone \d{1,2}:\d\d (AM|PM)$/);
     assert.match(text(byTestId(card('ORD-000032'), 'handover-track')), /^QR issued \d{1,2}:02 (AM|PM) · Not opened by the buyer yet$/);
     assert.match(text(byTestId(card('ORD-000034'), 'handover-record')), /^Verified by QR scan · Nov 23, \d{1,2}:15 (AM|PM) · Ann$/);
     assert.match(text(byTestId(card('ORD-000037'), 'handover-record')), /^Verified by QR scan · Nov 23, \d{1,2}:10 (AM|PM) · Courier \(Ahmad\)$/, 'delivered through the courier link');
-    assert.deepEqual(rpcs('shop_handovers')[0].args.p_order_ids, ['o31', 'o32', 'o33', 'o34', 'o35', 'o36', 'o37'], 'every order of the shop');
+    assert.deepEqual(rpcs('shop_handovers')[0].args.p_order_ids, ['o31', 'o32', 'o33', 'o34', 'o35', 'o36', 'o37', 'o38'], 'every order of the shop');
     // The courier link: on delivery orders still to hand over, not on collection ones.
     assert.ok(!byTestId(card('ORD-000031'), 'order-courier-link'), 'self-collect: no courier link');
     assert.equal(text(byTestId(card('ORD-000032'), 'order-courier-link')), 'Send a courier link');

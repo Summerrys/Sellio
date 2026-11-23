@@ -71,6 +71,7 @@ export default function CourierHandover() {
     else if (reason === 'paused') setNote(pausedText(t, answer.paused_until));
     else if (reason === 'cancelled') setNote(t('Order #{number} was cancelled. Don’t hand it over: check with the seller.', { number }));
     else if (reason === 'already' || reason === 'already_completed') setNote(t('Order #{number} was already handed over.', { number }));
+    else if (reason === 'not_packed') setNote(t('The seller hasn’t marked order #{number} packed yet. Ask them to, then scan again.', { number }));
     else setNote(t('Couldn’t check the QR'));
   };
   const send = async (request) => {

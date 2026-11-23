@@ -22,6 +22,19 @@ export function checkoutProblemFor(error) {
   return { kind: 'failed' };
 }
 
+// place_order's refusal when an item has fewer left than the order asks for (24 Nov 2026: hint
+// out_of_stock, detail {product_id, name, left}), as a 'rejected' reason in the page's language:
+// "Only 2 left of Butter cookies." / "Butter cookies is sold out." t: the store page's t(key).
+export function outOfStockReason(error, t) {
+  let detail = null;
+  try { detail = typeof error?.details === 'string' ? JSON.parse(error.details) : error?.details || null; } catch { detail = null; }
+  const name = String(detail?.name || '').trim();
+  const left = Math.max(0, Math.floor(Number(detail?.left) || 0));
+  if (!name) return t('outOfStockSome');
+  // A function puts the name in as it is ("$&" in a name isn't a replacement pattern).
+  return (left > 0 ? t('outOfStockLeft').replace('{count}', String(left)) : t('outOfStockNone')).replace('{name}', () => name);
+}
+
 // The heading and the words under it, in the page's language.
 export function problemWords(problem, { t, lang, shop }) {
   const fill = (text) => text.replace('{shop}', shop || '');

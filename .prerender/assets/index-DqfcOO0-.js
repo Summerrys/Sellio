@@ -2792,7 +2792,35 @@ const shop = {
   "This link works once, until {when}.": "此链接只能使用一次，有效期至 {when}。",
   "Courier link · opened {when}": "快递员链接 · {when} 已打开",
   "Courier link · not opened yet": "快递员链接 · 尚未打开",
-  "Send a courier link": "发送快递员链接"
+  "Send a courier link": "发送快递员链接",
+  "Packing photo": "包装照片",
+  "Order #{number} isn’t packed yet. Take its packing photo first (Packed · take photo on the order).": "订单 #{number} 还没包装好。请先拍包装照片（在订单上点“已包装 · 拍照”）。",
+  "Couldn’t take the photo. Try again.": "无法拍照。请再试一次。",
+  "Couldn’t save the packing photo": "无法保存包装照片",
+  "Saving a photo needs the internet.": "保存照片需要连接网络。",
+  "Order #{number} can’t take a photo now: it may have been cancelled or handed over. Refresh Orders to check.": "订单 #{number} 现在不能上传照片：它可能已被取消或已交付。请刷新订单查看。",
+  "Order #{number} packed. The buyer can see the photo.": "订单 #{number} 已包装好。买家可以看到这张照片。",
+  "Couldn’t save the packing photo. Try again.": "无法保存包装照片。请再试一次。",
+  "Sellio isn’t allowed to use the camera. Turn on camera access for Sellio in your phone’s settings, then try again.": "Sellio 没有使用相机的权限。请在手机设置中为 Sellio 打开相机权限，然后再试一次。",
+  "This page isn’t allowed to use the camera. Allow camera access for this site in your browser, then try again.": "此页面没有使用相机的权限。请在浏览器中允许此网站使用相机，然后再试一次。",
+  "This device can’t open a camera. Open this order in Sellio on your phone to take the packing photo.": "此设备无法打开相机。请在手机上的 Sellio 打开此订单来拍包装照片。",
+  "The camera didn’t start (another app may be using it). Try again.": "相机没有启动（可能有其他应用正在使用）。请再试一次。",
+  "Packing photo for order #{number}": "订单 #{number} 的包装照片",
+  "Can you read {number} in the photo? The buyer will see it.": "照片里看得清 {number} 吗？买家会看到这张照片。",
+  "Write {number} on the parcel or a note, and keep it in the photo.": "请把 {number} 写在包裹或纸条上，并让它出现在照片里。",
+  "Use photo": "使用照片",
+  "Take the packing photo to mark this order packed.": "请拍包装照片，才能把此订单标记为已包装。",
+  "This order isn’t in your shop any more.": "此订单已不在您的店铺里。",
+  "This order doesn’t need a packing photo.": "此订单不需要包装照片。",
+  "Accept order #{number} first.": "请先接受订单 #{number}。",
+  "That photo isn’t for this order. Take it again.": "这张照片不是这个订单的。请重拍。",
+  "The photo didn’t arrive. Take it again.": "照片没有上传成功。请重拍。",
+  "That photo was taken too long ago. Take a new one.": "这张照片拍得太久了。请重新拍一张。",
+  "The seller hasn’t marked order #{number} packed yet. Ask them to, then scan again.": "卖家还没有把订单 #{number} 标记为已包装。请卖家先标记，然后再扫描。",
+  "Open the packing photo of order #{number}": "打开订单 #{number} 的包装照片",
+  "Packed {when}": "{when} 包装好",
+  "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "买家会看到这张照片。请把 {number} 写在包裹或纸条上，并让它出现在照片里。",
+  "Packed · take photo": "已包装 · 拍照"
 };
 const All = "全部";
 const Goods = "商品";
@@ -3203,10 +3231,12 @@ const explore = {
   optional,
   "Anything the seller should know?": "有什么需要告诉卖家的吗？",
   "All in your cart": "已全部在购物车里",
-  "That’s all the seller has left.": "卖家只剩这么多了。",
-  "That’s all the seller has left, counting what’s in your cart.": "算上您购物车里的，卖家只剩这么多了。",
   "Everything the seller has left is in your cart.": "卖家剩下的都已在您的购物车里。",
-  "The seller has only {count} left.": "卖家只剩 {count} 件。",
+  "1 item left": "剩 1 件",
+  "{count} items left": "剩 {count} 件",
+  "{count} in your cart": "购物车里有 {count} 件",
+  "Only 1 item left": "只剩 1 件",
+  "Only {count} items left": "只剩 {count} 件",
   Quantity,
   "One less": "减一份",
   "One more": "加一份",
@@ -3512,7 +3542,10 @@ const explore = {
   "Verified with your code": "已用您的号码确认",
   "Delivery QR": "送货二维码",
   "Show delivery QR": "显示送货二维码",
-  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。"
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。",
+  "Open the packing photo": "打开包装照片",
+  "Your order, packed": "您的订单，已包装好",
+  "Packed {when}. The seller took this photo in Sellio.": "{when} 包装好。卖家在 Sellio 里拍了这张照片。"
 };
 const GROUPS = { signup, shop, explore };
 export {

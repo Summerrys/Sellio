@@ -178,6 +178,7 @@ async function bundle(name, lines, plugin) {
 }
 const store = await bundle('store', [
   "export { default as Storefront } from '@/pages/Storefront';",
+  "export { storeStockText } from '@/components/storefront/StorefrontView';",
   "export { __DICTIONARY as DICTIONARY } from '@/lib/LanguageContext';",
 ], storeMock);
 const listing = await bundle('listing', [
@@ -368,16 +369,21 @@ try {
     await wait(40);
     await openItem('Butter cookies');
     assert.equal(byTest('item-special-request').getAttribute('placeholder'), 'Anything the seller should know?', 'a buyer’s hint for any item');
+    // How many are left, under the quantity (Alvin, 24 Nov 2026), before reaching it too.
+    assert.equal(text(byTest('item-quantity-stock')), '3 items left');
+    assert.ok(byTest('item-quantity').compareDocumentPosition(byTest('item-quantity-stock')) & win.Node.DOCUMENT_POSITION_FOLLOWING, 'below the quantity');
     for (let i = 0; i < 5; i++) await click(byTest('item-quantity-more'));
     assert.equal(quantityShown(), '3', 'stops at the 3 the seller has');
     assert.ok(byTest('item-quantity-more').disabled, '+ off at the stock');
-    assert.equal(text(byTest('item-quantity-stock')), 'That’s all the seller has left.');
+    assert.equal(text(byTest('item-quantity-stock')), '3 items left');
+    assert.ok(!document.body.textContent.includes('seller has left.'), 'no “That’s all the seller has left”');
     assert.equal(text(byTest('item-buy-now-price')), 'S$18.00');
     await click(byTest('item-add-to-cart'));
     await wait(10);
     assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]]);
     // Again: Add to cart has no room left; the cart stays at 3, and the buyer is told why.
     await openItem('Butter cookies');
+    assert.equal(text(byTest('item-quantity-stock')), '3 items left · 3 in your cart');
     await click(byTest('item-add-to-cart'));
     await wait(10);
     assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], 'no more than the stock, however it’s added');
@@ -398,7 +404,7 @@ try {
     await click(byTest('item-add-to-cart'));
     await wait(10);
     assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], '1 + 3 asked, 3 left: 3');
-    assert.equal(globalThis.toasts.at(-1), 'That’s all the seller has left, counting what’s in your cart.');
+    assert.equal(globalThis.toasts.at(-1), 'Only 3 items left · 1 in your cart');
     // The cart's + works below the stock and stops at it.
     await click(buttonMatching(/^3 ?S\$18\.00$/));
     await wait(10);
@@ -419,6 +425,11 @@ try {
     await openItem('Pineapple tart tin');
     assert.ok(byTest('item-sold-out'), 'sold out');
     assert.ok(!byTest('item-quantity'), 'no quantity for a sold-out item');
+    assert.ok(!byTest('item-quantity-stock'), 'no “0 items left”');
+    await click(buttonMatching(/^✕$/));
+    // Not counted: no number shown.
+    await openItem('Pandan kaya jar');
+    assert.ok(byTest('item-quantity') && !byTest('item-quantity-stock'), 'an unlimited item shows no count');
     await unmountAll();
 
     // A table's order: the kitchen's example, the same stock limit, and a sold-out item.
@@ -440,15 +451,23 @@ try {
     await openItem('Otah bun');
     assert.equal(text(byTest('item-add-to-order')), 'All in your cart');
     assert.ok(byTest('item-add-to-order').disabled);
-    assert.equal(text(byTest('item-quantity-stock')), 'Everything the seller has left is in your cart.');
+    assert.equal(text(byTest('item-quantity-stock')), '2 items left · 2 in your cart');
     await unmountAll();
 
     const d = store.app.DICTIONARY;
-    for (const key of ['specialRequestOptional', 'itemNoteHint', 'itemNoteFoodHint', 'stockAllLeft', 'stockLeftWithCart', 'stockAllInCart', 'allInCart']) {
+    for (const key of ['specialRequestOptional', 'itemNoteHint', 'itemNoteFoodHint', 'itemLeft', 'itemsLeft', 'onlyItemLeft', 'onlyItemsLeft', 'inYourCart', 'mostOfItem', 'stockAllInCart', 'allInCart']) {
       assert.ok(d.en[key], `English ${key}`);
       for (const code of ['zh', 'ms', 'id']) assert.ok(d[code][key] && d[code][key] !== d.en[key], `${code} has its own ${key}`);
     }
-    passed('Store page: how many stops at the seller’s stock (item screen, the cart’s +, again later), sold-out items can’t be added, a buyer gets “Anything the seller should know?” and a table keeps the kitchen’s example, in four languages');
+    for (const key of ['stockAllLeft', 'stockLeftWithCart']) assert.ok(!(key in d.en), `${key} is gone`);
+    const say = (code) => (key) => d[code][key];
+    assert.equal(store.app.storeStockText(say('en'), 1), '1 item left');
+    assert.equal(store.app.storeStockText(say('en'), 2, 1), '2 items left · 1 in your cart');
+    assert.equal(store.app.storeStockText(say('en'), 1, 0, true), 'Only 1 item left');
+    assert.equal(store.app.storeStockText(say('zh'), 5, 2), '剩 5 件 · 购物车里有 2 件');
+    assert.equal(store.app.storeStockText(say('ms'), 3), 'Tinggal 3 item');
+    assert.equal(store.app.storeStockText(say('id'), 4, 0, true), 'Hanya sisa 4 item');
+    passed('Store page: “3 items left” under the quantity, which stops at the seller’s stock (item screen, the cart’s +, again later); sold-out items can’t be added; a buyer gets “Anything the seller should know?” and a table keeps the kitchen’s example, in four languages');
   }
 
   // ── Explore: the same limit, from the item's stock ───────────────────────────────────────
@@ -466,16 +485,17 @@ try {
     const sheet = () => document.body.querySelector('[role="dialog"][aria-labelledby="item-options-title"]');
     await click(buttonMatching(/^Add to cart$/));
     assert.equal(sheet().querySelector('#item-special-request').getAttribute('placeholder'), 'Anything the seller should know?');
+    assert.equal(text(byTest('item-options-stock')), '2 items left', 'how many are left, under the quantity');
     for (let i = 0; i < 4; i++) await click(buttonMatching(/^One more$/));
     assert.ok(byTest('item-options-more').disabled, '+ off at the 2 left');
-    assert.equal(text(byTest('item-options-stock')), 'That’s all the seller has left.');
+    assert.equal(text(byTest('item-options-stock')), '2 items left');
     await click(buttonMatching(/^Add to cart · S\$10\.00$/));
     await wait(10);
     assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 2]]);
     await click(buttonMatching(/^Add to cart$/));
     assert.equal(text(byTest('item-options-confirm')), 'All in your cart');
     assert.ok(byTest('item-options-confirm').disabled, 'nothing more to add');
-    assert.equal(text(byTest('item-options-stock')), 'That’s all the seller has left, counting what’s in your cart.');
+    assert.equal(text(byTest('item-options-stock')), '2 items left · 2 in your cart');
     await click(buttonMatching(/^Close$/));
     await wait(10);
     // Buy now fills its line up to the stock, and goes to the checkout.
@@ -498,14 +518,28 @@ try {
     await mount(h(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
       h(MemoryRouter, { initialEntries: ['/explore/cart'] }, h(listing.app.ExploreCart))));
     await wait(60);
-    assert.equal(text(byTest('cart-line-stock')), 'The seller has only 1 left.');
+    assert.equal(text(byTest('cart-line-stock')), 'Only 1 item left');
     await click(buttonMatching(/^One less Kaya jar$/));
     await wait(10);
     assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 1]], '− still works');
     assert.ok(!byTest('cart-line-stock'));
     await unmountAll();
+    // One left, an empty cart: "1 item left" in the sheet.
+    localStorage.clear();
+    await listingApp();
+    await wait(80);
+    await click(buttonMatching(/^Add to cart$/));
+    assert.equal(text(byTest('item-options-stock')), '1 item left');
+    await unmountAll();
+    // Not counted: no number.
+    globalThis.stockRows = [{ id: 'p-kaya', track_inventory: false, stock_quantity: 0 }];
+    await listingApp();
+    await wait(80);
+    await click(buttonMatching(/^Add to cart$/));
+    assert.ok(!byTest('item-options-stock'), 'an unlimited item shows no count');
+    await unmountAll();
     globalThis.stockRows = null;
-    passed('Explore: the options sheet and the Cart page stop at the seller’s stock (Add to cart, Buy now, +), and say so; the hint is “Anything the seller should know?”');
+    passed('Explore: the options sheet and the Cart page stop at the seller’s stock (Add to cart, Buy now, +); the sheet shows “2 items left” under the quantity; the hint is “Anything the seller should know?”');
   }
 
   console.log(`buy quantity: ${passes} passed`);

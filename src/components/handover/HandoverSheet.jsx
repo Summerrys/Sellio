@@ -22,6 +22,8 @@ const REASONS = {
   cancelled: N_('Order #{number} was cancelled.'),
   already_completed: N_('Order #{number} is already completed.'),
   no_qr: N_('This order has no QR.'),
+  // Packed only with its packing photo (lib/packingPhoto.js), and handed over only once packed.
+  not_packed: N_('Order #{number} isn’t packed yet. Take its packing photo first (Packed · take photo on the order).'),
 };
 const USED = {
   collection: N_('Already used: order #{number} was collected {when}.'),

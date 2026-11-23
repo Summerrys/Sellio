@@ -314,10 +314,12 @@
   "optional": "pilihan",
   "Anything the seller should know?": "Ada apa-apa yang penjual perlu tahu?",
   "All in your cart": "Semua sudah dalam troli",
-  "That’s all the seller has left.": "Itu sahaja baki yang ada pada penjual.",
-  "That’s all the seller has left, counting what’s in your cart.": "Itu sahaja baki penjual, termasuk yang sudah dalam troli anda.",
   "Everything the seller has left is in your cart.": "Semua baki penjual sudah ada dalam troli anda.",
-  "The seller has only {count} left.": "Penjual hanya ada {count} lagi.",
+  "1 item left": "Tinggal 1 item",
+  "{count} items left": "Tinggal {count} item",
+  "{count} in your cart": "{count} dalam troli anda",
+  "Only 1 item left": "Hanya tinggal 1 item",
+  "Only {count} items left": "Hanya tinggal {count} item",
   "Quantity": "Kuantiti",
   "One less": "Kurang satu",
   "One more": "Tambah satu",
@@ -623,5 +625,8 @@
   "Verified with your code": "Disahkan dengan kod anda",
   "Delivery QR": "Kod QR penghantaran",
   "Show delivery QR": "Tunjuk kod QR penghantaran",
-  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini semasa pesanan anda dihantar. Penjual atau kurier mereka akan mengimbasnya untuk mengesahkan anda sudah menerimanya."
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini semasa pesanan anda dihantar. Penjual atau kurier mereka akan mengimbasnya untuk mengesahkan anda sudah menerimanya.",
+  "Open the packing photo": "Buka foto pembungkusan",
+  "Your order, packed": "Pesanan anda, sudah dibungkus",
+  "Packed {when}. The seller took this photo in Sellio.": "Dibungkus {when}. Penjual mengambil foto ini dalam Sellio."
 }

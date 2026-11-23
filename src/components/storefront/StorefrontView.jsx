@@ -37,7 +37,7 @@ import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
 import { creditFor } from '@/lib/samplePhotos';
 import { didYouMean } from '@/lib/searchSuggest';
 import { formatMoney } from '@/lib/money';
-import { MAX_LINE_QUANTITY, cartLineKey, heldInCart, stockLimit } from '@/lib/shopCart';
+import { cartLineKey, heldInCart, stockLeft, stockLimit } from '@/lib/shopCart';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 const fill = (text, values) => text.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
@@ -1533,6 +1533,16 @@ function BarIconButton({ label, pressed, onClick, caption, captionColor = '#3341
   );
 }
 
+// "2 items left" (or "Only 2 items left"), and " · 1 in your cart" when the cart holds some of
+// the item (Alvin, 24 Nov 2026), in the store page's language. left: stockLeft(product).
+export function storeStockText(t, left, inCart = 0, only = false) {
+  const n = Math.max(0, Math.floor(Number(left) || 0));
+  const key = only ? (n === 1 ? 'onlyItemLeft' : 'onlyItemsLeft') : (n === 1 ? 'itemLeft' : 'itemsLeft');
+  const head = t(key).replace('{count}', String(n));
+  const held = Math.max(0, Math.floor(Number(inCart) || 0));
+  return held > 0 ? `${head} · ${t('inYourCart').replace('{count}', String(held))}` : head;
+}
+
 // ── Product detail modal ─────────────────────────────────────────────────────
 function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {}, buyerBar = null, cartLines = [] }) {
   const { t, lang } = useLanguage();
@@ -1564,7 +1574,9 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   const held = buyerBar ? heldInCart(cartLines, product.id, lineKey) : heldInCart(cartLines, product.id);
   const most = Math.max(0, limit - held);
   const full = !soldOut && most < 1;
-  const atStock = most >= 1 && quantity >= most && most < MAX_LINE_QUANTITY;
+  // Under the quantity: how many the seller has left, and how many of the item the cart holds.
+  const left = stockLeft(product);
+  const inCart = heldInCart(cartLines, product.id);
   // The choice (or the cart) changed under the chosen number: down to what's left.
   useEffect(() => {
     if (most >= 1 && quantity > most) setQuantity(most);
@@ -1778,9 +1790,9 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 </div>
               </div>
             )}
-            {(atStock || full) && (
+            {left > 0 && (
               <p data-testid="item-quantity-stock" style={{ margin: '-8px 0 16px', textAlign: 'right', fontSize: sfType(12), color: '#64748b' }}>
-                {full ? t('stockAllInCart') : held > 0 ? t('stockLeftWithCart') : t('stockAllLeft')}
+                {storeStockText(t, left, inCart)}
               </p>
             )}
             {/* A table's order, staff taking one or the preview: one Add button (a store's public

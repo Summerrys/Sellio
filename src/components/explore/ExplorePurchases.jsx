@@ -11,7 +11,9 @@ import { myOrderRatings, removeMyComment } from '@/lib/ratings';
 import { cancelMyOrder, claimDeviceOrders, fetchPurchase, fetchPurchases } from '@/lib/purchases';
 import { mapLinkProps } from '@/lib/nativeApp';
 import { fetchMyHandover, handoverMethod } from '@/lib/handover';
+import { fetchMyPackingPhoto, photoLinks } from '@/lib/packingPhoto';
 import HandoverPass from '@/components/handover/HandoverPass';
+import { PackingPhotoViewer } from '@/components/handover/PackingPhotoView';
 import { OrderRateRow, RateOrderSheet } from '@/components/ratings/RatingParts';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_COLOR, BRAND_GRADIENT, ShopAvatar, chatUrl, formatPrice, goBack, newChatUrl, storeUrl } from './shared';
@@ -389,6 +391,44 @@ function Card({ title, children, testId }) {
   );
 }
 
+// The photo the seller took of the order packed, its order number in the picture (Alvin, 23–24
+// Nov 2026; lib/packingPhoto.js): once it's packed (ready, out for delivery, or done). Only this
+// buyer's account sees it.
+const PACKED = new Set(['ready', 'served', 'completed']);
+function PackingPhotoCard({ order }) {
+  const { t, locale } = useAppText('explore');
+  const [photo, setPhoto] = useState(null); // { url, taken_at }
+  const [open, setOpen] = useState(false);
+  const packed = PACKED.has(order.status);
+  useEffect(() => {
+    if (!packed) { setPhoto(null); return undefined; }
+    let live = true;
+    (async () => {
+      try {
+        const mine = await fetchMyPackingPhoto(order.id);
+        if (!mine?.path) { if (live) setPhoto(null); return; }
+        const links = await photoLinks([mine.path]);
+        if (live) setPhoto(links[mine.path] ? { url: links[mine.path], taken_at: mine.taken_at } : null);
+      } catch (e) {
+        console.warn('Packing photo failed to load:', e?.message || e);
+      }
+    })();
+    return () => { live = false; };
+  }, [packed, order.id, order.status]);
+  if (!photo) return null;
+  return (
+    <Card title={t('Packing photo')} testId="purchase-packing">
+      <button type="button" onClick={() => setOpen(true)} aria-label={t('Open the packing photo')} className="block w-full rounded-xl overflow-hidden bg-slate-900" data-testid="purchase-packing-photo">
+        <img src={photo.url} alt={t('Your order, packed')} className="block w-full max-h-72 object-cover" />
+      </button>
+      <p className="mt-2 text-xs text-slate-500" data-testid="purchase-packing-when">
+        {t('Packed {when}. The seller took this photo in Sellio.', { when: when(photo.taken_at, locale) })}
+      </p>
+      {open && <PackingPhotoViewer src={photo.url} words={{ title: t('Packing photo'), close: t('Close photo') }} onClose={() => setOpen(false)} />}
+    </Card>
+  );
+}
+
 function HowYouGetIt({ order }) {
   const { t, locale } = useAppText('explore');
   const f = order.fulfilment || {};
@@ -594,6 +634,7 @@ export function PurchaseDetail() {
           <Timeline order={order} />
         </section>
 
+        {homeOrder && <PackingPhotoCard order={order} />}
         {homeOrder && order.status !== 'completed' && order.status !== 'cancelled' && (
           <HandoverCard order={order} onHandedOver={reload} />
         )}

@@ -108,13 +108,21 @@ const lineQuantity = (line) => Math.max(0, Math.floor(Number(line?.quantity) || 
 // (Track stock on); an item without it ("unlimited") stops at MAX_LINE_QUANTITY. Stock is
 // counted per item, so the limit covers all of the item's lines together (other options or
 // notes). Unknown stock (not loaded, or no number set) is no limit below MAX_LINE_QUANTITY,
-// the same as "Sold out" (tracked and exactly 0). Checkout doesn't check stock yet.
-export function stockLimit(product) {
-  if (!product || product.track_inventory !== true) return MAX_LINE_QUANTITY;
+// the same as "Sold out" (tracked and exactly 0). Checkout checks it too (24 Nov 2026: each
+// order takes from the count, and a buyer is refused past it, hint out_of_stock).
+
+// How many the seller has left (for "2 items left"), or null when they don't count it.
+export function stockLeft(product) {
+  if (!product || product.track_inventory !== true) return null;
   const raw = product.stock_quantity;
-  if (raw === null || raw === undefined || raw === '') return MAX_LINE_QUANTITY;
+  if (raw === null || raw === undefined || raw === '') return null;
   const n = Math.floor(Number(raw));
-  return Number.isFinite(n) ? Math.max(0, Math.min(MAX_LINE_QUANTITY, n)) : MAX_LINE_QUANTITY;
+  return Number.isFinite(n) ? Math.max(0, n) : null;
+}
+
+export function stockLimit(product) {
+  const left = stockLeft(product);
+  return left === null ? MAX_LINE_QUANTITY : Math.min(MAX_LINE_QUANTITY, left);
 }
 
 // How many of the item the cart's lines hold, leaving out the line `exceptKey` (null: none).

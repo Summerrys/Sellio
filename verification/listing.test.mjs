@@ -185,6 +185,17 @@ ok('the Cart lists shops with something in their cart, newest first, and counts 
   assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: 500 }), MAX);
   assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: null }), MAX, 'no number set: as unknown (the same as "Sold out" reads it)');
   assert.equal(m.stockLimit(null), MAX, 'stock not loaded yet');
+  // How many are left, for "2 items left" (24 Nov 2026): the seller's own number, not capped at 99.
+  assert.equal(m.stockLeft({ id: 'a' }), null, 'not counted: no number shown');
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: false, stock_quantity: 3 }), null);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: 3 }), 3);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: '5' }), 5);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: 500 }), 500);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: -2 }), 0);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: null }), null);
+  assert.equal(m.stockLeft({ id: 'a', track_inventory: true, stock_quantity: 'lots' }), null);
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: 'lots' }), MAX);
+  assert.equal(m.stockLeft(null), null);
 
   store.clear();
   const jar = { id: 'jar', name: 'Kaya jar', price: 5, image_url: null, track_inventory: true, stock_quantity: 3 };

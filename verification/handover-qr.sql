@@ -162,6 +162,16 @@ begin
     end;
   end if;
 
+  -- Packed (24 Nov 2026): an order with a buyer's QR is marked ready, and handed over, only once
+  -- its packing photo is recorded (verification/packing-photo.sql checks that rule). Where the
+  -- rule is in place, the orders this file marks ready have theirs.
+  if to_regclass('app.order_packing_photos') is not null then
+    execute 'insert into app.order_packing_photos (order_id, tenant_id, path)
+             select o.id, o.tenant_id, o.tenant_id || ''/'' || o.id || ''/'' || gen_random_uuid() || ''.jpg''
+               from public.orders o where o.id = any ($1)'
+      using array[v_o1, v_o2, v_o3, v_o4, v_o6, v_o7, v_c1, v_c2, v_c3];
+  end if;
+
   -- ── Nobody reads or writes the QRs directly ───────────────────────────────────────────────
   perform pg_temp.as_user(v_owner, 'zz-handover-owner@example.com');
   execute 'set role authenticated';

@@ -2792,7 +2792,35 @@ const shop = {
   "This link works once, until {when}.": "Pautan ini boleh digunakan sekali, sehingga {when}.",
   "Courier link · opened {when}": "Pautan kurier · dibuka {when}",
   "Courier link · not opened yet": "Pautan kurier · belum dibuka",
-  "Send a courier link": "Hantar pautan kurier"
+  "Send a courier link": "Hantar pautan kurier",
+  "Packing photo": "Foto pembungkusan",
+  "Order #{number} isn’t packed yet. Take its packing photo first (Packed · take photo on the order).": "Pesanan #{number} belum dibungkus. Ambil foto pembungkusannya dahulu (Sudah dibungkus · ambil foto pada pesanan).",
+  "Couldn’t take the photo. Try again.": "Tidak dapat mengambil foto. Cuba lagi.",
+  "Couldn’t save the packing photo": "Tidak dapat menyimpan foto pembungkusan",
+  "Saving a photo needs the internet.": "Menyimpan foto memerlukan internet.",
+  "Order #{number} can’t take a photo now: it may have been cancelled or handed over. Refresh Orders to check.": "Pesanan #{number} tidak boleh menerima foto sekarang: mungkin telah dibatalkan atau diserahkan. Muat semula Pesanan untuk menyemak.",
+  "Order #{number} packed. The buyer can see the photo.": "Pesanan #{number} sudah dibungkus. Pembeli boleh melihat foto itu.",
+  "Couldn’t save the packing photo. Try again.": "Tidak dapat menyimpan foto pembungkusan. Cuba lagi.",
+  "Sellio isn’t allowed to use the camera. Turn on camera access for Sellio in your phone’s settings, then try again.": "Sellio tidak dibenarkan menggunakan kamera. Hidupkan akses kamera untuk Sellio dalam tetapan telefon anda, kemudian cuba lagi.",
+  "This page isn’t allowed to use the camera. Allow camera access for this site in your browser, then try again.": "Halaman ini tidak dibenarkan menggunakan kamera. Benarkan akses kamera untuk laman ini dalam pelayar anda, kemudian cuba lagi.",
+  "This device can’t open a camera. Open this order in Sellio on your phone to take the packing photo.": "Peranti ini tidak dapat membuka kamera. Buka pesanan ini dalam Sellio pada telefon anda untuk mengambil foto pembungkusan.",
+  "The camera didn’t start (another app may be using it). Try again.": "Kamera tidak bermula (mungkin aplikasi lain sedang menggunakannya). Cuba lagi.",
+  "Packing photo for order #{number}": "Foto pembungkusan untuk pesanan #{number}",
+  "Can you read {number} in the photo? The buyer will see it.": "Bolehkah {number} dibaca dalam foto? Pembeli akan melihatnya.",
+  "Write {number} on the parcel or a note, and keep it in the photo.": "Tulis {number} pada bungkusan atau sekeping nota, dan pastikan ia ada dalam foto.",
+  "Use photo": "Guna foto",
+  "Take the packing photo to mark this order packed.": "Ambil foto pembungkusan untuk menandakan pesanan ini sudah dibungkus.",
+  "This order isn’t in your shop any more.": "Pesanan ini tiada lagi dalam kedai anda.",
+  "This order doesn’t need a packing photo.": "Pesanan ini tidak memerlukan foto pembungkusan.",
+  "Accept order #{number} first.": "Terima pesanan #{number} dahulu.",
+  "That photo isn’t for this order. Take it again.": "Foto itu bukan untuk pesanan ini. Ambil semula.",
+  "The photo didn’t arrive. Take it again.": "Foto itu tidak sampai. Ambil semula.",
+  "That photo was taken too long ago. Take a new one.": "Foto itu diambil terlalu lama dahulu. Ambil yang baharu.",
+  "The seller hasn’t marked order #{number} packed yet. Ask them to, then scan again.": "Penjual belum menandakan pesanan #{number} sudah dibungkus. Minta mereka berbuat begitu, kemudian imbas semula.",
+  "Open the packing photo of order #{number}": "Buka foto pembungkusan pesanan #{number}",
+  "Packed {when}": "Dibungkus {when}",
+  "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "Pembeli akan melihat foto ini. Tulis {number} pada bungkusan atau sekeping nota, dan pastikan ia ada dalam foto.",
+  "Packed · take photo": "Sudah dibungkus · ambil foto"
 };
 const All = "Semua";
 const Goods = "Barangan";
@@ -3203,10 +3231,12 @@ const explore = {
   optional,
   "Anything the seller should know?": "Ada apa-apa yang penjual perlu tahu?",
   "All in your cart": "Semua sudah dalam troli",
-  "That’s all the seller has left.": "Itu sahaja baki yang ada pada penjual.",
-  "That’s all the seller has left, counting what’s in your cart.": "Itu sahaja baki penjual, termasuk yang sudah dalam troli anda.",
   "Everything the seller has left is in your cart.": "Semua baki penjual sudah ada dalam troli anda.",
-  "The seller has only {count} left.": "Penjual hanya ada {count} lagi.",
+  "1 item left": "Tinggal 1 item",
+  "{count} items left": "Tinggal {count} item",
+  "{count} in your cart": "{count} dalam troli anda",
+  "Only 1 item left": "Hanya tinggal 1 item",
+  "Only {count} items left": "Hanya tinggal {count} item",
   Quantity,
   "One less": "Kurang satu",
   "One more": "Tambah satu",
@@ -3512,7 +3542,10 @@ const explore = {
   "Verified with your code": "Disahkan dengan kod anda",
   "Delivery QR": "Kod QR penghantaran",
   "Show delivery QR": "Tunjuk kod QR penghantaran",
-  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini semasa pesanan anda dihantar. Penjual atau kurier mereka akan mengimbasnya untuk mengesahkan anda sudah menerimanya."
+  "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini semasa pesanan anda dihantar. Penjual atau kurier mereka akan mengimbasnya untuk mengesahkan anda sudah menerimanya.",
+  "Open the packing photo": "Buka foto pembungkusan",
+  "Your order, packed": "Pesanan anda, sudah dibungkus",
+  "Packed {when}. The seller took this photo in Sellio.": "Dibungkus {when}. Penjual mengambil foto ini dalam Sellio."
 };
 const GROUPS = { signup, shop, explore };
 export {
