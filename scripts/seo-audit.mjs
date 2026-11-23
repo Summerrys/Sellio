@@ -210,6 +210,23 @@ if (flag('--external')) {
   }
 }
 
+// The edge-written pages again, straight after: the second answer should come from what Cloudflare
+// kept (X-Sellio-Edge-Cache: kept), as fast as a plain file. cf-ray ends with the Cloudflare
+// location that answered.
+const again = [...pages.keys()].filter((a) => ['store', 'listing', 'explore'].includes(kindOf(a)) && pages.get(a).status === 200);
+const sample = [...new Set([again.find((a) => kindOf(a) === 'store'), again.find((a) => kindOf(a) === 'listing'), again.find((a) => kindOf(a) === 'explore')].filter(Boolean))];
+if (sample.length) {
+  console.log('\nEdge pages asked for again (first byte, Cloudflare location, data):');
+  for (const address of sample) {
+    for (const round of [1, 2]) {
+      const answer = await get(toOrigin(address));
+      const location = (answer.headers.get('cf-ray') || '').split('-').pop() || '?';
+      console.log(`  ${round === 1 ? 'again' : 'again²'} ${String(answer.ms).padStart(5)} ms  ${location.padEnd(4)} ${answer.headers.get('x-sellio-edge') || '-'} / ${answer.headers.get('x-sellio-edge-cache') || '-'}  ${pathOf(address)}`);
+      if (round === 2 && answer.headers.get('x-sellio-edge-cache') === 'read') warn(pathOf(address), 'asked for twice in a row, the database was read both times: Cloudflare\'s cache isn\'t keeping it');
+    }
+  }
+}
+
 const crawled = [...pages.values()];
 console.log(`\n${crawled.length} pages: ${crawled.filter(indexable).length} indexable, ${crawled.filter((p) => p.status === 200 && !indexable(p)).length} noindex, `
   + `${crawled.filter((p) => p.status >= 300 && p.status < 400).length} redirects, ${crawled.filter((p) => p.status >= 400).length} errors. `

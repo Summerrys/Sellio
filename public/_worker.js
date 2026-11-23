@@ -281,7 +281,9 @@ const supabaseRows = async (env, path) => {
 
 // Kept per location (see above). Data, not pages, so a new version of this worker writes pages
 // its own way at once.
-async function edgeCached(ctx, key, load) {
+// `info`, when given, notes how the page's data came: kept (fresh), kept-old (fetched again behind
+// the answer) or read (from the database now); edgePage sends it as X-Sellio-Edge-Cache.
+async function edgeCached(ctx, key, load, info = null) {
   const cache = globalThis.caches?.default;
   const cacheKey = cache ? new Request(`${SITE}/__sellio-edge/${EDGE_CACHE}/${key}`) : null;
   let kept = null;
@@ -308,15 +310,20 @@ async function edgeCached(ctx, key, load) {
   if (kept) {
     const age = Date.now() - kept.at;
     const fresh = age >= 0 && age < (kept.data == null ? EDGE_MISSING_FRESH_MS : EDGE_FRESH_MS);
-    if (fresh) return kept.data;
+    if (fresh) {
+      if (info) info.cache = 'kept';
+      return kept.data;
+    }
     // Older: a shop or item that is there is still answered with while it is fetched again; one
     // that wasn't is asked about again now (it may have just opened).
     if (kept.data != null) {
       const again = fetchAndKeep().catch((error) => console.error(`Sellio edge: ${key} could not be fetched again.`, String(error?.message || error)));
       if (ctx?.waitUntil) ctx.waitUntil(again);
+      if (info) info.cache = 'kept-old';
       return kept.data;
     }
   }
+  if (info) info.cache = 'read';
   return fetchAndKeep();
 }
 
@@ -937,9 +944,10 @@ async function edgePage(env, request, url, shellPath, view) {
   const shell = await fromPages(env, new Request(url.toString(), { method: 'GET' }), url, shellPath);
   if (shell.status !== 200) return page(env, request, url, shellPath);
   const html = await shell.text();
+  const info = {};
   let written;
   try {
-    written = await view();
+    written = await view(info);
   } catch (error) {
     console.error(`Sellio edge: ${url.pathname} was sent without its content.`, String(error?.message || error));
     written = null;
@@ -949,10 +957,11 @@ async function edgePage(env, request, url, shellPath, view) {
   headers.set('Content-Type', 'text/html; charset=utf-8');
   headers.set('Cache-Control', 'no-cache');
   headers.set('X-Sellio-Edge', written && !written.fallback ? 'written' : 'fallback');
+  if (info.cache) headers.set('X-Sellio-Edge-Cache', info.cache);
   return new Response(request.method === 'HEAD' ? null : withEdge(html, written || {}), { status: written?.status || 200, headers });
 }
 
-async function storeEdge(env, ctx, url, rawSlug) {
+async function storeEdge(env, ctx, url, rawSlug, info) {
   let slug;
   try { slug = decodeURIComponent(rawSlug).trim(); } catch { return missingView('store'); }
   if (!slug || slug.length > 120) return missingView('store');
@@ -960,7 +969,7 @@ async function storeEdge(env, ctx, url, rawSlug) {
   const privateVariant = url.searchParams.get('preview') === 'true' || url.searchParams.get('staff') === 'true';
   let data;
   try {
-    data = await edgeCached(ctx, `store/${encodeURIComponent(slug)}`, () => loadStore(env, ctx, slug));
+    data = await edgeCached(ctx, `store/${encodeURIComponent(slug)}`, () => loadStore(env, ctx, slug), info);
   } catch (error) {
     console.error(`Sellio edge: shop ${slug} could not be read.`, String(error?.message || error));
     return fallbackView('store', canonical);
@@ -970,14 +979,14 @@ async function storeEdge(env, ctx, url, rawSlug) {
   return storeView(data, { canonical: storeAddress(data.shop.slug), privateVariant, shops });
 }
 
-async function listingEdge(env, ctx, rawId) {
+async function listingEdge(env, ctx, rawId, info) {
   let id;
   try { id = decodeURIComponent(rawId).trim(); } catch { return missingView('listing'); }
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return missingView('listing');
   const canonical = listingAddress(id);
   let data;
   try {
-    data = await edgeCached(ctx, `listing/${encodeURIComponent(id)}`, () => loadListing(env, id));
+    data = await edgeCached(ctx, `listing/${encodeURIComponent(id)}`, () => loadListing(env, id), info);
   } catch (error) {
     console.error(`Sellio edge: item ${id} could not be read.`, String(error?.message || error));
     return fallbackView('listing', canonical);
@@ -985,10 +994,10 @@ async function listingEdge(env, ctx, rawId) {
   return data ? listingView(data, { canonical }) : missingView('listing');
 }
 
-async function exploreEdge(env, ctx) {
+async function exploreEdge(env, ctx, info) {
   const canonical = `${SITE}/explore`;
   try {
-    return exploreView(await edgeCached(ctx, 'explore', () => loadExplore(env, ctx)), { canonical });
+    return exploreView(await edgeCached(ctx, 'explore', () => loadExplore(env, ctx), info), { canonical });
   } catch (error) {
     console.error('Sellio edge: Explore could not be read.', String(error?.message || error));
     return fallbackView('explore', canonical);
@@ -1049,11 +1058,11 @@ export default {
     if (pathname === '/explore/' || ((store || listing) && pathname.endsWith('/'))) {
       return Response.redirect(new URL(pathname.slice(0, -1) + url.search, url).toString(), 301);
     }
-    if (store) return edgePage(env, request, url, '/store', () => storeEdge(env, ctx, url, store[1]));
+    if (store) return edgePage(env, request, url, '/store', (info) => storeEdge(env, ctx, url, store[1], info));
     // /store/ alone or with more after the shop: no such storefront.
     if (pathname.startsWith('/store/')) return edgePage(env, request, url, '/store', () => missingView('store'));
-    if (pathname === '/explore') return edgePage(env, request, url, '/explore', () => exploreEdge(env, ctx));
-    if (listing) return edgePage(env, request, url, '/explore', () => listingEdge(env, ctx, listing[1]));
+    if (pathname === '/explore') return edgePage(env, request, url, '/explore', (info) => exploreEdge(env, ctx, info));
+    if (listing) return edgePage(env, request, url, '/explore', (info) => listingEdge(env, ctx, listing[1], info));
 
     // A file _routes.json doesn't list (one added at the top level later, say): as Pages has it.
     const name = pathname.slice(pathname.lastIndexOf('/') + 1);
