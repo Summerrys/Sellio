@@ -1250,7 +1250,9 @@ export default function Orders() {
               )}
             </div>
           ) : (
-            <div className="space-y-3">
+            // A gap, not space-y: each card's pop-ups sit beside it in the list, and space-y's
+            // top margin would move those full-screen pop-ups 12px down too.
+            <div className="flex flex-col gap-3">
               {filteredOrders.map((order, index) => (
                 <OrderCard
                   key={order.id}

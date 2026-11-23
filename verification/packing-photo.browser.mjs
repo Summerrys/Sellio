@@ -199,6 +199,19 @@ try {
     await page.waitForTimeout(300);
     await shoot(page, 'packing-1-orders');
 
+    // A card's pop-up covers the whole screen, from the very top: the list's 12px between cards
+    // isn't put above it too. A tap in the top strip lands on the pop-up's backdrop and closes it.
+    const cards = await page.evaluate(() => [...document.querySelectorAll('[data-sellio-order-card]')].map((c) => { const r = c.getBoundingClientRect(); return [r.top, r.bottom]; }));
+    assert.equal(cards.length, 2);
+    assert.equal(cards[1][0] - cards[0][1], 12, '12px between the cards');
+    await page.locator('[data-sellio-order-card]').nth(1).getByRole('button', { name: '💳 Mark as Paid' }).click();
+    const pay = page.getByRole('dialog', { name: 'Take payment' });
+    await pay.waitFor({ timeout: 5000 });
+    assert.deepEqual(await pay.evaluate((d) => { const r = d.parentElement.getBoundingClientRect(); return [r.top, r.height]; }), [0, 844], 'the pop-up’s backdrop: the whole screen');
+    await page.mouse.click(195, 5);
+    await pay.waitFor({ state: 'detached', timeout: 5000 });
+    passed('Orders: 12px between cards; a card’s pop-up covers the whole screen from the top, and a tap in its top strip closes it');
+
     // Sellio's camera: the parcel, the order number large, where the stamp goes.
     await step.click();
     await page.waitForFunction(() => { const v = document.querySelector('[data-testid="packing-sheet"] video'); return !!v && v.videoWidth > 0 && !v.paused; }, null, { timeout: 15000 });
