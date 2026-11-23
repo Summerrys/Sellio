@@ -101,47 +101,89 @@ function newLine(product, variant, notes, quantity) {
 }
 
 const clampQuantity = (n) => Math.min(MAX_LINE_QUANTITY, Math.max(1, Math.floor(Number(n) || 1)));
+const lineQuantity = (line) => Math.max(0, Math.floor(Number(line?.quantity) || 0));
 
-// Add to cart: one more of the line (or `quantity` more). False if this device can't
-// keep it (storage blocked or full).
+// ── Stock (Alvin, 23 Nov 2026) ─────────────────────────────────────────────────
+// A buyer can't have more of an item than the seller has, when the seller counts its stock
+// (Track stock on); an item without it ("unlimited") stops at MAX_LINE_QUANTITY. Stock is
+// counted per item, so the limit covers all of the item's lines together (other options or
+// notes). Unknown stock (not loaded, or no number set) is no limit below MAX_LINE_QUANTITY,
+// the same as "Sold out" (tracked and exactly 0). Checkout doesn't check stock yet.
+export function stockLimit(product) {
+  if (!product || product.track_inventory !== true) return MAX_LINE_QUANTITY;
+  const raw = product.stock_quantity;
+  if (raw === null || raw === undefined || raw === '') return MAX_LINE_QUANTITY;
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) ? Math.max(0, Math.min(MAX_LINE_QUANTITY, n)) : MAX_LINE_QUANTITY;
+}
+
+// How many of the item the cart's lines hold, leaving out the line `exceptKey` (null: none).
+export function heldInCart(lines, productId, exceptKey = null) {
+  return (lines || []).reduce((n, l) => (
+    l && productId != null && l.product_id === productId && l.key !== exceptKey ? n + lineQuantity(l) : n
+  ), 0);
+}
+
+// The most the line `key` can hold: the item's limit less its other lines.
+export function lineRoom(lines, product, key) {
+  return Math.max(0, stockLimit(product) - heldInCart(lines, product?.id, key));
+}
+
+// Returned by Add to cart (and Buy now for a new line) when none of the item fits any more:
+// the seller has no more than the cart already holds. Truthy, as nothing went wrong.
+export const CART_FULL = 'full';
+
+// Add to cart: `quantity` more of the line, as many as the item's stock leaves room for.
+// True once added; CART_FULL if none fits; false if this device can't keep it (storage
+// blocked or full).
 export function addToShopCart(slug, product, variant = null, notes = null, quantity = 1, shop = null) {
   if (!slug || !product?.id) return false;
   const qty = clampQuantity(quantity);
   const key = cartLineKey(product.id, variant, notes);
   const lines = readRaw(slug);
   const existing = lines.find(l => l?.key === key);
+  const have = lineQuantity(existing);
+  const most = Math.min(lineRoom(lines, product, key), have + qty);
+  if (most <= have) return CART_FULL;
   const next = existing
-    ? lines.map(l => (l?.key === key ? { ...l, quantity: Math.max(Number(l.quantity) || 0, Math.min(MAX_LINE_QUANTITY, (Number(l.quantity) || 0) + qty)) } : l))
-    : [...lines, newLine(product, variant, notes, qty)];
+    ? lines.map(l => (l?.key === key ? { ...l, quantity: most } : l))
+    : [...lines, newLine(product, variant, notes, most)];
   if (!write(slug, next)) return false;
   rememberShop(slug, shop);
   return true;
 }
 
-// Buy now: the line is in the cart with at least `quantity` (tapping Buy now on an item
-// that is already in the cart doesn't add a second one).
+// Buy now: the line is in the cart with at least `quantity`, or as many as the stock leaves
+// room for (tapping Buy now on an item that is already in the cart doesn't add a second one).
+// CART_FULL when the line is new and none fits.
 export function ensureInShopCart(slug, product, variant = null, notes = null, quantity = 1, shop = null) {
   if (!slug || !product?.id) return false;
   const qty = clampQuantity(quantity);
   const key = cartLineKey(product.id, variant, notes);
   const lines = readRaw(slug);
   const existing = lines.find(l => l?.key === key);
+  const want = Math.min(lineRoom(lines, product, key), qty);
+  if (!existing && want < 1) return CART_FULL;
   const next = existing
-    ? lines.map(l => (l?.key === key ? { ...l, quantity: Math.max(Number(l.quantity) || 0, qty) } : l))
-    : [...lines, newLine(product, variant, notes, qty)];
+    ? lines.map(l => (l?.key === key ? { ...l, quantity: Math.max(lineQuantity(l), want) } : l))
+    : [...lines, newLine(product, variant, notes, want)];
   if (!write(slug, next)) return false;
   rememberShop(slug, shop);
   return true;
 }
 
-// The Cart page's − / + / remove (0 removes the line).
-export function setShopCartQuantity(slug, key, quantity) {
+// The Cart page's − / + / remove (0 removes the line). `limit`: the item's stockLimit, when
+// known. Fewer always works; more stops at what the stock leaves room for.
+export function setShopCartQuantity(slug, key, quantity, limit = MAX_LINE_QUANTITY) {
   const lines = readRaw(slug);
   const n = Math.floor(Number(quantity) || 0);
-  const next = n > 0
-    ? lines.map(l => (l?.key === key ? { ...l, quantity: Math.min(MAX_LINE_QUANTITY, n) } : l))
-    : lines.filter(l => l?.key !== key);
-  return write(slug, next);
+  const line = lines.find(l => l?.key === key);
+  if (n > 0 && !line) return true;
+  if (n <= 0) return write(slug, lines.filter(l => l?.key !== key));
+  const have = lineQuantity(line);
+  const most = Math.max(0, Math.min(MAX_LINE_QUANTITY, limit) - heldInCart(lines, line.product_id, key));
+  const next = n > have ? Math.max(have, Math.min(n, most)) : n;
+  return write(slug, lines.map(l => (l?.key === key ? { ...l, quantity: next } : l)));
 }
 
 export function readShopCart(slug) {

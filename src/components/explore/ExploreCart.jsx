@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
-import { MAX_LINE_QUANTITY, cartCount, setShopCartQuantity, useShopCarts } from '@/lib/shopCart';
+import { cartCount, heldInCart, setShopCartQuantity, stockLimit, useShopCarts } from '@/lib/shopCart';
+import { useStockInfo } from '@/lib/stockInfo';
 import ExploreTabBar, { TAB_BAR_SPACE } from './ExploreTabBar';
 import { BRAND_COLOR, BRAND_GRADIENT, ExploreTabHeader, ItemImage, ShopAvatar, formatPrice, storeUrl } from './shared';
 import { useAppText } from '@/lib/appText';
@@ -42,7 +43,8 @@ function useShopDetails(slugs) {
   return found;
 }
 
-function Stepper({ line, onChange }) {
+// most: how many this line can hold, from the seller's stock and the item's other lines.
+function Stepper({ line, most, onChange }) {
   const { t } = useAppText('explore');
   const qty = Number(line.quantity) || 0;
   const item = line.name || t('item');
@@ -60,7 +62,7 @@ function Stepper({ line, onChange }) {
       <button
         type="button"
         onClick={() => onChange(qty + 1)}
-        disabled={qty >= MAX_LINE_QUANTITY}
+        disabled={qty >= most}
         aria-label={t('One more {item}', { item })}
         className="w-10 h-9 flex items-center justify-center text-slate-700 disabled:text-slate-300"
       >
@@ -70,7 +72,7 @@ function Stepper({ line, onChange }) {
   );
 }
 
-function ShopCart({ cart, details }) {
+function ShopCart({ cart, details, stock = {} }) {
   const { t } = useAppText('explore');
   const navigate = useNavigate();
   const { slug, lines } = cart;
@@ -97,6 +99,10 @@ function ShopCart({ cart, details }) {
         {lines.map((line) => {
           const qty = Number(line.quantity) || 0;
           const price = Number(line.price) || 0;
+          // The seller's stock, when they count it (and once it's loaded), across the item's lines.
+          const limit = stockLimit(stock[line.product_id]);
+          const most = Math.max(0, limit - heldInCart(lines, line.product_id, line.key));
+          const over = heldInCart(lines, line.product_id) > limit;
           return (
             <li key={line.key} className="flex gap-3 py-3 border-t border-slate-100">
               <ItemImage src={line.image_url} name={line.name} className="w-16 h-16 text-2xl flex-shrink-0" rounded="rounded-xl" />
@@ -109,8 +115,13 @@ function ShopCart({ cart, details }) {
                     <p className="text-sm font-bold text-slate-900">{formatPrice(price * qty, currency)}</p>
                     {qty > 1 && <p className="text-[11px] text-slate-500">{t('{price} each', { price: formatPrice(price, currency) })}</p>}
                   </div>
-                  <Stepper line={line} onChange={(n) => setShopCartQuantity(slug, line.key, n)} />
+                  <Stepper line={line} most={most} onChange={(n) => setShopCartQuantity(slug, line.key, n, limit)} />
                 </div>
+                {over && (
+                  <p className="mt-1.5 text-xs text-amber-800" data-testid="cart-line-stock">
+                    {limit === 0 ? t('Sold out') : t('The seller has only {count} left.', { count: limit })}
+                  </p>
+                )}
               </div>
             </li>
           );
@@ -140,6 +151,7 @@ export default function ExploreCart() {
   const { t, textKey } = useAppText('explore');
   const carts = useShopCarts();
   const details = useShopDetails(carts.map((c) => c.slug));
+  const stock = useStockInfo(carts.flatMap((c) => c.lines.map((l) => l.product_id)));
   const total = cartCount(carts);
 
   useEffect(() => {
@@ -168,7 +180,7 @@ export default function ExploreCart() {
         ) : (
           <>
             <div className="space-y-3">
-              {carts.map((cart) => <ShopCart key={cart.slug} cart={cart} details={details[cart.slug]} />)}
+              {carts.map((cart) => <ShopCart key={cart.slug} cart={cart} details={details[cart.slug]} stock={stock} />)}
             </div>
             <p className="mt-3 mx-1 text-xs leading-relaxed text-slate-500">
               {t('Each shop checks out on its own, and you pay that seller directly. Prices are confirmed when you check out.')}

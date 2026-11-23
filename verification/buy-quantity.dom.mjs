@@ -75,7 +75,8 @@ globalThis.supabaseFixture = {
     if (name === 'listing_likes_for') return chain({ data: [{ product_id: 'p-kaya', likes: 2, liked: false, own: false }], error: null });
     return chain({ data: null, error: null });
   },
-  from() { return chain({ data: null, error: null }); },
+  // An item's stock, read by Explore's listing and Cart pages (lib/stockInfo.js).
+  from(table) { return chain({ data: table === 'products' ? globalThis.stockRows || [] : null, error: null }); },
   auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
@@ -86,14 +87,23 @@ globalThis.supabaseFixture = {
   storage: { from: () => ({ createSignedUrls: async () => ({ data: [], error: null }) }) },
 };
 globalThis.catalogFor = {
-  'tenant-1': { products: [{ id: 'kaya', name: 'Kaya toast set', price: 4.5, category_id: 'c1', is_available: true }], categories: [{ id: 'c1', name: 'Breakfast' }] },
-  'tenant-2': { products: [{ id: 'jar', name: 'Pandan kaya jar', price: 7, category_id: 'c2', is_available: true }], categories: [{ id: 'c2', name: 'Jars' }] },
+  'tenant-1': { products: [
+    { id: 'kaya', name: 'Kaya toast set', price: 4.5, category_id: 'c1', is_available: true },
+    // Counted stock (Track stock on): 2 left, and one sold out.
+    { id: 'otah', name: 'Otah bun', price: 2.2, category_id: 'c1', is_available: true, track_inventory: true, stock_quantity: 2 },
+    { id: 'kopi-c', name: 'Kopi C peng', price: 2, category_id: 'c1', is_available: true, track_inventory: true, stock_quantity: 0 },
+  ], categories: [{ id: 'c1', name: 'Breakfast' }] },
+  'tenant-2': { products: [
+    { id: 'jar', name: 'Pandan kaya jar', price: 7, category_id: 'c2', is_available: true },
+    { id: 'cookies', name: 'Butter cookies', price: 6, category_id: 'c2', is_available: true, track_inventory: true, stock_quantity: 3 },
+    { id: 'tart', name: 'Pineapple tart tin', price: 18, category_id: 'c2', is_available: true, track_inventory: true, stock_quantity: 0 },
+  ], categories: [{ id: 'c2', name: 'Jars' }] },
 };
 globalThis.tenantFixture = { tenant: null, tenantId: null, user: null, hasPermission: () => true, isOwner: false, noStore: false, subscription: null };
 globalThis.appUserState = { appUser: null, clearAppUser() {} };
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), 'sellio-buy-quantity-'));
-const sonner = 'const note = () => {}; export const toast = Object.assign(note, { success: note, error: note, info: note, custom: note, message: note, dismiss() {} }); export const Toaster = () => null;';
+const sonner = 'const note = (m) => { (globalThis.toasts ||= []).push(String(m)); }; export const toast = Object.assign(note, { success: note, error: note, info: note, custom: note, message: note, dismiss() {} }); export const Toaster = () => null;';
 const supabase = 'export const getSupabase = async () => globalThis.supabaseFixture; export const SUPABASE_URL = "https://project.example.invalid";';
 const back = [
   "import { useState } from 'react';",
@@ -106,7 +116,7 @@ const back = [
 const storeStubs = {
   sonner, supabase, back,
   catalog: 'export const fetchStorefrontCatalog = async (_s, id) => globalThis.catalogFor[id];',
-  assistant: 'export default function MenuAssistantWidget() { return null; }',
+  assistant: 'export default function MenuAssistantWidget(props) { globalThis.assistant = props; return null; }',
   ratings: 'export const fetchRatingSummaries = async () => ({}); export const forgetRatingSummary = () => {}; export const isSignedIn = async () => !!globalThis.signedIn; export const myOrderRatings = async () => ({});',
   chat: 'export const useChatUser = () => ({ user: null });',
   likes: 'export const likeErrorMessage = () => ""; export const needsSignIn = () => false; export const setListingLike = async () => {}; export const toggleKnownLike = async (id) => { globalThis.liked = id; }; export const useLikesFor = () => {}; export const useKnownLike = (id) => (id ? { liked: false, likes: 2, own: false } : null);',
@@ -172,6 +182,7 @@ const store = await bundle('store', [
 ], storeMock);
 const listing = await bundle('listing', [
   "export { default as ListingPage } from '@/components/explore/ListingPage';",
+  "export { default as ExploreCart } from '@/components/explore/ExploreCart';",
   "export { readShopCart } from '@/lib/shopCart';",
 ], listingMock);
 
@@ -348,6 +359,153 @@ try {
     assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 2]]);
     await unmountAll();
     passed('Explore: Add to cart and Buy now open the sheet to choose how many (items without options too); that many goes into the cart or to the checkout');
+  }
+
+  // ── Stock (Alvin, 23 Nov 2026): no more than the seller has, when they count it ──────────
+  {
+    localStorage.clear();
+    await storePage('/store/ann-bakes');
+    await wait(40);
+    await openItem('Butter cookies');
+    assert.equal(byTest('item-special-request').getAttribute('placeholder'), 'Anything the seller should know?', 'a buyer’s hint for any item');
+    for (let i = 0; i < 5; i++) await click(byTest('item-quantity-more'));
+    assert.equal(quantityShown(), '3', 'stops at the 3 the seller has');
+    assert.ok(byTest('item-quantity-more').disabled, '+ off at the stock');
+    assert.equal(text(byTest('item-quantity-stock')), 'That’s all the seller has left.');
+    assert.equal(text(byTest('item-buy-now-price')), 'S$18.00');
+    await click(byTest('item-add-to-cart'));
+    await wait(10);
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]]);
+    // Again: Add to cart has no room left; the cart stays at 3, and the buyer is told why.
+    await openItem('Butter cookies');
+    await click(byTest('item-add-to-cart'));
+    await wait(10);
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], 'no more than the stock, however it’s added');
+    assert.equal(globalThis.toasts.at(-1), 'Everything the seller has left is in your cart.');
+    // The cart's +: off at the stock; − works.
+    await click(buttonMatching(/^3 ?S\$18\.00$/));
+    await wait(10);
+    assert.ok(byTest('store-cart-more').disabled, 'the cart’s + is off at the stock');
+    await click(buttonMatching(/^−$/));
+    await click(buttonMatching(/^−$/));
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 1]]);
+    await click(buttonMatching(/^✕$/));
+    // More asked than is left (1 in the cart, 3 asked): as many as fit, and told so.
+    await openItem('Butter cookies');
+    await click(byTest('item-quantity-more'));
+    await click(byTest('item-quantity-more'));
+    assert.equal(quantityShown(), '3');
+    await click(byTest('item-add-to-cart'));
+    await wait(10);
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], '1 + 3 asked, 3 left: 3');
+    assert.equal(globalThis.toasts.at(-1), 'That’s all the seller has left, counting what’s in your cart.');
+    // The cart's + works below the stock and stops at it.
+    await click(buttonMatching(/^3 ?S\$18\.00$/));
+    await wait(10);
+    await click(buttonMatching(/^−$/));
+    assert.ok(!byTest('store-cart-more').disabled);
+    await click(byTest('store-cart-more'));
+    await click(byTest('store-cart-more'));
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], 'the cart’s + stops at 3 too');
+    await click(buttonMatching(/^✕$/));
+    // The menu assistant changes amounts through the same cart: no more than the stock either.
+    await act(async () => { globalThis.assistant.onUpdateCartQuantity('cookies-default', 9); });
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], 'the assistant can’t go past the stock');
+    await act(async () => { globalThis.assistant.onUpdateCartQuantity('cookies-default', 1); });
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 1]], 'fewer works');
+    await act(async () => { globalThis.assistant.onAddToCart(globalThis.catalogFor['tenant-2'].products[1], null, null, 5); });
+    assert.deepEqual(cartOf('sf_cart_ann-bakes'), [['cookies', 3]], 'the assistant’s add stops at the stock');
+    // Sold out: no quantity, the bar says so.
+    await openItem('Pineapple tart tin');
+    assert.ok(byTest('item-sold-out'), 'sold out');
+    assert.ok(!byTest('item-quantity'), 'no quantity for a sold-out item');
+    await unmountAll();
+
+    // A table's order: the kitchen's example, the same stock limit, and a sold-out item.
+    localStorage.clear();
+    await storePage('/order/kopi-corner/t5');
+    await wait(40);
+    await openItem('Kopi C peng');
+    assert.equal(text(byTest('item-add-to-order')), 'Sold out');
+    assert.ok(byTest('item-add-to-order').disabled, 'a sold-out item can’t be added to the table’s order');
+    assert.ok(!byTest('item-quantity'));
+    await click(buttonMatching(/^✕$/));
+    await openItem('Otah bun');
+    assert.equal(byTest('item-special-request').getAttribute('placeholder'), 'e.g. No onions, extra spicy...', 'a table keeps the kitchen’s example');
+    for (let i = 0; i < 3; i++) await click(byTest('item-quantity-more'));
+    assert.equal(quantityShown(), '2');
+    await click(buttonMatching(/^Add to order · S\$4\.40$/));
+    await wait(10);
+    assert.deepEqual(cartOf('sf_table_cart_kopi-corner_t5'), [['otah', 2]]);
+    await openItem('Otah bun');
+    assert.equal(text(byTest('item-add-to-order')), 'All in your cart');
+    assert.ok(byTest('item-add-to-order').disabled);
+    assert.equal(text(byTest('item-quantity-stock')), 'Everything the seller has left is in your cart.');
+    await unmountAll();
+
+    const d = store.app.DICTIONARY;
+    for (const key of ['specialRequestOptional', 'itemNoteHint', 'itemNoteFoodHint', 'stockAllLeft', 'stockLeftWithCart', 'stockAllInCart', 'allInCart']) {
+      assert.ok(d.en[key], `English ${key}`);
+      for (const code of ['zh', 'ms', 'id']) assert.ok(d[code][key] && d[code][key] !== d.en[key], `${code} has its own ${key}`);
+    }
+    passed('Store page: how many stops at the seller’s stock (item screen, the cart’s +, again later), sold-out items can’t be added, a buyer gets “Anything the seller should know?” and a table keeps the kitchen’s example, in four languages');
+  }
+
+  // ── Explore: the same limit, from the item's stock ───────────────────────────────────────
+  {
+    localStorage.clear();
+    globalThis.stockRows = [{ id: 'p-kaya', track_inventory: true, stock_quantity: 2 }];
+    const Where = () => { const at = useLocation(); return h('p', { 'data-testid': 'where' }, `${at.pathname}${at.search}`); };
+    const listingApp = () => mount(h(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+      h(MemoryRouter, { initialEntries: ['/listing/p-kaya'] },
+        h(Routes, null,
+          h(Route, { path: '/listing/:productId', element: h(listing.app.ListingPage) }),
+          h(Route, { path: '/store/:slug', element: h(Where) })))));
+    await listingApp();
+    await wait(80);
+    const sheet = () => document.body.querySelector('[role="dialog"][aria-labelledby="item-options-title"]');
+    await click(buttonMatching(/^Add to cart$/));
+    assert.equal(sheet().querySelector('#item-special-request').getAttribute('placeholder'), 'Anything the seller should know?');
+    for (let i = 0; i < 4; i++) await click(buttonMatching(/^One more$/));
+    assert.ok(byTest('item-options-more').disabled, '+ off at the 2 left');
+    assert.equal(text(byTest('item-options-stock')), 'That’s all the seller has left.');
+    await click(buttonMatching(/^Add to cart · S\$10\.00$/));
+    await wait(10);
+    assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 2]]);
+    await click(buttonMatching(/^Add to cart$/));
+    assert.equal(text(byTest('item-options-confirm')), 'All in your cart');
+    assert.ok(byTest('item-options-confirm').disabled, 'nothing more to add');
+    assert.equal(text(byTest('item-options-stock')), 'That’s all the seller has left, counting what’s in your cart.');
+    await click(buttonMatching(/^Close$/));
+    await wait(10);
+    // Buy now fills its line up to the stock, and goes to the checkout.
+    await click(buttonMatching(/^Buy now/));
+    for (let i = 0; i < 3; i++) await click(buttonMatching(/^One more$/));
+    await click(buttonMatching(/^Buy now · S\$10\.00$/));
+    await wait(10);
+    assert.equal(text(byTest('where')), '/store/ann-bakes?buy=1');
+    assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 2]]);
+    await unmountAll();
+
+    // Explore's Cart page: + off at the stock; told when the seller has fewer than the cart holds.
+    await mount(h(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+      h(MemoryRouter, { initialEntries: ['/explore/cart'] }, h(listing.app.ExploreCart))));
+    await wait(60);
+    assert.ok(buttonMatching(/^One more Kaya jar$/).disabled, 'the Cart page’s + is off at the stock');
+    assert.ok(!byTest('cart-line-stock'), 'no note while the cart is within the stock');
+    await unmountAll();
+    globalThis.stockRows = [{ id: 'p-kaya', track_inventory: true, stock_quantity: 1 }];
+    await mount(h(QueryClientProvider, { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+      h(MemoryRouter, { initialEntries: ['/explore/cart'] }, h(listing.app.ExploreCart))));
+    await wait(60);
+    assert.equal(text(byTest('cart-line-stock')), 'The seller has only 1 left.');
+    await click(buttonMatching(/^One less Kaya jar$/));
+    await wait(10);
+    assert.deepEqual(listing.app.readShopCart('ann-bakes').map((l) => [l.product_id, l.quantity]), [['p-kaya', 1]], '− still works');
+    assert.ok(!byTest('cart-line-stock'));
+    await unmountAll();
+    globalThis.stockRows = null;
+    passed('Explore: the options sheet and the Cart page stop at the seller’s stock (Add to cart, Buy now, +), and say so; the hint is “Anything the seller should know?”');
   }
 
   console.log(`buy quantity: ${passes} passed`);

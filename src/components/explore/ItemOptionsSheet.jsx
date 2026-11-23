@@ -11,7 +11,10 @@ import { useAppText } from '@/lib/appText';
 // Choosing an item's options (size, add-ons), a special request and how many, before
 // it goes into the cart (mode 'cart') or straight to checkout (mode 'buy'). The same
 // rules as the shop page's item screen (see itemOptions.js).
-export default function ItemOptionsSheet({ open, mode, item, currency, image, onClose, onConfirm }) {
+// limitFor(variant, notes) → { max, held }: the most this choice can take, from the seller's
+// stock and the cart (Alvin, 23 Nov 2026), and how many of the item the cart already counts
+// against it. None: up to MAX_LINE_QUANTITY.
+export default function ItemOptionsSheet({ open, mode, item, currency, image, onClose, onConfirm, limitFor = null }) {
   const { t, language } = useAppText('explore');
   const groups = useMemo(() => normaliseVariants(item?.variants, item?.price), [item]);
   const [picks, setPicks] = useState({});
@@ -29,6 +32,15 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
   const unit = (Number(item?.price) || 0) + (variant?.price_modifier || 0);
   const missing = missingChoices(groups, picks);
   const verb = mode === 'buy' ? t('Buy now') : t('Add to cart');
+  const room = limitFor ? limitFor(variant, notes.trim() || null) : null;
+  const max = room ? Math.max(0, Math.min(MAX_LINE_QUANTITY, Math.floor(Number(room.max) || 0))) : MAX_LINE_QUANTITY;
+  const full = max < 1; // the cart already holds all the seller has
+  const atStock = !full && quantity >= max && max < MAX_LINE_QUANTITY;
+
+  // The stock (or the cart) changed under the chosen number: down to what's left.
+  useEffect(() => {
+    if (max >= 1 && quantity > max) setQuantity(max);
+  }, [max, quantity]);
   // "Choose a size" in English (lib/itemOptions.js); in other languages the seller's own group name.
   const choose = (group) => {
     if (language === 'en') return chooseLabel(group);
@@ -38,19 +50,23 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
   const groupName = (name) => (name === 'Options' ? t('Options') : name);
 
   const confirm = () => {
-    if (missing.length) return;
-    onConfirm({ variant, notes: notes.trim() || null, quantity });
+    if (missing.length || full) return;
+    onConfirm({ variant, notes: notes.trim() || null, quantity: Math.min(quantity, max) });
   };
 
+  const blocked = missing.length > 0 || full;
   const footer = (
     <button
       type="button"
       onClick={confirm}
-      disabled={missing.length > 0}
+      disabled={blocked}
+      data-testid="item-options-confirm"
       className="w-full h-[50px] rounded-[14px] text-[15px] font-bold disabled:cursor-default"
-      style={missing.length ? { background: '#e2e8f0', color: '#475569' } : { background: BRAND_GRADIENT, color: '#fff' }}
+      style={blocked ? { background: '#e2e8f0', color: '#475569' } : { background: BRAND_GRADIENT, color: '#fff' }}
     >
-      {missing.length ? choose(missing[0]) : `${verb} · ${formatPrice(unit * quantity, currency)}`}
+      {missing.length ? choose(missing[0])
+        : full ? (room?.held > 0 ? t('All in your cart') : t('Sold out'))
+          : `${verb} · ${formatPrice(unit * quantity, currency)}`}
     </button>
   );
 
@@ -112,7 +128,7 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           maxLength={500}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder={t('e.g. No onions, extra spicy')}
+          placeholder={t('Anything the seller should know?')}
           className="w-full px-3 py-2.5 rounded-xl border-[1.5px] border-slate-200 text-sm text-slate-900 resize-none outline-none focus:border-slate-400"
         />
       </div>
@@ -133,14 +149,22 @@ export default function ItemOptionsSheet({ open, mode, item, currency, image, on
           <button
             type="button"
             aria-label={t('One more')}
-            onClick={() => setQuantity((q) => Math.min(MAX_LINE_QUANTITY, q + 1))}
-            disabled={quantity >= MAX_LINE_QUANTITY}
+            onClick={() => setQuantity((q) => Math.min(max, q + 1))}
+            disabled={quantity >= max}
+            data-testid="item-options-more"
             className="w-11 h-10 flex items-center justify-center text-slate-700 disabled:text-slate-300"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
       </div>
+      {(atStock || full) && (
+        <p className="mt-2 text-right text-xs text-slate-500" data-testid="item-options-stock">
+          {room?.held > 0
+            ? t('That’s all the seller has left, counting what’s in your cart.')
+            : full ? t('Sold out') : t('That’s all the seller has left.')}
+        </p>
+      )}
     </BottomSheet>
   );
 }

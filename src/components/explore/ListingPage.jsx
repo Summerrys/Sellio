@@ -10,7 +10,10 @@ import { rememberReturnPath } from '@/lib/authNavigation';
 import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { useRatingSummaries } from '@/lib/ratings';
 import { likeErrorMessage, likesText, needsSignIn, noteLikes, setListingLike } from '@/lib/likes';
-import { addToShopCart, ensureInShopCart, useCartCount } from '@/lib/shopCart';
+import {
+  CART_FULL, addToShopCart, cartLineKey, ensureInShopCart, heldInCart, lineRoom, readShopCart, stockLimit, useCartCount,
+} from '@/lib/shopCart';
+import { useStockInfo } from '@/lib/stockInfo';
 import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
 import ShareSheet from './ShareSheet';
 import ItemOptionsSheet from './ItemOptionsSheet';
@@ -293,6 +296,8 @@ function Listing({ productId }) {
   const item = state.data?.product;
   const shop = state.data?.shop;
   const viewer = state.data?.viewer;
+  // How many the seller has, when they count it: Buy now and Add to cart stop there.
+  const stock = useStockInfo(item?.id ? [item.id] : [])[item?.id] || null;
   const [shopRatings] = useRatingSummaries(shop?.id ? [shop.id] : []);
   const shopRating = shop?.id ? shopRatings[shop.id] || null : null;
   const [ratingOpen, setRatingOpen] = useState(false);
@@ -472,12 +477,30 @@ function Listing({ productId }) {
   const shareUrl = `${PUBLIC_ORIGIN}${listingUrl(item.id)}`;
   const priceText = formatPrice(item.price, currency);
 
-  // The line the shop page itself would add for this item, and the shop for the Cart page.
-  const cartProduct = { id: item.id, name: item.name, price: item.price, image_url: images[0] || null };
+  // The line the shop page itself would add for this item (with its stock, for the limit),
+  // and the shop for the Cart page.
+  const cartProduct = {
+    id: item.id, name: item.name, price: item.price, image_url: images[0] || null,
+    track_inventory: stock?.track_inventory, stock_quantity: stock?.stock_quantity,
+  };
   const cartShop = { name: shop.name, logo_url: shop.logo_url, currency };
+  // The most the choice in the options sheet can take: Add to cart adds on top of all the
+  // item's lines; Buy now fills its own line, next to the item's other lines.
+  const cartLines = optionsMode ? readShopCart(shop.slug) : [];
+  const limitFor = (variant, notes) => {
+    if (optionsMode === 'buy') {
+      const key = cartLineKey(item.id, variant, notes);
+      return { max: lineRoom(cartLines, cartProduct, key), held: heldInCart(cartLines, item.id, key) };
+    }
+    const held = heldInCart(cartLines, item.id);
+    return { max: Math.max(0, stockLimit(cartProduct) - held), held };
+  };
 
   const putInCart = (variant, notes, quantity) => {
-    if (addToShopCart(shop.slug, cartProduct, variant, notes, quantity, cartShop)) {
+    const added = addToShopCart(shop.slug, cartProduct, variant, notes, quantity, cartShop);
+    if (added === CART_FULL) {
+      showNotice(t('Everything the seller has left is in your cart.'), { label: t('View cart'), onClick: () => navigate('/explore/cart') });
+    } else if (added) {
       showNotice(t('Added to cart'), { label: t('View cart'), onClick: () => navigate('/explore/cart') });
     } else {
       // This phone won't keep it (storage blocked or full): order on the shop's page instead.
@@ -767,6 +790,7 @@ function Listing({ productId }) {
         image={images[0]}
         onClose={closeOptions}
         onConfirm={confirmOptions}
+        limitFor={limitFor}
       />
 
       {viewerAt != null && images.length > 0 && (

@@ -37,7 +37,7 @@ import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
 import { creditFor } from '@/lib/samplePhotos';
 import { didYouMean } from '@/lib/searchSuggest';
 import { formatMoney } from '@/lib/money';
-import { MAX_LINE_QUANTITY } from '@/lib/shopCart';
+import { MAX_LINE_QUANTITY, cartLineKey, heldInCart, stockLimit } from '@/lib/shopCart';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 const fill = (text, values) => text.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
@@ -1166,6 +1166,7 @@ export default function StorefrontView({
           onClose={closeProductModal}
           contentMap={contentMap}
           buyerBar={buyerBar}
+          cartLines={cart}
         />
       )}
     </div>
@@ -1533,7 +1534,7 @@ function BarIconButton({ label, pressed, onClick, caption, captionColor = '#3341
 }
 
 // ── Product detail modal ─────────────────────────────────────────────────────
-function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {}, buyerBar = null }) {
+function ProductDetailModal({ product, currency, primaryColor, storefrontConfig, selectedVariants, setSelectedVariants, itemNotes, setItemNotes, activeImageIndex, setActiveImageIndex, onAddToCart, onClose, contentMap = {}, buyerBar = null, cartLines = [] }) {
   const { t, lang } = useLanguage();
   const name = contentMap[product.name] || product.name;
   const description = contentMap[product.description] || product.description;
@@ -1554,7 +1555,20 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   // own page, and none for an item that isn't on Explore, which can't be liked or chatted about).
   const like = useKnownLike(buyerBar ? product.id : null);
   const social = !!buyerBar && !!like && !like.own;
-  const soldOut = !!product.track_inventory && product.stock_quantity === 0;
+  // The seller's stock, when they count it (Alvin, 23 Nov 2026): the number stops there,
+  // counting what the cart already holds. Buy now fills this choice's own line (the item's
+  // other lines count); Add to cart and Add to order add on top of all its lines.
+  const limit = stockLimit(product);
+  const soldOut = limit === 0;
+  const lineKey = cartLineKey(product.id, combineChoices(selectedVariants), itemNotes.trim() || null);
+  const held = buyerBar ? heldInCart(cartLines, product.id, lineKey) : heldInCart(cartLines, product.id);
+  const most = Math.max(0, limit - held);
+  const full = !soldOut && most < 1;
+  const atStock = most >= 1 && quantity >= most && most < MAX_LINE_QUANTITY;
+  // The choice (or the cart) changed under the chosen number: down to what's left.
+  useEffect(() => {
+    if (most >= 1 && quantity > most) setQuantity(most);
+  }, [most, quantity]);
   const chooseText = () => {
     const groupName = String(missingOptions[0]?.name || '').trim();
     if (!groupName) return t('selectOption');
@@ -1723,16 +1737,20 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
               );
             })()}
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontWeight: 600, fontSize: sfType(13), margin: '0 0 8px', color: '#0f172a' }}>Special Request (optional)</p>
+              <label htmlFor="item-special-request" style={{ display: 'block', fontWeight: 600, fontSize: sfType(13), margin: '0 0 8px', color: '#0f172a' }}>{t('specialRequestOptional')}</label>
+              {/* A buyer on a store's public page: words for any item (Alvin, 23 Nov 2026). A
+                  table's order or staff taking one: the kitchen's example. */}
               <textarea
+                id="item-special-request"
+                data-testid="item-special-request"
                 value={itemNotes}
                 onChange={e => setItemNotes(e.target.value)}
-                placeholder="e.g. No onions, extra spicy..."
+                placeholder={buyerBar ? t('itemNoteHint') : t('itemNoteFoodHint')}
                 rows={2}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: sfType(13), resize: 'none', fontFamily: 'inherit' }}
               />
             </div>
-            {!(buyerBar && soldOut) && (
+            {!soldOut && (
               <div data-testid="item-quantity" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span id="item-quantity-label" style={{ fontWeight: 600, fontSize: sfType(13), color: '#0f172a' }}>{t('quantity')}</span>
                 <div role="group" aria-labelledby="item-quantity-label" style={{ display: 'flex', alignItems: 'center', height: 40, borderRadius: 999, border: '1px solid #e2e8f0' }}>
@@ -1750,23 +1768,29 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                   <button
                     type="button"
                     aria-label={t('oneMore')}
-                    onClick={() => setQuantity((q) => Math.min(MAX_LINE_QUANTITY, q + 1))}
-                    disabled={quantity >= MAX_LINE_QUANTITY}
+                    onClick={() => setQuantity((q) => Math.min(most, q + 1))}
+                    disabled={quantity >= most}
                     data-testid="item-quantity-more"
-                    style={{ width: 44, height: 40, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: quantity >= MAX_LINE_QUANTITY ? 'default' : 'pointer', color: quantity >= MAX_LINE_QUANTITY ? '#cbd5e1' : '#334155' }}
+                    style={{ width: 44, height: 40, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: quantity >= most ? 'default' : 'pointer', color: quantity >= most ? '#cbd5e1' : '#334155' }}
                   >
                     <Plus size={16} aria-hidden="true" />
                   </button>
                 </div>
               </div>
             )}
+            {(atStock || full) && (
+              <p data-testid="item-quantity-stock" style={{ margin: '-8px 0 16px', textAlign: 'right', fontSize: sfType(12), color: '#64748b' }}>
+                {full ? t('stockAllInCart') : held > 0 ? t('stockLeftWithCart') : t('stockAllLeft')}
+              </p>
+            )}
             {/* A table's order, staff taking one or the preview: one Add button (a store's public
                 page: the bar below). */}
             {!buyerBar && (
             <button
-              disabled={missingOptions.length > 0}
+              disabled={missingOptions.length > 0 || soldOut || full}
+              data-testid="item-add-to-order"
               onClick={() => {
-                if (missingOptions.length > 0) return;
+                if (missingOptions.length > 0 || soldOut || full) return;
                 // Flattens both single-select picks (plain objects) and multi-select
                 // picks (arrays) into one combined label/price, so everything
                 // downstream (cart, order storage, Kitchen Display, receipts) still
@@ -1779,12 +1803,14 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 onAddToCart(product, combinedVariant, itemNotes.trim() || null, quantity);
                 onClose();
               }}
-              style={missingOptions.length > 0
+              style={missingOptions.length > 0 || soldOut || full
                 ? { width: '100%', padding: 14, background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'default' }
                 : { width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'pointer' }}>
-              {missingOptions.length > 0
-                ? t('selectOption')
-                : <>{t('addToOrder')} · {linePrice}</>}
+              {soldOut ? t('soldOut')
+                : full ? t('allInCart')
+                  : missingOptions.length > 0
+                    ? t('selectOption')
+                    : <>{t('addToOrder')} · {linePrice}</>}
             </button>
             )}
           </div>

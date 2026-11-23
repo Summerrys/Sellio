@@ -48,14 +48,16 @@ assert.ok(addStart > 0, 'Storefront.jsx still has addToCart');
 const addBody = storefront.slice(addStart, storefront.indexOf('\n  };', addStart));
 const keyExpr = addBody.match(/const key = (.*);\n/)[1];
 const lineExpr = addBody.match(/return \[\.\.\.prev, (\{ key, product_id[^\n]*\})\];/)[1];
-// One at a time, as a card's + adds (qty: the page's quantity, here 1).
+// One at a time, as a card's + adds (qty: the page's quantity, here 1; next: what the line
+// becomes, here as many as one more, the stock not counted).
 // eslint-disable-next-line no-new-func
-const shopAdd = new Function('prev', 'product', 'variant', 'notes', `
+const shopAdd = (prev, product, variant, notes) => new Function('prev', 'product', 'variant', 'notes', 'cartLineKey', `
   const qty = 1;
+  const next = qty;
   const key = ${keyExpr};
   const existing = prev.find(i => i.key === key);
   if (existing) return prev.map(i => i.key === key ? { ...i, quantity: i.quantity + 1 } : i);
-  return [...prev, ${lineExpr}];`);
+  return [...prev, ${lineExpr}];`)(prev, product, variant, notes, m.cartLineKey);
 
 // ── Options, as stored (Cafetelier's items) ──
 const RICE_WINE = [
@@ -170,5 +172,57 @@ ok('Buy now, − / + / remove and the 99 cap; other lines untouched');
   store.fail = false;
 }
 ok('the Cart lists shops with something in their cart, newest first, and counts every item');
+
+// ── Stock (Alvin, 23 Nov 2026): no more of an item than the seller has, when they count it ──
+{
+  const MAX = m.MAX_LINE_QUANTITY;
+  assert.equal(m.stockLimit({ id: 'a' }), MAX, 'an item without Track stock: unlimited, up to 99');
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: false, stock_quantity: 3 }), MAX, 'Track stock off: the number is ignored');
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: 3 }), 3);
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: '5' }), 5);
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: 0 }), 0, 'sold out');
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: -2 }), 0);
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: 500 }), MAX);
+  assert.equal(m.stockLimit({ id: 'a', track_inventory: true, stock_quantity: null }), MAX, 'no number set: as unknown (the same as "Sold out" reads it)');
+  assert.equal(m.stockLimit(null), MAX, 'stock not loaded yet');
+
+  store.clear();
+  const jar = { id: 'jar', name: 'Kaya jar', price: 5, image_url: null, track_inventory: true, stock_quantity: 3 };
+  const qty = () => JSON.parse(store.getItem('sf_cart_ann-bakes') || '[]').map((l) => [l.key, l.quantity]);
+  assert.equal(m.addToShopCart('ann-bakes', jar, null, null, 2), true);
+  assert.equal(m.addToShopCart('ann-bakes', jar, null, null, 2), true, 'more than is left: as many as fit');
+  assert.deepEqual(qty(), [['jar-default', 3]]);
+  assert.equal(m.addToShopCart('ann-bakes', jar, null, null, 1), m.CART_FULL, 'none fits: told so, nothing written');
+  assert.equal(m.addToShopCart('ann-bakes', jar, null, 'Gift wrap', 1), m.CART_FULL, "another line of the item counts: stock is the item's");
+  assert.deepEqual(qty(), [['jar-default', 3]]);
+  assert.equal(m.heldInCart(m.readShopCart('ann-bakes'), 'jar'), 3);
+  assert.equal(m.heldInCart(m.readShopCart('ann-bakes'), 'jar', 'jar-default'), 0);
+
+  // The Cart page's − and +: fewer always works; more stops at the stock.
+  m.setShopCartQuantity('ann-bakes', 'jar-default', 1, m.stockLimit(jar));
+  assert.deepEqual(qty(), [['jar-default', 1]]);
+  m.setShopCartQuantity('ann-bakes', 'jar-default', 9, m.stockLimit(jar));
+  assert.deepEqual(qty(), [['jar-default', 3]], '+ stops at the stock');
+  // Buy now with a note: its own line gets what the item's other line leaves.
+  m.setShopCartQuantity('ann-bakes', 'jar-default', 2, m.stockLimit(jar));
+  assert.equal(m.ensureInShopCart('ann-bakes', jar, null, 'Gift wrap', 5), true);
+  assert.deepEqual(qty(), [['jar-default', 2], ['jar-default-Gift wrap', 1]]);
+  assert.equal(m.lineRoom(m.readShopCart('ann-bakes'), jar, 'jar-default-Gift wrap'), 1);
+  assert.equal(m.ensureInShopCart('ann-bakes', jar, { label: 'Large', price_modifier: 1 }, null, 1), m.CART_FULL, 'Buy now, a new line, none left');
+  // The seller lowered the stock after the buyer added: + does nothing, − still works.
+  const fewer = { ...jar, stock_quantity: 1 };
+  m.setShopCartQuantity('ann-bakes', 'jar-default', 3, m.stockLimit(fewer));
+  assert.deepEqual(qty(), [['jar-default', 2], ['jar-default-Gift wrap', 1]], 'over the stock already: no more');
+  m.setShopCartQuantity('ann-bakes', 'jar-default', 1, m.stockLimit(fewer));
+  assert.deepEqual(qty(), [['jar-default', 1], ['jar-default-Gift wrap', 1]]);
+  // Unlimited items keep the 99 cap.
+  const toast = { id: 'toast', name: 'Kaya toast', price: 2 };
+  m.addToShopCart('ann-bakes', toast, null, null, 98);
+  assert.equal(m.addToShopCart('ann-bakes', toast, null, null, 5), true);
+  assert.equal(m.readShopCart('ann-bakes').find((l) => l.product_id === 'toast').quantity, MAX);
+  assert.equal(m.addToShopCart('ann-bakes', toast, null, null, 1), m.CART_FULL);
+  store.clear();
+}
+ok("a cart holds no more of an item than the seller has (all its lines together); unlimited items stop at 99");
 
 console.log(`${checks} listing and cart checks passed (no network, no real account).`);

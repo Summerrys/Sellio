@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Clock, Eye, ShoppingCart } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
@@ -33,7 +33,7 @@ import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes
 // Open/closed from the posted hours, including hours that close at or past midnight.
 import { computeStoreOpenState } from '@/lib/storeHours';
 import { formatMoney } from '@/lib/money';
-import { MAX_LINE_QUANTITY } from '@/lib/shopCart';
+import { MAX_LINE_QUANTITY, cartLineKey, heldInCart, lineRoom, stockLimit } from '@/lib/shopCart';
 import { hasEdgeHead } from '@/lib/pageMeta';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
@@ -579,8 +579,16 @@ function StorefrontInner() {
   const money = (n) => formatMoney(Number(n) || 0, currency);
   const isFnB = isFnBIndustry(tenant?.industry);
 
+  // Each item as the shop lists it now, for its stock: a cart never holds more of an item
+  // than the seller has when they count it (Alvin, 23 Nov 2026; shopCart.js stockLimit),
+  // whichever way it's added (the item's screen, a card's +, the cart's +, the assistant).
+  const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const stockItem = (productId, fallback = null) => productById.get(productId) || fallback;
+  // The cart line's most, for the cart's + (the item's other lines count too).
+  const lineMost = (line) => lineRoom(cart, stockItem(line.product_id), line.key);
+
   // quantity: how many the item's screen chose (1 from a card's +); a line holds at most
-  // MAX_LINE_QUANTITY (the database's limit for one line).
+  // MAX_LINE_QUANTITY (the database's limit for one line), and an item no more than its stock.
   const addToCart = (product, variant = null, notes = null, quantity = 1) => {
     if (checkoutGuard.current) return;
     const qty = Math.min(MAX_LINE_QUANTITY, Math.max(1, Math.floor(Number(quantity) || 1)));
@@ -588,18 +596,35 @@ function StorefrontInner() {
     // product+variant twice with two different special requests would silently
     // merge into one line and lose one of the notes (or overwrite it), the same
     // way two different variants already correctly stay as separate lines.
-    const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
+    const key = cartLineKey(product.id, variant, notes);
+    const item = stockItem(product.id, product);
+    const have = cart.find((i) => i.key === key)?.quantity || 0;
+    const room = lineRoom(cart, item, key);
+    if (room <= have) {
+      // Nothing more fits: say why instead of adding nothing silently.
+      toast.info(t(stockLimit(item) === 0 ? 'soldOut' : heldInCart(cart, product.id) > 0 ? 'stockAllInCart' : 'stockAllLeft'));
+      return;
+    }
+    if (have + qty > room) toast.info(t(heldInCart(cart, product.id) > 0 ? 'stockLeftWithCart' : 'stockAllLeft'));
     setCart(prev => {
       const existing = prev.find(i => i.key === key);
-      if (existing) return prev.map(i => i.key === key ? { ...i, quantity: Math.max(i.quantity, Math.min(MAX_LINE_QUANTITY, i.quantity + qty)) } : i);
-      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: qty, variant: variant?.label || null, notes: notes || null }];
+      const before = existing ? existing.quantity : 0;
+      const next = Math.min(lineRoom(prev, item, key), before + qty);
+      if (next <= before) return prev;
+      if (existing) return prev.map(i => i.key === key ? { ...i, quantity: next } : i);
+      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: next, variant: variant?.label || null, notes: notes || null }];
     });
   };
 
+  // The cart's − and + (and the assistant's): fewer always works; more stops at the stock.
   const updateQuantity = (key, qty) => {
     if (checkoutGuard.current) return;
-    if (qty <= 0) setCart(prev => prev.filter(i => i.key !== key));
-    else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
+    if (qty <= 0) { setCart(prev => prev.filter(i => i.key !== key)); return; }
+    setCart(prev => prev.map(i => {
+      if (i.key !== key) return i;
+      if (qty <= i.quantity) return { ...i, quantity: qty };
+      return { ...i, quantity: Math.max(i.quantity, Math.min(qty, lineRoom(prev, stockItem(i.product_id), key))) };
+    }));
   };
 
   // ── An item's Like, Chat and Buy now (its Add to cart is addToCart) ──
@@ -615,7 +640,7 @@ function StorefrontInner() {
     if (ownShop) { blockOwnShop(); return; }
     if (checkoutGuard.current || !isStoreOpen) return; // closed: as Add to cart (nothing added)
     const qty = Math.min(MAX_LINE_QUANTITY, Math.max(1, Math.floor(Number(quantity) || 1)));
-    const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
+    const key = cartLineKey(product.id, variant, notes);
     const line = cart.find((i) => i.key === key);
     if (!line) addToCart(product, variant, notes, qty);
     else if (line.quantity < qty) updateQuantity(key, qty);
@@ -1069,7 +1094,12 @@ function StorefrontInner() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                       <button onClick={() => updateQuantity(item.key, item.quantity - 1)} style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>−</button>
                                       <span style={{ width: 26, height: 26, borderRadius: '50%', background: `${primaryColor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: primaryColor }}>{item.quantity}</span>
-                                      <button onClick={() => updateQuantity(item.key, item.quantity + 1)} style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>+</button>
+                                      {(() => {
+                                        const full = item.quantity >= lineMost(item);
+                                        return (
+                                          <button onClick={() => updateQuantity(item.key, item.quantity + 1)} disabled={full} aria-label={t('oneMore')} data-testid="store-cart-more" style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: full ? 'default' : 'pointer', fontSize: 18, color: full ? '#cbd5e1' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1 }}>+</button>
+                                        );
+                                      })()}
                                     </div>
                   </div>
                 ))}
