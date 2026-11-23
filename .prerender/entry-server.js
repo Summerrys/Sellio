@@ -3141,7 +3141,10 @@ const ROUTES = {
     // In the HTML too, not only set by LandingPage in the browser, so search engines list
     // sellio.sg rather than the old address (Alvin, 6 Nov 2026). The website serves this page
     // only at "/" (public/_worker.js; other addresses get app.html or store.html).
-    canonical: "https://sellio.sg/"
+    canonical: "https://sellio.sg/",
+    // Site ownership for Bing Webmaster Tools (sellio.sg added 24 Nov 2026). Bing checks it now
+    // and again later: removing it unverifies the site (scripts/check-prerender.mjs keeps it).
+    verification: [["msvalidate.01", "2791838D4B843C4AA43170B569418838"]]
   },
   "/privacy": {
     Component: Privacy,
@@ -3187,7 +3190,8 @@ function headFor(route) {
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${socialDescription}" />`,
     `<meta name="twitter:image" content="${IMAGE}" />`,
-    `<meta name="twitter:image:alt" content="${imageAlt}" />`
+    `<meta name="twitter:image:alt" content="${imageAlt}" />`,
+    ...(route.verification || []).map(([name, content]) => `<meta name="${escapeAttr(name)}" content="${escapeAttr(content)}" />`)
   ].join("\n");
 }
 function renderRoute(path) {

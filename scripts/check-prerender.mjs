@@ -123,6 +123,11 @@ for (const route of ["'/store'", "'/explore'", "'/app'", "'/sitemap.xml'", "/res
   if (!worker.includes(route)) failures.push(`_worker.js: ${route} routing missing`);
 }
 
+// Bing Webmaster Tools verifies sellio.sg by this tag in the home page's head, now and later.
+const home = await readFile('dist/index.html', 'utf8').catch(() => '');
+const head = home.split('</head>')[0];
+if (!head.includes('<meta name="msvalidate.01" content="2791838D4B843C4AA43170B569418838" />')) failures.push('index.html: the Bing verification tag (msvalidate.01) is missing from the head');
+
 // robots.txt: open to every crawler, with the sitemap and the content signals.
 const robots = await readFile('dist/robots.txt', 'utf8').catch(() => '');
 if (!robots.includes('Sitemap: https://sellio.sg/sitemap.xml')) failures.push('robots.txt: the Sitemap line is missing');
