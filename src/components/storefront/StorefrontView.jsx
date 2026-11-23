@@ -19,7 +19,7 @@ import {
   Coffee, UtensilsCrossed, IceCream, Salad, Sandwich,
   Drumstick, Tag, Gift, LayoutGrid, ShoppingCart, Clock,
   Cpu, Glasses, Shirt, Trophy, BookOpen, Home, PawPrint,
-  Gem, Wrench, Scissors, Sparkles, Search, X, Heart, MessageCircle
+  Gem, Wrench, Scissors, Sparkles, Search, X, Heart, MessageCircle, Minus, Plus
 } from 'lucide-react';
 import LanguageToggle from './LanguageToggle';
 import { RatingPill } from '@/components/ratings/RatingParts';
@@ -37,6 +37,7 @@ import { SampleTag, PhotoCredit } from '@/components/ui-custom/PhotoCredit';
 import { creditFor } from '@/lib/samplePhotos';
 import { didYouMean } from '@/lib/searchSuggest';
 import { formatMoney } from '@/lib/money';
+import { MAX_LINE_QUANTITY } from '@/lib/shopCart';
 
 const sfType = pixels => `calc(${pixels}px * var(--sf-type-scale, 1))`;
 const fill = (text, values) => text.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
@@ -479,8 +480,9 @@ export default function StorefrontView({
   onRatingClick,
   // A home shop (no saved layout yet) shows a Grid; a business, Split.
   homeShop = false,
-  // A home seller's public page: the item screen gets Like, Chat, Add to cart and Buy now
-  // ({ onBuyNow, onLike, onChat } from Storefront.jsx). Null elsewhere: one Add button.
+  // A store's public page (a home seller's or a business's): the item screen gets Like, Chat,
+  // Add to cart and Buy now ({ onBuyNow, onLike, onChat } from Storefront.jsx). Null for a
+  // table's order, staff taking an order or the owner's preview: one Add to order button.
   buyerBar = null,
   // A line at the top of the menu (Storefront.jsx: "This is your shop…" for its owner).
   notice = null,
@@ -826,8 +828,8 @@ export default function StorefrontView({
     setActiveCategory(categoryId);
   };
 
-  const handleAddToCart = (product, variant = null, notes = null) => {
-    if (onAddToCart) onAddToCart(product, variant, notes);
+  const handleAddToCart = (product, variant = null, notes = null, quantity = 1) => {
+    if (onAddToCart) onAddToCart(product, variant, notes, quantity);
   };
 
   const handleProductClick = (product) => {
@@ -1542,8 +1544,14 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   const touchStartX = useRef(null);
   const optionGroups = normaliseVariants(product.variants, product.price);
   const missingOptions = missingChoices(optionGroups, selectedVariants);
-  // A home seller's item: its likes (known once Explore has it; none on the seller's own
-  // shop, and none for an item that isn't on Explore, which can't be liked or chatted about).
+  // How many (Alvin, 23 Nov 2026): 1 each time an item opens; Add to cart, Buy now and Add to
+  // order take that many, and their price is for that many.
+  const [quantity, setQuantity] = useState(1);
+  useEffect(() => { setQuantity(1); }, [product.id]);
+  const unitPrice = (parseFloat(product.price) || 0) + (combineChoices(selectedVariants)?.price_modifier || 0);
+  const linePrice = formatMoney(unitPrice * quantity, currency);
+  // The item's likes on a store's public page (known once Explore has it; none on the shop's
+  // own page, and none for an item that isn't on Explore, which can't be liked or chatted about).
   const like = useKnownLike(buyerBar ? product.id : null);
   const social = !!buyerBar && !!like && !like.own;
   const soldOut = !!product.track_inventory && product.stock_quantity === 0;
@@ -1565,13 +1573,13 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
   };
   const addItem = () => {
     if (missingOptions.length > 0) { showMissingChoice(); return; }
-    onAddToCart(product, combineChoices(selectedVariants), itemNotes.trim() || null);
+    onAddToCart(product, combineChoices(selectedVariants), itemNotes.trim() || null, quantity);
     onClose();
   };
   // Straight to checkout: the screen closes as the checkout opens (onClose passed along).
   const buyItem = () => {
     if (missingOptions.length > 0) { showMissingChoice(); return; }
-    buyerBar.onBuyNow(product, combineChoices(selectedVariants), itemNotes.trim() || null, onClose);
+    buyerBar.onBuyNow(product, combineChoices(selectedVariants), itemNotes.trim() || null, onClose, quantity);
   };
 
   const handleTouchStart = (e) => {
@@ -1724,7 +1732,36 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: sfType(13), resize: 'none', fontFamily: 'inherit' }}
               />
             </div>
-            {/* A business's item: one Add button (a home seller's: the bar below). */}
+            {!(buyerBar && soldOut) && (
+              <div data-testid="item-quantity" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span id="item-quantity-label" style={{ fontWeight: 600, fontSize: sfType(13), color: '#0f172a' }}>{t('quantity')}</span>
+                <div role="group" aria-labelledby="item-quantity-label" style={{ display: 'flex', alignItems: 'center', height: 40, borderRadius: 999, border: '1px solid #e2e8f0' }}>
+                  <button
+                    type="button"
+                    aria-label={t('oneLess')}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    data-testid="item-quantity-less"
+                    style={{ width: 44, height: 40, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: quantity <= 1 ? 'default' : 'pointer', color: quantity <= 1 ? '#cbd5e1' : '#334155' }}
+                  >
+                    <Minus size={16} aria-hidden="true" />
+                  </button>
+                  <span aria-live="polite" data-testid="item-quantity-value" style={{ minWidth: 22, textAlign: 'center', fontSize: sfType(15), fontWeight: 600, color: '#0f172a' }}>{quantity}</span>
+                  <button
+                    type="button"
+                    aria-label={t('oneMore')}
+                    onClick={() => setQuantity((q) => Math.min(MAX_LINE_QUANTITY, q + 1))}
+                    disabled={quantity >= MAX_LINE_QUANTITY}
+                    data-testid="item-quantity-more"
+                    style={{ width: 44, height: 40, border: 'none', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: quantity >= MAX_LINE_QUANTITY ? 'default' : 'pointer', color: quantity >= MAX_LINE_QUANTITY ? '#cbd5e1' : '#334155' }}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* A table's order, staff taking one or the preview: one Add button (a store's public
+                page: the bar below). */}
             {!buyerBar && (
             <button
               disabled={missingOptions.length > 0}
@@ -1739,7 +1776,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 // checkout — there was no way to attach a note to a specific item, so
                 // adding a second item later (e.g. via Edit Order) had nowhere for its
                 // own note to go. Each cart item now carries its own optional note.
-                onAddToCart(product, combinedVariant, itemNotes.trim() || null);
+                onAddToCart(product, combinedVariant, itemNotes.trim() || null, quantity);
                 onClose();
               }}
               style={missingOptions.length > 0
@@ -1747,11 +1784,11 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                 : { width: '100%', padding: 14, background: primaryColor, color: 'white', border: 'none', borderRadius: 12, fontSize: sfType(15), fontWeight: 700, cursor: 'pointer' }}>
               {missingOptions.length > 0
                 ? t('selectOption')
-                : <>{t('addToOrder')} · {formatMoney(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0), currency)}</>}
+                : <>{t('addToOrder')} · {linePrice}</>}
             </button>
             )}
           </div>
-          {/* A home seller's item: Like and Chat (once it's on Explore, not your own),
+          {/* A store's public page: Like and Chat (once the item is on Explore, not your own),
               Add to cart and Buy now, kept in view at the foot of the screen. */}
           {buyerBar && (
             <div data-testid="item-buyer-bar" style={{ position: 'sticky', bottom: 0, zIndex: 5, background: '#ffffff', borderTop: '1px solid #e2e8f0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1800,7 +1837,7 @@ function ProductDetailModal({ product, currency, primaryColor, storefrontConfig,
                     ) : (
                       <>
                         <span style={{ fontSize: sfType(15), fontWeight: 700 }}>{t('buyNow')}</span>
-                        <span style={{ fontSize: sfType(11), fontWeight: 500 }}>{formatMoney(parseFloat(product.price) + (combineChoices(selectedVariants)?.price_modifier || 0), currency)}</span>
+                        <span data-testid="item-buy-now-price" style={{ fontSize: sfType(11), fontWeight: 500 }}>{linePrice}</span>
                       </>
                     )}
                   </button>

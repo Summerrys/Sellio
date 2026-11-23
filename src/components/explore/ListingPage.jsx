@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Share2, MessageCircle, ShoppingCart, Heart, Store, MapPin, Truck, CalendarClock,
@@ -11,7 +11,6 @@ import { handOverBackStep, useBackToClose } from '@/lib/useBackToClose';
 import { useRatingSummaries } from '@/lib/ratings';
 import { likeErrorMessage, likesText, needsSignIn, noteLikes, setListingLike } from '@/lib/likes';
 import { addToShopCart, ensureInShopCart, useCartCount } from '@/lib/shopCart';
-import { normaliseVariants } from '@/lib/itemOptions';
 import { RatingPill, RatingSheet } from '@/components/ratings/RatingParts';
 import ShareSheet from './ShareSheet';
 import ItemOptionsSheet from './ItemOptionsSheet';
@@ -32,7 +31,8 @@ import { useAppText, N_ } from '@/lib/appText';
 // that sits below the status bar.
 // Buyers: Like (the heart; its count shows to everyone), Chat, Add to cart and Buy now.
 // The cart is that shop's own cart (shopCart.js); Buy now puts the item in it and opens
-// the shop's checkout. Items with options (sizes, add-ons) are chosen in a sheet first.
+// the shop's checkout. Both open a sheet first to choose how many (and the item's options:
+// sizes, add-ons), as on Shopee (Alvin, 23 Nov 2026).
 
 const LIKE_RED = '#e11d48';
 
@@ -412,7 +412,6 @@ function Listing({ productId }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [optionsMode, setOptionsMode] = useState(null); // 'cart' | 'buy' while choosing options
   const cartItems = useCartCount();
-  const optionGroups = useMemo(() => normaliseVariants(item?.variants, item?.price), [item]);
   const closeShare = useCallback(() => setShareOpen(false), []);
   const closeOptions = useCallback(() => setOptionsMode(null), []);
 
@@ -493,13 +492,11 @@ function Listing({ productId }) {
   };
   const addToCart = () => {
     hideNotice();
-    if (optionGroups.length) setOptionsMode('cart');
-    else putInCart(null, null, 1);
+    setOptionsMode('cart');
   };
   const buyNow = () => {
     hideNotice();
-    if (optionGroups.length) setOptionsMode('buy');
-    else checkOut(null, null, 1, false);
+    setOptionsMode('buy');
   };
   const confirmOptions = ({ variant, notes, quantity }) => {
     if (optionsMode === 'buy') { checkOut(variant, notes, quantity, true); return; }

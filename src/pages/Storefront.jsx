@@ -33,6 +33,7 @@ import LoadingShapes, { StoreShapes } from '@/components/ui-custom/LoadingShapes
 // Open/closed from the posted hours, including hours that close at or past midnight.
 import { computeStoreOpenState } from '@/lib/storeHours';
 import { formatMoney } from '@/lib/money';
+import { MAX_LINE_QUANTITY } from '@/lib/shopCart';
 import { hasEdgeHead } from '@/lib/pageMeta';
 
 // Orders whose "How was your order?" card was dismissed (shown once per order).
@@ -578,8 +579,11 @@ function StorefrontInner() {
   const money = (n) => formatMoney(Number(n) || 0, currency);
   const isFnB = isFnBIndustry(tenant?.industry);
 
-  const addToCart = (product, variant = null, notes = null) => {
+  // quantity: how many the item's screen chose (1 from a card's +); a line holds at most
+  // MAX_LINE_QUANTITY (the database's limit for one line).
+  const addToCart = (product, variant = null, notes = null, quantity = 1) => {
     if (checkoutGuard.current) return;
+    const qty = Math.min(MAX_LINE_QUANTITY, Math.max(1, Math.floor(Number(quantity) || 1)));
     // Notes now factor into the merge key too — otherwise adding the same
     // product+variant twice with two different special requests would silently
     // merge into one line and lose one of the notes (or overwrite it), the same
@@ -587,8 +591,8 @@ function StorefrontInner() {
     const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
     setCart(prev => {
       const existing = prev.find(i => i.key === key);
-      if (existing) return prev.map(i => i.key === key ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: 1, variant: variant?.label || null, notes: notes || null }];
+      if (existing) return prev.map(i => i.key === key ? { ...i, quantity: Math.max(i.quantity, Math.min(MAX_LINE_QUANTITY, i.quantity + qty)) } : i);
+      return [...prev, { key, product_id: product.id, name: product.name, price: product.price + (variant?.price_modifier || 0), image_url: product.image_url, quantity: qty, variant: variant?.label || null, notes: notes || null }];
     });
   };
 
@@ -598,19 +602,23 @@ function StorefrontInner() {
     else setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
   };
 
-  // ── A home seller's item: Like, Chat and Buy now (its Add to cart is addToCart) ──
-  // Only on a home seller's public page: not a table's order, staff taking an order or
-  // the owner's preview.
-  const homeBuyer = !!shopSelling && !isPreview && !isStaffMode && !isDineIn;
+  // ── An item's Like, Chat and Buy now (its Add to cart is addToCart) ──
+  // On a store's public page, a home seller's or a business's alike (Alvin, 23 Nov 2026): not
+  // a table's order, staff taking an order or the owner's preview (one Add to order button).
+  const publicBuyer = !isPreview && !isStaffMode && !isDineIn;
   // The likes of the shop's items, as on Explore (none for an item that isn't on Explore).
-  useLikesFor(homeBuyer ? products.map((p) => p.id) : [], null);
+  useLikesFor(publicBuyer ? products.map((p) => p.id) : [], null);
 
-  // Into this shop's cart once (the same line Add to cart writes), then straight to checkout.
-  const buyNow = (product, variant = null, notes = null, closeItem) => {
+  // Into this shop's cart with at least `quantity` (the same line Add to cart writes: Buy now
+  // on an item already in the cart doesn't add it twice), then straight to checkout.
+  const buyNow = (product, variant = null, notes = null, closeItem, quantity = 1) => {
     if (ownShop) { blockOwnShop(); return; }
     if (checkoutGuard.current || !isStoreOpen) return; // closed: as Add to cart (nothing added)
+    const qty = Math.min(MAX_LINE_QUANTITY, Math.max(1, Math.floor(Number(quantity) || 1)));
     const key = `${product.id}-${variant?.label || 'default'}${notes ? `-${notes}` : ''}`;
-    if (!cart.some((i) => i.key === key)) addToCart(product, variant, notes);
+    const line = cart.find((i) => i.key === key);
+    if (!line) addToCart(product, variant, notes, qty);
+    else if (line.quantity < qty) updateQuantity(key, qty);
     beginCheckout(false, closeItem);
   };
 
@@ -642,7 +650,7 @@ function StorefrontInner() {
     params.delete('like');
     const query = params.toString();
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
-    if (!homeBuyer || !products.some((p) => String(p.id) === likeId)) return;
+    if (!publicBuyer || !products.some((p) => String(p.id) === likeId)) return;
     setListingLike(likeId, true)
       .then(() => toast.success(t('likedFound')))
       .catch((e) => { if (!needsSignIn(e)) toast.error(likeErrorMessage(e)); });
@@ -992,7 +1000,7 @@ function StorefrontInner() {
           rating={showRating ? ratingSummary : null}
           onRatingClick={() => setShowRatingSheet(true)}
           onAddToCart={ownShop ? blockOwnShop : !isStoreOpen ? () => {} : addToCart}
-          buyerBar={homeBuyer ? { onBuyNow: buyNow, onLike: likeItem, onChat: chatAbout } : null}
+          buyerBar={publicBuyer ? { onBuyNow: buyNow, onLike: likeItem, onChat: chatAbout } : null}
           cartCount={cartCount}
           cartTotal={cartTotal}
           isDesktop={isDesktop}

@@ -43,13 +43,15 @@ const ok = (name) => { checks += 1; console.log('PASS ' + name); };
 
 // The shop page's own addToCart, taken from its source.
 const storefront = await readFile(path.join(app, 'src/pages/Storefront.jsx'), 'utf8');
-const addStart = storefront.indexOf('const addToCart = (product, variant = null, notes = null) => {');
+const addStart = storefront.indexOf('const addToCart = (product, variant = null, notes = null, quantity = 1) => {');
 assert.ok(addStart > 0, 'Storefront.jsx still has addToCart');
 const addBody = storefront.slice(addStart, storefront.indexOf('\n  };', addStart));
 const keyExpr = addBody.match(/const key = (.*);\n/)[1];
 const lineExpr = addBody.match(/return \[\.\.\.prev, (\{ key, product_id[^\n]*\})\];/)[1];
+// One at a time, as a card's + adds (qty: the page's quantity, here 1).
 // eslint-disable-next-line no-new-func
 const shopAdd = new Function('prev', 'product', 'variant', 'notes', `
+  const qty = 1;
   const key = ${keyExpr};
   const existing = prev.find(i => i.key === key);
   if (existing) return prev.map(i => i.key === key ? { ...i, quantity: i.quantity + 1 } : i);
