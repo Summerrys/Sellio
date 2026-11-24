@@ -3577,7 +3577,13 @@ const explore = {
   "Distributor earnings aren’t open yet. Your code earns coins in the meantime.": "分销商佣金尚未开放。在此之前，您的推荐码会为您赚金币。",
   "You can become a distributor after your shop’s first payment.": "您的店铺首次付款后，即可成为分销商。",
   "You can become a distributor when your business plan is active.": "您的商业方案生效后，即可成为分销商。",
-  "You’re a Sellio distributor": "您是 Sellio 分销商"
+  "You’re a Sellio distributor": "您是 Sellio 分销商",
+  "Sellio World is coming soon": "Sellio World 即将开放",
+  "Walk Sellio’s streets, collect coins and style your stall. It opens soon.": "逛逛 Sellio 的街道，收集金币，装扮您的摊位。即将开放。",
+  "Back to Explore": "返回“发现”",
+  "You have {coins} coins to spend when Sellio World opens.": "您有 {coins} 金币，Sellio World 开放后即可使用。",
+  "Sellio World": "Sellio World",
+  "Admins only, until it opens": "开放前仅限管理员"
 };
 const GROUPS = { signup, shop, explore };
 export {

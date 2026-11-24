@@ -74,7 +74,7 @@ const mocks = {
 const plugin = { name: 'referral-fixtures', setup(builder) {
   for (const [filter, key] of [[/tenant\/TenantContext$/, 'tenant'], [/useSubscription$/, 'subscription'], [/supabaseClient$/, 'clients'],
     [/AppUserContext$/, 'profile'], [/^sonner$/, 'toast'], [/pushNotifications$/, 'push'], [/lib\/ratings$/, 'ratings'],
-    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$|(^|\/)ExploreChatCount$/, 'nothing']]) {
+    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$|(^|\/)ExploreChatCount$|world\/WorldGame$/, 'nothing']]) {
     builder.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   }
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: mocks[args.path], resolveDir: process.cwd() }));
@@ -125,6 +125,7 @@ try {
         "export { default as ReferralInvite } from '@/pages/ReferralInvite';",
         "export { default as ExploreMe } from '@/components/explore/ExploreMe';",
         "export { default as CoinsAdmin } from '@/components/admin/CoinsAdmin';",
+        "export { default as World } from '@/pages/World';",
         "export { default as PricingModal } from '@/components/subscription/PricingModal';",
         "export { default as AuthPricingModal } from '@/components/auth/AuthPricingModal';",
         "export { default as TenantContext } from '@/components/tenant/TenantContext';",
@@ -414,7 +415,7 @@ try {
   assert.equal(text(byTestId('refer-code-once')), 'A home shop’s code earns once: for the first shop that joins with it.');
   assert.equal(text(byTestId('refer-coins-free')), '50 coins when a home seller opens a free shop with your code and lists their first item.');
   assert.equal(text(byTestId('refer-coins-merchant')), '100 coins when a business signs up with your code and makes its first payment.');
-  assert.equal(text(byTestId('refer-balance')), 'You have 0 coins. Spend them on your stall in Sellio World');
+  assert.equal(text(byTestId('refer-balance')), 'You have 0 coins to spend when Sellio World opens.', 'Sellio World: admins only until it opens');
   assert.equal(decodeURIComponent(byTestId('refer-card-whatsapp').getAttribute('href').split('text=')[1]),
     'Hi! I sell from home with Mei Bakes on Sellio. Open your own shop free with my link: https://sellio.sg/r/MEY234', "a home seller's message");
   assert.equal(byTestId('refer-pitch'), null, 'no distributor part');
@@ -462,7 +463,8 @@ try {
     await settle();
     const row = byTestId('refer-row');
     const coins = document.body.querySelector('a[href="/admin/coins"]');
-    const result = row ? { text: text(row), href: row.getAttribute('href'), coins: coins ? text(coins) : null } : null;
+    const world = document.body.querySelector('a[href="/World"]');
+    const result = row ? { text: text(row), href: row.getAttribute('href'), coins: coins ? text(coins) : null, world: world ? text(world) : null } : null;
     await done();
     return result;
   }
@@ -470,10 +472,12 @@ try {
   assert.equal(row?.href, '/refer');
   assert.equal(row?.text, 'Refer & earn Your code: 4PWJDZ');
   assert.equal(row?.coins, null, 'Admin → Coins: admins only');
+  assert.equal(row?.world, null, 'Sellio World: no way in for others');
   row = await meRow(HOME_OVERVIEW, { setup: () => owner({ seller_type: 'individual' }) });
   assert.equal(row?.text, 'Refer & earn NEW Your code: MEY234', 'a free home shop too, NEW until someone joins with its code');
   row = await meRow(OVERVIEW, { admin: true });
   assert.equal(row?.coins, 'Sellio Coins Coin prices, the daily limit and referral coins');
+  assert.equal(row?.world, 'Sellio World Admins only, until it opens', 'admins get a way into Sellio World');
   assert.equal(await meRow(OVERVIEW, { setup: () => owner({}, { isOwner: false }) }), null, 'staff: no row');
   assert.equal(callsTo('referral_overview').length, 0, '…and no call');
   passed("Me: the Refer & earn row for every shop's owner, with the code (NEW until someone joins); Admin → Coins for Sellio's admins");
@@ -653,6 +657,25 @@ try {
   assert.equal(callsTo('coins_admin_overview').length, 0);
   await close();
   passed('Admin → Coins: the rules and prices saved together (only what changed), every value checked first, the database\'s refusals shown; others turned away');
+
+  // 13b. Sellio World is for Sellio's admins until Alvin opens it (25 Nov 2026): everyone else is
+  // told it's coming soon; an admin gets the island.
+  for (const admin of [false, true]) {
+    reset();
+    owner();
+    answers.am_i_sellio_admin = () => ({ data: admin, error: null });
+    close = await show(h(app.World), ['/World']);
+    await settle();
+    if (admin) {
+      assert.ok(document.body.querySelector('iframe[title="Sellio World"]'), "an admin: the island");
+      assert.equal(byTestId('world-soon'), null);
+    } else {
+      assert.match(text(byTestId('world-soon')), /^S Sellio World is coming soon Walk Sellio’s streets, collect coins and style your stall\. It opens soon\. Back to Explore$/);
+      assert.equal(document.body.querySelector('iframe'), null, 'no island for anyone else');
+    }
+    await close();
+  }
+  passed("Sellio World: admins only until it opens; everyone else is told it's coming soon");
 
   // 14. In 中文 (and the other languages): the explore group's words.
   reset();

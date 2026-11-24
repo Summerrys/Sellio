@@ -6,6 +6,7 @@ import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
 import { rememberReturnPath } from '@/lib/authNavigation';
 import { amISellioAdmin } from '@/lib/appFeedback';
+import { useWorldAccess } from '@/lib/worldAccess';
 import {
   DISTRIBUTOR_TERMS_PATH, joinReferral, ratePercent, referralDashboard, referralErrorMessage, referralOverview, setReferralWhatsapp, whatsAppLink,
 } from '@/lib/referral';
@@ -96,7 +97,7 @@ function FooterLinks({ t, onInfo }) {
 }
 
 // What the code has earned: who joined with it, and the coins.
-function CoinsCard({ t, overview }) {
+function CoinsCard({ t, overview, worldOpen }) {
   const invited = overview.invited || {};
   const tile = (label, value, testId) => (
     <div className="rounded-xl bg-slate-50 px-3 py-2.5" data-testid={testId}>
@@ -120,11 +121,14 @@ function CoinsCard({ t, overview }) {
         {tile(t('Still to list or pay'), invited.waiting, 'refer-count-waiting')}
         {tile(t('Coins earned'), invited.coins, 'refer-count-coins')}
       </div>
+      {/* Sellio World is admins-only until it opens (lib/worldAccess.js). */}
       <p className="text-[13px] leading-[19px] text-slate-600" data-testid="refer-balance">
-        {t('You have {coins} coins. {link}', {
-          coins: <b>{Number(overview.balance) || 0}</b>,
-          link: <Link to="/World" className="font-semibold text-blue-600 hover:text-blue-700">{t('Spend them on your stall in Sellio World')}</Link>,
-        })}
+        {worldOpen
+          ? t('You have {coins} coins. {link}', {
+            coins: <b>{Number(overview.balance) || 0}</b>,
+            link: <Link to="/World" className="font-semibold text-blue-600 hover:text-blue-700">{t('Spend them on your stall in Sellio World')}</Link>,
+          })
+          : t('You have {coins} coins to spend when Sellio World opens.', { coins: <b>{Number(overview.balance) || 0}</b> })}
       </p>
     </Card>
   );
@@ -138,6 +142,7 @@ export default function Refer() {
   const owner = hasShop && !!isOwner;
   const business = owner && tenant.seller_type !== 'individual';
   const tenantId = tenant?.id;
+  const worldOpen = useWorldAccess() === 'yes';
 
   const [overview, setOverview] = useState(null); // referral_overview: the shop's code and coins
   const [data, setData] = useState(null); // referral_dashboard: becoming a distributor (business shops)
@@ -325,7 +330,7 @@ export default function Refer() {
               )}
             </section>
 
-            <CoinsCard t={t} overview={overview} />
+            <CoinsCard t={t} overview={overview} worldOpen={worldOpen} />
 
             {distributor === 'join' && (
               <Pitch t={t} rates={rates} locale={locale} onInfo={openInfo}>

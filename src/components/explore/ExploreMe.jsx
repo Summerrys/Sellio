@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift, Coins } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift, Coins, Map as MapIcon } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -262,6 +262,11 @@ export default function ExploreMe() {
               {feedbackLine && (
                 <div className="border-t border-slate-100">
                   <Row to="/admin/feedback" icon={MessageSquareHeart} label={t('App feedback')} detail={feedbackLine} pulse={appFeedback.lowOpen > 0} />
+                </div>
+              )}
+              {sellioAdmin && (
+                <div className="border-t border-slate-100">
+                  <Row to="/World" icon={MapIcon} label={t('Sellio World')} detail={t('Admins only, until it opens')} />
                 </div>
               )}
               {sellioAdmin && (
