@@ -45,6 +45,7 @@ for (const [, fn, expected] of guards) {
 if (guards.length !== 12) { console.log(`FAIL expected 12 guarded functions, found ${guards.length}`); mismatched += 1; }
 await db.exec(read('supabase/migrations/20261124185500_coin_ledger_referral_reason.sql'));
 await db.exec(migration);
+await db.exec(read('supabase/migrations/20261125040000_world_wallet.sql'));
 
 async function run(file) {
   try {
@@ -62,6 +63,7 @@ async function run(file) {
 let failed = mismatched;
 for (const file of [
   'verification/coins-referrals.sql',
+  'verification/wallet.sql',
   'verification/referral-programme.sql',
   'verification/referral-events.sql',
   'verification/referral-joining.sql',

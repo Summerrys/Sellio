@@ -90,6 +90,11 @@ Stripe, Google, WhatsApp, SKU, Logo and QR stay as they are.
 | out for delivery, delivered, ready for collection, collected | Sedang dihantar, Telah dihantar, Sedia untuk diambil, Sudah diambil |
 | Active, Inactive (a product; a plan's status) | Aktif, Tidak aktif |
 | Singapore, Malaysia, Indonesia | Singapura, Malaysia, Indonesia |
+| Sellio Coins, coins (Sellio World) | Syiling Sellio, syiling |
+| wallet (a person's coins), My coins | dompet, Syiling saya |
+| stall (in Sellio World) | gerai |
+| badge (Sellio World) | lencana |
+| Sellio World, Pop-up Street (places in the World) | stay in English |
 
 - Dates and times read as `src/lib/appDates.js` writes them for ms-MY: 14 Nov 2026,
   Sab, 14 Nov, 6:30 PG / 3:05 PTG, 5 minit lalu.

@@ -140,6 +140,29 @@ body.sheet-open .dock{transform:translateY(140%);opacity:0}
 .actions{flex:none;display:flex;gap:10px;flex-wrap:wrap}
 .actions .primary{flex:1 1 180px}
 
+/* wallet sheet: the coin chip opens it for a signed-in person (the rest is on Sellio's /wallet page) */
+.coins[role="button"]{cursor:pointer}
+.coins[role="button"]:focus-visible{outline:3px solid var(--plum);outline-offset:2px}
+.wl-bal{display:flex;align-items:center;gap:12px;margin:14px 0 12px}
+.wl-bal .coin-ico{width:46px;height:46px;box-shadow:inset 0 0 0 3px rgba(150,90,0,.35)}
+.wl-bal .coin-ico::after{font-size:24px}
+.wl-bal b{font:600 40px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wl-bal span{align-self:flex-end;padding-bottom:4px;color:var(--muted);font-size:15px}
+.wl-today{display:grid;gap:8px;background:var(--paper-2);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+.wl-today .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px}
+.wl-today .row span{font-variant-numeric:tabular-nums;font-weight:600}
+.wl-bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.wl-bar i{display:block;height:100%;border-radius:4px;background:var(--gold)}
+.wl-today small{color:var(--muted);font-size:12.5px}
+.wl-list{list-style:none;margin:0 0 12px;padding:0;border-top:1px solid var(--line)}
+.wl-list li{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.wl-list .what{flex:1;min-width:0}
+.wl-list .what span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wl-list .what small{color:var(--muted);font-size:12.5px}
+.wl-list b{font:600 15px/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--mint)}
+.wl-list b.out{color:#c2410c}
+.wl-list li.empty{color:var(--muted)}
+
 /* style panel */
 .balance{flex:none;display:flex;align-items:center;gap:8px;margin:12px 0 10px;font-weight:600;font-variant-numeric:tabular-nums}
 .balance b{font:700 18px/1 var(--font-display)}
@@ -405,6 +428,29 @@ body.hero-open .mini,body.hero-open .goal{visibility:hidden}
     <p class="note">This is a preview. Coins and unlocks are kept in this browser only. In Sellio, the server will award and track every coin.</p>
   </div>
   <div class="actions"><button class="ghost" id="btnSound" aria-pressed="true">Sound is on</button><button class="ghost" id="btnReset">Reset coins and unlocks</button><button class="ghost" id="btnLeave" hidden>Leave Sellio World</button></div>
+</section>
+
+<!-- wallet: a signed-in person's coins, from the coin chip. The whole history is on Sellio's /wallet page. -->
+<section class="sheet" id="walletSheet" role="dialog" aria-labelledby="walletTitle">
+  <div class="grab" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <h2 id="walletTitle">My coins</h2>
+    <button class="x" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="scroll">
+    <div class="wl-bal"><span class="coin-ico" aria-hidden="true"></span><b id="walletBalance">0</b><span>coins</span></div>
+    <div class="wl-today" id="walletToday" hidden>
+      <div class="row"><strong>Today from playing</strong><span id="walletTodayText"></span></div>
+      <div class="wl-bar" aria-hidden="true"><i id="walletTodayBar"></i></div>
+      <small id="walletTodaySplit"></small>
+    </div>
+    <p class="label">Latest</p>
+    <ul class="wl-list" id="walletList" aria-live="polite"></ul>
+    <p class="note">Coins have no cash value and stay in Sellio.</p>
+  </div>
+  <div class="actions"><button class="primary" id="btnWalletOpen">Open wallet</button><button class="ghost" id="btnWalletStyle" hidden>Style my stall</button></div>
 </section>
 
 <!-- island map -->
@@ -733,6 +779,7 @@ function popAt(x, y, text, five) {
 function updateCoinUI(bump) {
   $('#coinCount').textContent = LIVE && !wallet.live ? (wallet.guest ? 'Sign in' : '0') : state.coins;
   $('#panelCoins').textContent = state.coins;
+  $('#walletBalance').textContent = state.coins;
   if (bump && !reduceMotion) { const c = $('#coinChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 }
 
@@ -1893,8 +1940,9 @@ function buildGame(hot) {
     help: { el: $('#helpSheet'), open: false },
     hero: { el: $('#heroSheet'), open: false, preview: null, commit: false },
     map: { el: $('#mapSheet'), open: false },
+    wallet: { el: $('#walletSheet'), open: false },
   };
-  const anySheet = () => ui.stall.open || ui.style.open || ui.help.open || ui.hero.open || ui.map.open;
+  const anySheet = () => ui.stall.open || ui.style.open || ui.help.open || ui.hero.open || ui.map.open || ui.wallet.open;
   let lastFocus = null;
   function setOpen(key, open) {
     if (open) { lastFocus = document.activeElement; for (const k of Object.keys(ui)) if (k !== key && ui[k].open) closeSheet(k, true); }
@@ -2081,6 +2129,61 @@ function buildGame(hot) {
   }
   $('#btnStyle').addEventListener('click', () => openStyle());
   $('#btnHelp').addEventListener('click', () => setOpen('help', true));
+
+  /* ---------- wallet sheet (signed in): the balance, today's play against the day's limit and the last few coins in
+     and out (world_wallet). Shop, item and badge names come from the server, so they go in as text, never as HTML. ---------- */
+  let walletSeq = 0;
+  function walletLine(e) {
+    switch (e && e.reason) {
+      case 'drop': return 'Coin on Pop-up Street';
+      case 'visit': return e.shop ? `Visit: ${e.shop}` : 'Shop visit';
+      case 'referral': return e.kind === 'merchant' ? 'A business you invited paid' : 'A seller you invited listed their first item';
+      case 'cosmetic': return e.item ? `Stall item: ${e.item}` : 'Stall item';
+      case 'achievement': return e.badge ? `Badge: ${e.badge}` : 'Badge';
+      case 'daily': return 'Daily reward';
+      case 'mission': case 'missions_all': return 'Mission reward';
+      case 'admin': return 'Adjusted by Sellio';
+      default: return 'Coins';
+    }
+  }
+  function walletWhen(at) {
+    const d = new Date(at); if (isNaN(d)) return '';
+    const time = d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === new Date().toDateString() ? `Today, ${time}` : `${d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}, ${time}`;
+  }
+  function renderWallet(w) {
+    $('#walletBalance').textContent = state.coins;
+    const today = w && w.today;
+    const cap = today ? Number(today.cap) || 0 : wallet.dailyCap || 0;
+    const earned = today ? Number(today.earned) || 0 : Math.max(0, cap - (wallet.capLeft === null ? cap : wallet.capLeft));
+    $('#walletToday').hidden = !cap;
+    if (cap) {
+      $('#walletTodayText').textContent = `${earned} of ${cap}`;
+      $('#walletTodayBar').style.width = `${Math.min(100, Math.round(earned / cap * 100))}%`;
+      $('#walletTodaySplit').textContent = today ? `Street coins ${Number(today.drops) || 0} · Shop visits ${Number(today.visits) || 0} · starts again at midnight` : 'Starts again at midnight';
+    }
+    const list = $('#walletList');
+    const note = text => { const li = document.createElement('li'); li.className = 'empty'; li.textContent = text; list.replaceChildren(li); };
+    if (!w) return note('Loading your latest coins…');
+    if (w.error) return note('We couldn’t load your latest coins. Open your wallet to try again.');
+    const lines = (w.history || []).slice(0, 3);
+    if (!lines.length) return note('No coins yet. Walk Pop-up Street to find some.');
+    list.replaceChildren(...lines.map(e => {
+      const li = document.createElement('li'), what = document.createElement('span'), name = document.createElement('span'), when = document.createElement('small'), b = document.createElement('b');
+      what.className = 'what'; name.textContent = walletLine(e); when.textContent = walletWhen(e.at); what.append(name, when);
+      const n = Number(e.delta) || 0; b.textContent = n < 0 ? `−${-n}` : `+${n}`; if (n < 0) b.className = 'out';
+      li.append(what, b); return li;
+    }));
+  }
+  function openWallet() {
+    if (!wallet.live) return;
+    renderWallet(null); setOpen('wallet', true);
+    const n = ++walletSeq;
+    host.call('wallet').then(w => { if (n === walletSeq && ui.wallet.open) renderWallet(w || { history: [] }); },
+                               () => { if (n === walletSeq && ui.wallet.open) renderWallet({ error: true }); });
+  }
+  $('#btnWalletOpen').addEventListener('click', () => { if (host) host.call('navigate', '/wallet'); });
+  $('#btnWalletStyle').addEventListener('click', () => openStyle());
   $('#btnRecentre').addEventListener('click', () => { focus = null; view.yaw = player.rotation.y + Math.PI; view.dist = portrait ? 13 : 11.5; });
   document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
     const key = Object.keys(ui).find(k => ui[k].el.contains(b)); closeSheet(key);
@@ -2150,7 +2253,7 @@ function buildGame(hot) {
   const MOVE_KEYS = ['w', 'a', 's', 'd', 'q', 'e', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
   addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
-    if (k === 'escape') { for (const key of ['style', 'stall', 'help', 'map', 'hero']) if (ui[key].open) { closeSheet(key); break; } return; }
+    if (k === 'escape') { for (const key of ['style', 'stall', 'help', 'map', 'hero', 'wallet']) if (ui[key].open) { closeSheet(key); break; } return; }
     if (anySheet() || e.metaKey || e.ctrlKey || e.altKey) return;
     if (MOVE_KEYS.includes(k)) { keys.add(k); if (k.startsWith('arrow')) e.preventDefault(); }
   });
@@ -2212,7 +2315,14 @@ function buildGame(hot) {
     const worth = wallet.dropMax <= 1 ? '1 coin' : wallet.dropMax === 2 ? '1 or 2' : `1 to ${wallet.dropMax}`;
     $('#helpCoins').textContent = `Walk over the coins on Pop-up Street. New ones arrive every day, with extra in the evening, and each is worth ${worth}. Your first visits to shops each day earn coins too${wallet.dailyCap ? `, up to ${wallet.dailyCap} coins a day in all` : ''}.`;
     const leave = $('#btnLeave'); leave.hidden = false; leave.addEventListener('click', () => host.call('leave'));
-    if (wallet.guest) { const chip = $('#coinChip'); chip.classList.add('signin'); chip.setAttribute('role', 'button'); chip.tabIndex = 0; chip.addEventListener('click', () => host.call('navigate', (boot.links && boot.links.signIn) || '/Auth')); }
+    const chipButton = fn => {
+      const chip = $('#coinChip'); chip.setAttribute('role', 'button'); chip.tabIndex = 0; chip.addEventListener('click', fn);
+      chip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+      return chip;
+    };
+    if (wallet.guest) chipButton(() => host.call('navigate', (boot.links && boot.links.signIn) || '/Auth')).classList.add('signin');
+    else if (wallet.live) { const chip = chipButton(openWallet); chip.setAttribute('aria-haspopup', 'dialog'); chip.setAttribute('aria-controls', 'walletSheet'); }
+    $('#btnWalletStyle').hidden = !myStalls.length;
   }
 
   /* ---------- walk-up prompt ---------- */
@@ -2426,7 +2536,7 @@ function buildGame(hot) {
     renderer.render(scene, camera);
     if (++frames === 3) $('#loader').classList.add('done');
   });
-  window.__popup = { live: LIVE, wallet, coinList: coins, closeSheet, hopTo, openMap, districts: DISTRICTS, walkable, placeAt, toWorld, place: () => curPlace, view, cam, keys, setHero, openHero, heroes: HEROES, hero: () => currentHero, renderer, player, stalls, coins, state: () => state, openStyle, openStall, walkTo: (x, z) => walkTo(new THREE.Vector3(x, 0, z)), camera, ui };
+  window.__popup = { live: LIVE, wallet, coinList: coins, closeSheet, hopTo, openMap, districts: DISTRICTS, walkable, placeAt, toWorld, place: () => curPlace, view, cam, keys, setHero, openHero, heroes: HEROES, hero: () => currentHero, renderer, player, stalls, coins, state: () => state, openStyle, openStall, openWallet, walkTo: (x, z) => walkTo(new THREE.Vector3(x, 0, z)), camera, ui };
 }
 
 const hot = window.claude?.hot;

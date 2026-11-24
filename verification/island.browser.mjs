@@ -68,6 +68,11 @@ window.__setup = (cfg) => {
       return { ok: true, value: give, cap_left: S.capLeft, balance: S.balance, missions: [], unlocked: [] };
     },
     myStall: async (tid) => { __calls.push(['myStall', tid]); return { tenant_id: tid, balance: S.balance, stall_level: { level: 1 }, style: { awning: 'sunset', ...S.style }, catalog: S.catalog }; },
+    wallet: async () => {
+      __calls.push(['wallet']);
+      if (S.walletFails) throw Object.assign(new Error('offline'), { hint: 'network' });
+      return S.wallet;
+    },
     buy: async () => { throw Object.assign(new Error('Not in this test.'), { hint: 'unknown' }); },
     equip: async () => { throw Object.assign(new Error('Not in this test.'), { hint: 'unknown' }); },
   };
@@ -282,6 +287,70 @@ await check("Style your stall: the server's prices, and nothing Sellio has taken
   assert.deepEqual(ids, ['wood Owned · tap to use', 'chalk 99 coins', 'neon Equipped', 'gold 45 coins']);
   assert.deepEqual([...errors, ...again.errors], []);
   await again.page.close();
+});
+
+// The wallet sheet (25 Nov 2026): the coin chip opens it for a signed-in person, with the last three coins in and out.
+const now = new Date().toISOString();
+const WALLET = {
+  balance: 10, earned: 40, spent: 30,
+  today: { earned: 4, cap: 30, left: 26, drops: 2, visits: 2 },
+  history: [
+    { at: now, delta: 2, reason: 'visit', shop: '<img src=x onerror="window.__xss=1">Kaya & Co' },
+    { at: now, delta: -30, reason: 'cosmetic', item: 'Neon Sign' },
+    { at: now, delta: 50, reason: 'referral', kind: 'free' },
+    { at: now, delta: 1, reason: 'drop' },
+  ],
+};
+const walletSheet = (frame) => frame.evaluate(() => ({
+  open: window.__popup.ui.wallet.open,
+  balance: document.querySelector('#walletBalance').textContent,
+  today: document.querySelector('#walletToday').hidden ? null : `${document.querySelector('#walletTodayText').textContent} | ${document.querySelector('#walletTodaySplit').textContent}`,
+  lines: [...document.querySelectorAll('#walletList li')].map((li) => li.classList.contains('empty') ? li.textContent
+    : `${li.querySelector('.what span').textContent} ${li.querySelector('b').textContent}`),
+  injected: !!document.querySelector('#walletList img') || !!window.__xss,
+  style: !document.querySelector('#btnWalletStyle').hidden,
+}));
+
+await check('signed in: the coin chip opens the wallet, with the last three coins in and out', async () => {
+  const { page, frame, errors } = await open({ street: STREET, fnb: FNB, capLeft: 26, wallet: WALLET }, shots ? { width: 390, height: 780 } : undefined);
+  assert.equal(await frame.evaluate(() => document.querySelector('#coinChip').getAttribute('role')), 'button');
+  await frame.click('#coinChip');
+  await page.waitForFunction(() => window.__calls.some((c) => c[0] === 'wallet'));
+  await frame.waitForFunction(() => document.querySelectorAll('#walletList li:not(.empty)').length > 0);
+  const w = await walletSheet(frame);
+  assert.equal(w.open, true);
+  assert.equal(w.balance, '10');
+  assert.equal(w.today, '4 of 30 | Street coins 2 · Shop visits 2 · starts again at midnight');
+  assert.deepEqual(w.lines, ['Visit: <img src=x onerror="window.__xss=1">Kaya & Co +2', 'Stall item: Neon Sign −30', 'A seller you invited listed their first item +50']);
+  assert.equal(w.injected, false, 'a shop name goes in as text');
+  assert.equal(w.style, true, 'Style my stall, for someone with a stall');
+  if (shots) { await frame.waitForTimeout(500); await page.screenshot({ path: path.join(shots, 'island-wallet.png') }); }
+  await frame.click('#btnWalletOpen');
+  await page.waitForFunction(() => window.__navigated.includes('/wallet'));
+  await frame.press('#btnWalletOpen', 'Escape');
+  await frame.waitForFunction(() => !window.__popup.ui.wallet.open);
+  // From the keyboard too.
+  await frame.focus('#coinChip'); await frame.press('#coinChip', 'Enter');
+  await frame.waitForFunction(() => window.__popup.ui.wallet.open);
+  assert.deepEqual(errors, []);
+  await page.close();
+});
+
+await check("the wallet sheet says so when its coins can't load, and a guest's chip still asks them to sign in", async () => {
+  const { page, frame, errors } = await open({ street: STREET.filter((x) => !x.mine), fnb: FNB, walletFails: true });
+  await frame.click('#coinChip');
+  await frame.waitForFunction(() => /couldn’t load/.test(document.querySelector('#walletList').textContent));
+  const w = await walletSheet(frame);
+  assert.equal(w.today, '0 of 30 | Starts again at midnight');
+  assert.equal(w.style, false, 'no Style my stall without a stall');
+  await page.close();
+  const guest = await open({ user: null, street: STREET, fnb: FNB });
+  await guest.frame.click('#coinChip');
+  await guest.page.waitForFunction(() => window.__navigated.length > 0);
+  assert.equal(await guest.frame.evaluate(() => window.__popup.ui.wallet.open), false);
+  assert.equal(await guest.page.evaluate(() => window.__calls.some((c) => c[0] === 'wallet')), false);
+  assert.deepEqual([...errors, ...guest.errors], []);
+  await guest.page.close();
 });
 
 await browser.close();

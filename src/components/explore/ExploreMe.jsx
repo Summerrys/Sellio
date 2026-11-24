@@ -18,6 +18,7 @@ import ShopBell from './ShopBell';
 import AppLanguageSwitch from '@/components/ui-custom/AppLanguageSwitch';
 import { BRAND_GRADIENT, ExploreTabHeader, LOGO_URL } from './shared';
 import { useAppText } from '@/lib/appText';
+import WalletCard from '@/components/wallet/WalletCard';
 
 // Me — the one Me tab for everyone (a free shop's bar opens this same page): the account,
 // what they've bought (My purchases), the shop (its link, the Dashboard, Settings) and
@@ -216,6 +217,9 @@ export default function ExploreMe() {
                 </div>
               </section>
             )}
+
+            {/* My Sellio Coins: shows only to those who can go into Sellio World (admins, until it opens). */}
+            <WalletCard />
 
             {storeUrl && (
               <section className="mt-4 rounded-2xl p-4 text-white" style={{ background: BRAND_GRADIENT }}>

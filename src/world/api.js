@@ -73,6 +73,8 @@ export function createSupabaseBackend(getSupabase) {
     claimDaily: () => rpc('world_claim_daily'),
     claimMission: (code) => rpc('world_claim_mission', { p_code: code }),
     myStall: (tenantId) => rpc('world_my_stall', { p_tenant_id: tenantId }),
+    // The wallet sheet: balance, today and the last few coins in and out (world_wallet).
+    wallet: () => rpc('world_wallet', { p_limit: 3 }),
     buy: (tenantId, itemId) => rpc('world_buy_cosmetic', { p_tenant_id: tenantId, p_item_id: itemId }),
     equip: (tenantId, itemId) => rpc('world_equip_cosmetic', { p_tenant_id: tenantId, p_item_id: itemId }),
     links: {

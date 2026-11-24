@@ -126,6 +126,7 @@ try {
         "export { default as ExploreMe } from '@/components/explore/ExploreMe';",
         "export { default as CoinsAdmin } from '@/components/admin/CoinsAdmin';",
         "export { default as World } from '@/pages/World';",
+        "export { default as Wallet } from '@/pages/Wallet';",
         "export { default as PricingModal } from '@/components/subscription/PricingModal';",
         "export { default as AuthPricingModal } from '@/components/auth/AuthPricingModal';",
         "export { default as TenantContext } from '@/components/tenant/TenantContext';",
@@ -677,6 +678,77 @@ try {
   }
   passed("Sellio World: admins only until it opens; everyone else is told it's coming soon");
 
+  // 13c. Sellio Coins' wallet (25 Nov 2026), one per person: /wallet and the Me card, for those who
+  // can go into Sellio World (admins, until it opens). Everyone else: coming soon, and no call.
+  const WALLET = { balance: 27, earned: 77, spent: 50, today: { earned: 17, cap: 30, left: 13, drops: 15, visits: 2 },
+    dropMax: 2, visitReward: 2, referralCoins: { free: 50, merchant: 100 },
+    history: [
+      { at: new Date().toISOString(), delta: 2, reason: 'visit', shop: 'Kaya by Mei', item: null, badge: null, kind: null },
+      { at: '2026-11-20T04:00:00Z', delta: -50, reason: 'cosmetic', item: 'Neon Sign' },
+      { at: '2026-11-19T04:00:00Z', delta: 50, reason: 'referral', kind: 'free' },
+      { at: '2026-11-18T04:00:00Z', delta: 50, reason: 'referral', kind: 'merchant' },
+      { at: '2026-11-17T04:00:00Z', delta: 5, reason: 'achievement', badge: 'First Steps' },
+      { at: '2026-11-16T04:00:00Z', delta: -10, reason: 'admin' },
+    ] };
+  for (const admin of [false, true]) {
+    reset();
+    owner();
+    answers.am_i_sellio_admin = () => ({ data: admin, error: null });
+    answers.world_wallet = () => ({ data: WALLET, error: null });
+    close = await show(h(app.Wallet), ['/wallet']);
+    await settle();
+    if (!admin) {
+      assert.ok(byTestId('world-soon'), 'not an admin: coming soon');
+      assert.equal(byTestId('wallet-page'), null);
+      assert.equal(callsTo('world_wallet').length, 0, '…and no call');
+    } else {
+      assert.deepEqual(callsTo('world_wallet')[0][1], { p_limit: 40, p_before: null });
+      assert.equal(text(byTestId('wallet-balance')), '27');
+      assert.match(pageText(), /27 coins in your wallet Earned so far 77 · Spent 50/);
+      assert.equal(text(byTestId('wallet-today')), 'Today 17 of 30 from playing Street coins 15 Shop visits 2 Starts again at midnight. Referral coins don’t count toward it.');
+      assert.match(pageText(), /Ways to earn Coins on Pop-up Street 1 to 2 each Visit a shop \+2 Bring a home seller \+50 Bring a business \+100 Share my referral code/);
+      assert.ok(document.body.querySelector('a[href="/refer"]') && document.body.querySelector('a[href="/World"]'), 'to Refer & earn, and into the World');
+      const lines = allByTestId('wallet-line').map(text);
+      assert.match(lines[0], /^Visit: Kaya by Mei Today, \d{1,2}:\d{2} [ap]m \+2$/i);
+      assert.deepEqual(lines.slice(1), ['Stall item: Neon Sign 20 Nov −50', 'A seller you invited listed their first item 19 Nov +50',
+        'A business you invited paid 18 Nov +50', 'Badge: First Steps 17 Nov +5', 'Adjusted by Sellio 16 Nov −10']);
+      assert.match(pageText(), /Coins have no cash value and stay in Sellio\.$/);
+    }
+    await close();
+    // The Me card
+    reset();
+    owner();
+    answers.am_i_sellio_admin = () => ({ data: admin, error: null });
+    answers.world_wallet = () => ({ data: WALLET, error: null });
+    close = await show(h(app.ExploreMe), ['/explore/me']);
+    await settle();
+    const card = byTestId('wallet-card');
+    if (!admin) {
+      assert.equal(card, null, 'not an admin: no wallet card');
+      assert.equal(callsTo('world_wallet').length, 0);
+    } else {
+      assert.equal(text(card), 'My Sellio Coins S 27 coins Today from playing 17 of 30 Open wallet Spend in World');
+      assert.deepEqual(callsTo('world_wallet')[0][1], { p_limit: 1, p_before: null }, 'the card needs no history');
+      assert.ok(card.querySelector('a[href="/wallet"]') && card.querySelector('a[href="/World"]'));
+    }
+    await close();
+  }
+  // It couldn't load: says so, and tries again.
+  reset();
+  owner();
+  answers.am_i_sellio_admin = () => ({ data: true, error: null });
+  let walletDown = true;
+  answers.world_wallet = () => (walletDown ? { data: null, error: { message: 'offline' } } : { data: { ...WALLET, history: [] }, error: null });
+  close = await show(h(app.Wallet), ['/wallet']);
+  await settle();
+  assert.match(pageText(), /We couldn’t load your coins just now\. Try again/);
+  walletDown = false;
+  await click(buttonNamed('Try again'));
+  assert.equal(text(byTestId('wallet-balance')), '27');
+  assert.match(text(byTestId('wallet-history')), /^History No coins yet\. Walk Pop-up Street to find some\.$/);
+  await close();
+  passed('the coins wallet: /wallet and the Me card for those who can go into Sellio World, every coin in and out, and a retry');
+
   // 14. In 中文 (and the other languages): the explore group's words.
   reset();
   await app.resetAppTextForTests({ preview: 'zh', choice: 'zh' });
@@ -689,8 +761,17 @@ try {
   assert.match(text(byTestId('refer-pitch')), /成为 Sellio 分销商.*每笔按月付款您赚 3%，每笔按年付款赚 5%/);
   assert.match(text(byTestId('refer-coins-free')), /^居家卖家用您的推荐码开设免费店铺并发布第一件商品时，您得 50 金币。$/);
   await close();
+  answers.am_i_sellio_admin = () => ({ data: true, error: null });
+  answers.world_wallet = () => ({ data: { ...WALLET, history: WALLET.history.slice(1, 3) }, error: null });
+  close = await show(h(app.Wallet), ['/wallet']);
+  await settle(10);
+  assert.match(pageText(), /我的金币/);
+  assert.match(text(byTestId('wallet-today')), /^今天 游玩所得 17 \/ 30 街上金币 15 逛店 2 午夜重新计算。推荐金币不计入每日上限。$/);
+  assert.deepEqual(allByTestId('wallet-line').map((l) => text(l).replace(/ \S+$/, '').replace(/ [0-9]{1,2}月[0-9]{1,2}日$|\s\d.*$/, '')),
+    ['摊位装饰：Neon Sign', '您邀请的卖家发布了第一件商品']);
+  await close();
   await app.resetAppTextForTests();
-  passed('Refer & earn in 中文');
+  passed('Refer & earn, and the coins wallet, in 中文');
 
   console.log(passes + ' referral-programme checks passed');
 } finally {

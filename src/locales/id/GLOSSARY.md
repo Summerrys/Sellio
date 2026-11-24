@@ -150,6 +150,11 @@ QRIS, PayNow, DuitNow, Stripe, Google and WhatsApp stay as they are. Rupiah is w
 | Buying, Selling (the chat lists) | Pembelian, Penjualan (Selling is the Settings tab's word too) |
 | Online, Last seen …, Seen | Online, Terakhir dilihat …, Dibaca |
 | Buyer, Seller | Pembeli, Penjual |
+| Sellio Coins, coins (Sellio World) | Koin Sellio, koin |
+| wallet (a person's coins), My coins | dompet, Koin saya |
+| stall (in Sellio World) | lapak |
+| badge (Sellio World) | lencana |
+| Sellio World, Pop-up Street (places in the World) | stay in English |
 
 - The group's screens name it, `useAppText('explore')`: English until `explore` is in `LIVE_GROUPS`, but in a preview. Pieces other screens share (the loading shapes, "Did you mean", the share sheet, the rating parts) take the screen's own t, so a store page still never loads the app's words.
 - What Sellio's database says to people (a `raise … hint`) is a phrase too: each file that calls it lists them word for word (`DATABASE_SAYS` in `lib/likes.js`, `lib/ratings.js`, `lib/chat.js`, `lib/purchases.js`), and the screen shows them through its t.

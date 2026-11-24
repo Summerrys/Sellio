@@ -30,7 +30,8 @@ export default function World() {
   return <Island backend={backend} go={go} />;
 }
 
-function WorldSoon() {
+// Before Sellio World opens (lib/worldAccess.js): also the Wallet page's, since coins come with it.
+export function WorldSoon() {
   const { t } = useAppText('explore');
   return (
     <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #6b21a8 100%)' }} data-testid="world-soon">

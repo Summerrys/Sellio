@@ -42,6 +42,7 @@ export function createIslandHost({ backend, navigate, leave, frame, toError }) {
     claimDrop: (id) => backend.claimDrop(String(id)),
     claimVisit: (tenantId) => backend.claimVisit(String(tenantId)),
     myStall: (tenantId) => backend.myStall(String(tenantId)),
+    wallet: () => backend.wallet(),
     buy: (tenantId, itemId) => backend.buy(String(tenantId), String(itemId)),
     equip: (tenantId, itemId) => backend.equip(String(tenantId), String(itemId)),
     navigate(url) {

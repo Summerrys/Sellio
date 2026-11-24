@@ -2922,6 +2922,11 @@ const Design = "Tampilan";
 const NEW = "BARU";
 const Copy = "Salin";
 const Businesses = "Usaha";
+const coins = "koin";
+const Balance = "Saldo";
+const History = "Riwayat";
+const Badge = "Lencana";
+const Coins = "Koin";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3583,7 +3588,50 @@ const explore = {
   "Back to Explore": "Kembali ke Jelajahi",
   "You have {coins} coins to spend when Sellio World opens.": "Anda punya {coins} koin untuk dipakai saat Sellio World dibuka.",
   "Sellio World": "Sellio World",
-  "Admins only, until it opens": "Khusus admin, sampai dibuka"
+  "Admins only, until it opens": "Khusus admin, sampai dibuka",
+  "My Sellio Coins": "Koin Sellio Saya",
+  coins,
+  "Today from playing": "Hasil bermain hari ini",
+  "{earned} of {cap}": "{earned} dari {cap}",
+  "Open wallet": "Buka dompet",
+  "Spend in World": "Pakai di World",
+  "Today, {time}": "Hari ini, {time}",
+  "My coins": "Koin saya",
+  "We couldn’t load your coins just now.": "Koin Anda belum bisa dimuat saat ini.",
+  Balance,
+  "coins in your wallet": "koin di dompet Anda",
+  "Earned so far {earned} · Spent {spent}": "Didapat sejauh ini {earned} · Dipakai {spent}",
+  "{earned} of {cap} from playing": "{earned} dari {cap} hasil bermain",
+  "Street coins {coins}": "Koin jalanan {coins}",
+  "Shop visits {coins}": "Kunjungan toko {coins}",
+  "Starts again at midnight. Referral coins don’t count toward it.": "Dihitung ulang tengah malam. Koin referal tidak dihitung dalam batas harian.",
+  "Ways to earn": "Cara mendapatkan koin",
+  "Coins on Pop-up Street": "Koin di Pop-up Street",
+  "1 to {max} each": "1 sampai {max} per koin",
+  "1 each": "1 per koin",
+  "Visit a shop": "Kunjungi toko",
+  "Bring a home seller": "Ajak penjual rumahan",
+  "Bring a business": "Ajak usaha",
+  "Share my referral code": "Bagikan kode referal saya",
+  "Style your stall": "Hias lapak Anda",
+  "Spend coins on a signboard, lights and decor for your stall in Sellio World.": "Pakai koin untuk papan nama, lampu, dan dekorasi lapak Anda di Sellio World.",
+  "Open Sellio World": "Buka Sellio World",
+  History,
+  "No coins yet. Walk Pop-up Street to find some.": "Belum ada koin. Jelajahi Pop-up Street untuk menemukannya.",
+  "Coins have no cash value and stay in Sellio.": "Koin tidak bernilai uang tunai dan hanya berlaku di Sellio.",
+  "Coin on Pop-up Street": "Koin di Pop-up Street",
+  "Visit: {shop}": "Kunjungan: {shop}",
+  "Shop visit": "Kunjungan toko",
+  "A business you invited paid": "Usaha yang Anda ajak sudah membayar",
+  "A seller you invited listed their first item": "Penjual yang Anda ajak mengunggah produk pertamanya",
+  "Stall item: {item}": "Item lapak: {item}",
+  "Stall item": "Item lapak",
+  "Badge: {badge}": "Lencana: {badge}",
+  Badge,
+  "Daily reward": "Hadiah harian",
+  "Mission reward": "Hadiah misi",
+  "Adjusted by Sellio": "Disesuaikan oleh Sellio",
+  Coins
 };
 const GROUPS = { signup, shop, explore };
 export {

@@ -52,6 +52,7 @@ const AppFeedbackInbox = lazy(() => import('@/components/feedback/AppFeedbackInb
 const CoinsAdmin = lazy(() => import('@/components/admin/CoinsAdmin'));
 const AppRatingPrompt = lazy(() => import('@/components/feedback/AppRatingPrompt'));
 const Refer = lazy(() => import('./pages/Refer'));
+const Wallet = lazy(() => import('./pages/Wallet'));
 const ReferralInvite = lazy(() => import('./pages/ReferralInvite'));
 const DistributorTerms = lazy(() => import('./pages/DistributorTerms'));
 
@@ -197,6 +198,8 @@ const AuthenticatedApp = () => {
         {/* Admin → Coins: Sellio Coins' rules and the stall items' prices (components/admin/CoinsAdmin.jsx). */}
         <Route path="/admin/coins" element={<LayoutWrapper currentPageName="Explore"><CoinsAdmin /></LayoutWrapper>} />
         <Route path="/refer" element={<LayoutWrapper currentPageName="Explore"><Refer /></LayoutWrapper>} />
+        {/* My coins: the signed-in person's Sellio Coins wallet (pages/Wallet.jsx; admins until Sellio World opens). */}
+        <Route path="/wallet" element={<LayoutWrapper currentPageName="Explore"><Wallet /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />
         <Route path="*" element={<PageNotFound />} />

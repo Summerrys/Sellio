@@ -79,6 +79,11 @@ SKU, Logo and QR as a payment method name stay as they are.
 | out for delivery, delivered, ready for collection, collected | 送货中, 已送达, 可以自取了, 已自取 |
 | Active, Inactive (a product; a plan's status) | 启用, 停用 |
 | Singapore, Malaysia, Indonesia | 新加坡, 马来西亚, 印尼 |
+| Sellio Coins, coins (Sellio World) | Sellio 金币, 金币 |
+| wallet (a person's coins), My coins | 钱包, 我的金币 |
+| stall (in Sellio World) | 摊位 |
+| badge (Sellio World) | 徽章 |
+| Sellio World, Pop-up Street (places in the World) | stay in English |
 
 - Dates and times read as Intl writes them for zh-SG (`src/lib/appDates.js`): 2026年11月14日,
   11月14日 周六, 上午6:30, 5 分钟前.

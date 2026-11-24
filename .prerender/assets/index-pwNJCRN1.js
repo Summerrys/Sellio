@@ -2922,6 +2922,11 @@ const Design = "设计";
 const NEW = "新";
 const Copy = "复制";
 const Businesses = "商家";
+const coins = "金币";
+const Balance = "余额";
+const History = "收支记录";
+const Badge = "徽章";
+const Coins = "金币";
 const explore = {
   All,
   "Food & drinks": "餐饮",
@@ -3583,7 +3588,50 @@ const explore = {
   "Back to Explore": "返回“发现”",
   "You have {coins} coins to spend when Sellio World opens.": "您有 {coins} 金币，Sellio World 开放后即可使用。",
   "Sellio World": "Sellio World",
-  "Admins only, until it opens": "开放前仅限管理员"
+  "Admins only, until it opens": "开放前仅限管理员",
+  "My Sellio Coins": "我的 Sellio 金币",
+  coins,
+  "Today from playing": "今天游玩所得",
+  "{earned} of {cap}": "{earned} / {cap}",
+  "Open wallet": "打开钱包",
+  "Spend in World": "去 World 使用",
+  "Today, {time}": "今天 {time}",
+  "My coins": "我的金币",
+  "We couldn’t load your coins just now.": "暂时无法加载您的金币。",
+  Balance,
+  "coins in your wallet": "您钱包里的金币",
+  "Earned so far {earned} · Spent {spent}": "累计赚取 {earned} · 已使用 {spent}",
+  "{earned} of {cap} from playing": "游玩所得 {earned} / {cap}",
+  "Street coins {coins}": "街上金币 {coins}",
+  "Shop visits {coins}": "逛店 {coins}",
+  "Starts again at midnight. Referral coins don’t count toward it.": "午夜重新计算。推荐金币不计入每日上限。",
+  "Ways to earn": "赚金币的方法",
+  "Coins on Pop-up Street": "Pop-up Street 上的金币",
+  "1 to {max} each": "每枚 1 至 {max}",
+  "1 each": "每枚 1",
+  "Visit a shop": "逛一家店铺",
+  "Bring a home seller": "邀请居家卖家",
+  "Bring a business": "邀请商家",
+  "Share my referral code": "分享我的推荐码",
+  "Style your stall": "装扮您的摊位",
+  "Spend coins on a signboard, lights and decor for your stall in Sellio World.": "在 Sellio World 用金币为您的摊位换上招牌、灯饰和装饰。",
+  "Open Sellio World": "打开 Sellio World",
+  History,
+  "No coins yet. Walk Pop-up Street to find some.": "还没有金币。去 Pop-up Street 逛逛就能找到。",
+  "Coins have no cash value and stay in Sellio.": "金币没有现金价值，只能在 Sellio 内使用。",
+  "Coin on Pop-up Street": "在 Pop-up Street 捡到金币",
+  "Visit: {shop}": "逛店：{shop}",
+  "Shop visit": "逛店",
+  "A business you invited paid": "您邀请的商家已付款",
+  "A seller you invited listed their first item": "您邀请的卖家发布了第一件商品",
+  "Stall item: {item}": "摊位装饰：{item}",
+  "Stall item": "摊位装饰",
+  "Badge: {badge}": "徽章：{badge}",
+  Badge,
+  "Daily reward": "每日奖励",
+  "Mission reward": "任务奖励",
+  "Adjusted by Sellio": "由 Sellio 调整",
+  Coins
 };
 const GROUPS = { signup, shop, explore };
 export {
