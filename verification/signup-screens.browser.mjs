@@ -60,6 +60,11 @@ window.__client = {
   },
   rpc: (name, args) => {
     window.__calls.push(['rpc', name, args]);
+    // Kept across the page load that follows opening a shop.
+    try { const log = JSON.parse(sessionStorage.getItem('__rpcLog') || '[]'); log.push([name, args]); sessionStorage.setItem('__rpcLog', JSON.stringify(log)); } catch {}
+    if (name === 'create_personal_store') return chain({ data: window.__newShop || null, error: null });
+    if (name === 'referral_code_info') return chain({ data: (window.__codes || {})[args.p_code] || { found: false }, error: null });
+    if (name === 'referral_attach_free') return chain({ data: { ok: true }, error: null });
     if (name === 'get_invite_by_token') return chain({ data: window.__invite || null, error: null });
     if (name === 'my_account_status') return chain({ data: window.__status || null, error: null });
     if (name === 'complete_account_setup') return chain({ data: null, error: window.__setupError || null });
@@ -286,6 +291,50 @@ try {
     await page.locator('#shop-name').fill('Mei’s Home Bakes');
     await Promise.all([page.waitForURL('**/ShopSetup'), page.getByRole('button', { name: 'Open my shop' }).click()]);
     passed('Name your shop: the sign shows the name as it’s typed; no name is said under the field, nothing sent; Back returns; then the shop opens and its setup starts');
+    await page.close();
+  }
+
+  // ── Name your shop with a referral code (24 Nov 2026: 50 coins for whoever brought the shop) ──
+  {
+    const rpcLog = (page) => page.evaluate(() => JSON.parse(sessionStorage.getItem('__rpcLog') || '[]'));
+    const NEW_SHOP = "window.__newShop = { tenant_id: 'shop-new', slug: 'siti-kitchen', name: 'Siti Kitchen' };";
+    // The code kept from an invite link goes with the new shop, then it's forgotten on this device.
+    const kept = "if (!sessionStorage.getItem('__kept')) { sessionStorage.setItem('__kept', '1'); localStorage.setItem('sellio_referral', JSON.stringify({ code: 'MEY234', shopName: 'Mei Bakes', firstName: 'Mei', typed: false, savedAt: Date.now() })); }";
+    let page = await screen('/Account', SET_UP + NEW_SHOP + kept);
+    await page.getByRole('button', { name: /Sell from home/ }).click();
+    assert.equal((await page.locator('[data-testid="shop-referral-kept"]').textContent()).replace(/\s+/g, ' '), 'Referral code MEY234 applied Change');
+    await page.locator('#shop-name').fill('Siti Kitchen');
+    await Promise.all([page.waitForURL('**/ShopSetup'), page.getByRole('button', { name: 'Open my shop' }).click()]);
+    let log = await rpcLog(page);
+    assert.deepEqual(log.filter(([n]) => n === 'create_personal_store' || n.startsWith('referral_')), [
+      ['create_personal_store', { p_name: 'Siti Kitchen', p_sells_food: null }],
+      ['referral_attach_free', { p_tenant_id: 'shop-new', p_code: 'MEY234', p_typed: false }],
+    ], "the link's code, with the new shop");
+    assert.equal(await page.evaluate(() => localStorage.getItem('sellio_referral')), null, 'then forgotten');
+    await page.close();
+    // Typed: checked before the shop opens; a wrong one is said under the field and nothing is sent.
+    page = await screen('/Account', SET_UP + NEW_SHOP + "window.__codes = { MEY234: { found: true, code: 'MEY234', shopName: 'Mei Bakes', firstName: 'Mei' } };");
+    await page.getByRole('button', { name: /Sell from home/ }).click();
+    await page.locator('#shop-name').fill('Siti Kitchen');
+    await page.getByRole('button', { name: 'Have a referral code?' }).click();
+    await page.locator('#referral-code').fill('zzz999');
+    assert.equal(await page.locator('#referral-code').inputValue(), 'ZZZ999', 'in capitals');
+    await page.getByRole('button', { name: 'Open my shop' }).click();
+    await page.waitForTimeout(400);
+    assert.equal(await page.locator('#referral-code-error').textContent(), "That referral code isn't valid.");
+    assert.equal(await invalid(page, '#referral-code'), 'true');
+    assert.equal(await focused(page), 'referral-code');
+    log = await rpcLog(page);
+    assert.equal(log.filter(([n]) => n === 'create_personal_store').length, 0, 'no shop yet');
+    await shoot(page, 'flow-3c-name-referral');
+    await page.locator('#referral-code').fill('mey-234');
+    await Promise.all([page.waitForURL('**/ShopSetup'), page.getByRole('button', { name: 'Open my shop' }).click()]);
+    log = await rpcLog(page);
+    assert.deepEqual(log.filter(([n]) => n === 'create_personal_store' || n === 'referral_attach_free'), [
+      ['create_personal_store', { p_name: 'Siti Kitchen', p_sells_food: null }],
+      ['referral_attach_free', { p_tenant_id: 'shop-new', p_code: 'MEY234', p_typed: true }],
+    ], 'the typed code, checked, then with the new shop');
+    passed('Name your shop with a referral code: a kept code goes with the new shop (then is forgotten); a typed one is checked first, a wrong one said under the field');
     await page.close();
   }
 

@@ -1881,5 +1881,7 @@
   "Open the packing photo of order #{number}": "Buka foto kemasan pesanan #{number}",
   "Packed {when}": "Dikemas {when}",
   "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "Pembeli akan melihat foto ini. Tulis {number} di paket atau secarik catatan, dan pastikan terlihat di foto.",
-  "Packed · take photo": "Sudah dikemas · ambil foto"
+  "Packed · take photo": "Sudah dikemas · ambil foto",
+  "This code has been used already.": "Kode ini sudah dipakai.",
+  "A referral code can only be added when a shop is new.": "Kode referal hanya bisa ditambahkan saat toko masih baru."
 }

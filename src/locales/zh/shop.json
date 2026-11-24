@@ -1881,5 +1881,7 @@
   "Open the packing photo of order #{number}": "打开订单 #{number} 的包装照片",
   "Packed {when}": "{when} 包装好",
   "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "买家会看到这张照片。请把 {number} 写在包裹或纸条上，并让它出现在照片里。",
-  "Packed · take photo": "已包装 · 拍照"
+  "Packed · take photo": "已包装 · 拍照",
+  "This code has been used already.": "该推荐码已被使用。",
+  "A referral code can only be added when a shop is new.": "推荐码只能在店铺新开设时添加。"
 }

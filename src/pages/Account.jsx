@@ -13,6 +13,7 @@ import SignUpSteps from '@/components/auth/SignUpSteps';
 import ShopNameStall from '@/components/auth/ShopNameStall';
 import { FieldError, FormError, fieldBorder, fieldProps } from '@/components/ui-custom/FieldError';
 import { clearAccountWelcome, readAccountWelcome } from '@/lib/accountWelcome';
+import { attachFreeReferral, forgetReferral, referralCode, referralCodeInfo, useKeptReferral } from '@/lib/referral';
 
 const BUTTON_STYLE = { background: 'linear-gradient(to bottom, #ffaa6e, #fe7824, #e86a1a)' };
 const SUPPORT_EMAIL = 'sellio@apptelier.sg';
@@ -53,6 +54,12 @@ export default function Account() {
   const [creating, setCreating] = useState(false);
   const [nameError, setNameError] = useState('');
   const [formError, setFormError] = useState('');
+  // A referral code for the new home shop (Alvin, 24 Nov 2026: 50 coins for whoever brought it):
+  // the one kept from an invite link, or one typed here.
+  const keptCode = useKeptReferral();
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeText, setCodeText] = useState('');
+  const [codeError, setCodeError] = useState('');
   // Right after "Set up your account": welcome, step 3 of 3, a little confetti (cleared once seen).
   const [welcome] = useState(() => readAccountWelcome());
   const [confetti, setConfetti] = useState(welcome); // once: not again after Name your shop → Back
@@ -147,12 +154,28 @@ export default function Account() {
       document.getElementById('shop-name')?.focus();
       return;
     }
+    // A typed code is checked first, so a typo can be fixed before the shop opens.
+    let refer = null;
+    if (codeOpen && codeText.trim()) {
+      const code = referralCode(codeText);
+      const info = code ? await referralCodeInfo(code).catch(() => null) : null;
+      if (!info?.found) {
+        setCodeError(t("That referral code isn't valid."));
+        document.getElementById('referral-code')?.focus();
+        return;
+      }
+      refer = { code, typed: true };
+    } else if (!codeOpen && keptCode) refer = { code: keptCode.code, typed: keptCode.typed };
     setCreating(true);
     try {
       const supabase = await getSupabase();
       // What a home seller sells isn't asked: a shop can sell anything (p_sells_food: null).
-      const { error } = await supabase.rpc('create_personal_store', { p_name: name, p_sells_food: null });
+      const { data: shop, error } = await supabase.rpc('create_personal_store', { p_name: name, p_sells_food: null });
       if (error) throw error;
+      // The code goes with the new shop; the shop opens whatever Sellio says about the code.
+      if (refer && shop?.tenant_id) {
+        await attachFreeReferral(shop.tenant_id, refer.code, { typed: refer.typed }).then(() => forgetReferral(), () => {});
+      }
       await rememberProfile(supabase, status.email);
       // Full reload so the workspace loads the new shop from scratch (as after onboarding),
       // straight into the shop's setup steps (step 15).
@@ -210,6 +233,25 @@ export default function Account() {
                   {...fieldProps('shop-name', nameError)} />
               </div>
               <FieldError id="shop-name-error">{nameError}</FieldError>
+              {!codeOpen && keptCode ? (
+                <p className="mt-3 text-[13px] text-slate-600" data-testid="shop-referral-kept">
+                  {t('Referral code {code} applied', { code: <b className="text-slate-800">{keptCode.code}</b> })}{' '}
+                  <button type="button" onClick={() => { setCodeOpen(true); setCodeText(keptCode.code); }} className="font-semibold text-orange-600 underline underline-offset-2">{t('Change')}</button>
+                </p>
+              ) : !codeOpen ? (
+                <button type="button" onClick={() => setCodeOpen(true)} className="mt-3 text-[13px] font-semibold text-orange-600 underline underline-offset-2" data-testid="shop-referral-open">
+                  {t('Have a referral code?')}
+                </button>
+              ) : (
+                <div className="mt-3">
+                  <label htmlFor="referral-code" className="block text-sm font-medium text-slate-700 mb-1">{t('Referral code (optional)')}</label>
+                  <input id="referral-code" type="text" maxLength={12} autoComplete="off" autoCapitalize="characters" spellCheck={false} value={codeText}
+                    onChange={(e) => { setCodeText(e.target.value.toUpperCase()); setCodeError(''); }}
+                    className={`w-full px-4 py-2.5 border rounded-xl text-sm tracking-[0.12em] focus:outline-none focus:ring-2 ${fieldBorder(codeError)}`}
+                    {...fieldProps('referral-code', codeError)} data-testid="shop-referral-input" />
+                  <FieldError id="referral-code-error">{codeError}</FieldError>
+                </div>
+              )}
               {formError && <div className="mt-3"><FormError>{formError}</FormError></div>}
               <button type="submit" disabled={creating}
                 className="mt-4 w-full py-3 rounded-xl text-white text-sm font-semibold transition-opacity disabled:opacity-70" style={BUTTON_STYLE}>

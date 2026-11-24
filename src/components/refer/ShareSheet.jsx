@@ -13,13 +13,20 @@ import { useAppText } from '@/lib/appText';
 // the link for WhatsApp, and the QR as a picture. Saving the QR works as on the free shop's share
 // card (ShareShop): a browser saves it from the page; Sellio's app puts it online first (it only
 // holds the public invite link) and opens it in the phone's browser, which downloads it.
-export function inviteMessage(t, shopName, link) {
+// homeShop: a free home seller's invitation (Alvin, 24 Nov 2026: every shop has a code) speaks of
+// selling from home; a business's, of the counter and the 7-day trial.
+export function inviteMessage(t, shopName, link, { homeShop = false } = {}) {
+  if (homeShop) {
+    return shopName
+      ? t('Hi! I sell from home with {shop} on Sellio. Open your own shop free with my link: {link}', { shop: shopName, link })
+      : t('Hi! I sell from home on Sellio. Open your own shop free with my link: {link}', { link });
+  }
   return shopName
     ? t('Hi! I run {shop} on Sellio: counter, QR ordering and kitchen display in one app. Try it free for 7 days with my link: {link}', { shop: shopName, link })
     : t('Hi! I run my shop on Sellio: counter, QR ordering and kitchen display in one app. Try it free for 7 days with my link: {link}', { link });
 }
 
-export default function ShareSheet({ open, onClose, code, link, shopName, tenantId }) {
+export default function ShareSheet({ open, onClose, code, link, shopName, tenantId, homeShop = false }) {
   const { t } = useAppText('explore');
   const titleId = useId();
   const [qr, setQr] = useState('');
@@ -27,7 +34,7 @@ export default function ShareSheet({ open, onClose, code, link, shopName, tenant
   const inApp = isNativeApp();
   const fileName = `sellio-invite-${code || 'code'}.png`;
   const [appSaveUrl, setAppSaveUrl] = useState(null); // in the app: the QR's download address, '' if it couldn't go online
-  const message = inviteMessage(t, shopName, link);
+  const message = inviteMessage(t, shopName, link, { homeShop });
 
   useEffect(() => {
     if (!open || !link) return undefined;

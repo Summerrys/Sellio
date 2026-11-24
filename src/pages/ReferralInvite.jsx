@@ -17,12 +17,30 @@ import { useAppText, N_ } from '@/lib/appText';
 // Stripe's checkout; an owner who already sells from home logs in and moves their shop to a
 // business plan with the code filled in. Signed out, so it reads only referral_code_info:
 // the shop's name and logo, the owner's first name, and their WhatsApp if they chose to show it.
+// Since 24 Nov 2026 every shop has a code: a distributor's earns a commission, any other shop's
+// earns Sellio Coins (the line at the bottom says which), and a free home shop can join with it.
 
 const PINK = '#be185d';
 const INK = '#1f1530';
 const MUTED = '#5b5470';
 const WARM = 'linear-gradient(135deg, #c2410c 0%, #be185d 55%, #7e22ce 100%)';
 const TOP_BAR = 'linear-gradient(90deg, #fb923c 0%, #e0449a 50%, #8b2fc9 100%)';
+// Selling from home, free (Alvin, 24 Nov 2026: any shop's code brings in home sellers too, and
+// earns its owner coins): a home seller's invitation shows it first, a business's after the plans.
+// Signed out, /Join makes the account first; signed in, /Account opens the shop. The code is kept
+// on this device, so the new shop takes it.
+function HomeShopCard({ t, signedIn }) {
+  return (
+    <section className="mx-[18px] mt-[18px] p-4 rounded-[18px] border flex flex-col gap-2.5" style={{ background: '#fff7ed', borderColor: '#fed7aa' }} data-testid="invite-home-shop">
+      <h2 className="text-[17px] leading-[22px] font-bold">{t('Selling from home?')}</h2>
+      <p className="text-sm leading-[21px]" style={{ color: MUTED }}>{t('Open a home shop on Sellio for free: your own shop page, orders and chats with buyers. The code stays applied.')}</p>
+      <Link to={signedIn ? '/Account' : '/Join'} className="h-[46px] rounded-xl text-white text-[15px] font-bold inline-flex items-center justify-center" style={{ background: WARM }} data-testid="invite-home-shop-start">
+        {t('Open a free home shop')}
+      </Link>
+    </section>
+  );
+}
+
 const HIGHLIGHTS = [
   N_('POS counter, QR ordering and storefront'),
   N_('Kitchen display and receipt printing'),
@@ -139,6 +157,7 @@ export default function ReferralInvite() {
                 <CircleCheck className="w-4 h-4" />{' '}{t('Referral code {code} applied', { code: info.code })}
               </p>
             </section>
+            {info.homeShop && <HomeShopCard t={t} signedIn={!!appUser} />}
 
             <section className="px-[18px] pt-[22px] pb-1.5 flex flex-col gap-2.5">
               <h1 className="text-[32px] leading-9 font-extrabold tracking-[-0.02em]">{t('Your business, beautifully online')}</h1>
@@ -213,6 +232,8 @@ export default function ReferralInvite() {
               })}
             </div>
 
+            {!info.homeShop && <HomeShopCard t={t} signedIn={!!appUser} />}
+
             <section className="mx-[18px] mt-[18px] p-4 rounded-[18px] border flex flex-col gap-2.5" style={{ background: '#faf7fd', borderColor: '#ece2f6' }}>
               <h2 className="text-[17px] leading-[22px] font-bold">{t('Want help setting up?')}</h2>
               {info.whatsapp ? (
@@ -250,7 +271,9 @@ export default function ReferralInvite() {
               {t('Already selling from home on Sellio? {link} and move your shop to a business plan. The code stays applied.', { link: homeSellerLink })}
             </p>
             <p className="mx-[18px] mt-3.5 text-xs leading-[18px]" style={{ color: MUTED }} data-testid="invite-disclosure">
-              {t('{name} earns a commission from Sellio if you subscribe. Your price is the same.', { name })}
+              {info.distributor === false
+                ? t('{name} earns Sellio Coins if you join with this code. It costs you nothing.', { name })
+                : t('{name} earns a commission from Sellio if you subscribe. Your price is the same.', { name })}
             </p>
           </>
         )}

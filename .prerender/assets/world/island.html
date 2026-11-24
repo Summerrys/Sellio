@@ -398,9 +398,9 @@ body.hero-open .mini,body.hero-open .goal{visibility:hidden}
       <div><dt>Look around</dt><dd>Drag to turn the view. Pinch or scroll to zoom. Q and E turn it from the keyboard.</dd></div>
       <div><dt>Get around</dt><dd>Sellio Plaza sits in the middle and each street starts at its arch. Open the Map to hop to any street.</dd></div>
       <div><dt>Visit a shop</dt><dd>Tap a stall or storefront, or walk up and use the button that appears.</dd></div>
-      <div><dt>Collect coins</dt><dd id="helpCoins">Walk over coins. Each is worth 1 to 5, and new ones drop in as you go. Your first visit to each shop each day adds 2, and today's goals add more.</dd></div>
+      <div><dt>Collect coins</dt><dd id="helpCoins">Walk over coins. Each is worth 1 or 2, and new ones drop in as you go. Your first visit to each shop each day adds 2, and today's goals add more.</dd></div>
       <div><dt>Your hero</dt><dd>Switch hero any time with the Hero button. Hair, outfits and accessories come with the wardrobe.</dd></div>
-      <div><dt>Style your stall</dt><dd>Every stall wears the same Sellio awning. Spend coins on your signboard, lights and decor, and try an item on before you unlock it.</dd></div>
+      <div><dt>Style your stall</dt><dd>Every stall on Pop-up Street wears Sellio's purple and white awning, and every business Sellio's orange and white. Spend coins on your signboard, lights and decor, and try an item on before you unlock it.</dd></div>
     </dl>
     <p class="note">This is a preview. Coins and unlocks are kept in this browser only. In Sellio, the server will award and track every coin.</p>
   </div>
@@ -492,8 +492,9 @@ const liveOk = !!(LIVE && boot && !boot.error);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------------- data ---------------- */
-/* One awning for every stall and shop: Sellio's blue-violet, same shape and same stripes. Owners personalise the rest. */
-const AWNING = ['#5a3fd4', '#7058e6'];
+/* Sellio's two awnings, the same on every stall or shop of a kind (Alvin, 24 Nov 2026): purple and white over the home
+   sellers' stalls on Pop-up Street, orange and white over the businesses (F&B, Retail, Services). Owners personalise the rest. */
+const AWNINGS = { stall: ['#8b2fc9', '#fff8f0'], shop: ['#f97316', '#fff8f0'] };
 const SLOTS = ['sign', 'lights', 'decor'];
 const CATALOG = {
   sign: [
@@ -543,7 +544,8 @@ const POPUP = [
 
 /* The other three districts have no live shops yet, so they show example shops, labelled as examples. */
 const ex = (id, name, kind, tint, tagline, menu, style, goods) => ({ id, name, kind: 'Example shop · ' + kind, tint, tagline, menu, style, goods, example: true });
-const toLet = (id, what) => ({ id, vacant: true, name: 'To let', kind: 'Unit to let', tint: '#b9a8c9', goods: 'none', style: { sign: 'chalk', lights: 'none', decor: 'none' },
+/* an empty business unit: "Open for lease!" (Alvin, 25 Nov 2026, was "To let") */
+const toLet = (id, what) => ({ id, vacant: true, name: 'Open for lease!', kind: 'Unit for lease', tint: '#b9a8c9', goods: 'none', style: { sign: 'chalk', lights: 'none', decor: 'none' },
   tagline: `Nobody has opened here yet. A ${what} on a Sellio plan with a product listed gets a storefront on this street.`,
   menu: ['Open your shop on Sellio', 'List your first product', 'Your storefront opens here'], cta: 'See Sellio plans', ctaToast: 'In Sellio, this opens the plans page.' });
 const FNB = [
@@ -694,6 +696,11 @@ const wallet = {
   live: !!(liveOk && boot.profile), guest: !!(liveOk && !boot.user), balance: (liveOk && boot.profile && boot.profile.balance) || 0, pending: 0,
   visitReward: (liveOk && boot.profile && boot.profile.visit_reward) || VISIT_REWARD, visitsLeft: (liveOk && boot.profile && boot.profile.visits_left) || 0,
   visited: new Set((liveOk && boot.profile && boot.profile.visited_today) || []), claimed: new Set(),
+  /* the day's limit on coins from playing (street coins and shop visits). capLeft is what's left of it, less the coins
+     still on their way to the server (capPending); null means no limit */
+  dailyCap: (liveOk && boot.profile && boot.profile.daily_cap) || null,
+  capLeft: liveOk && boot.profile && typeof boot.profile.cap_left === 'number' ? boot.profile.cap_left : null, capPending: 0, limitShown: false,
+  dropMax: (liveOk && boot.profile && boot.profile.drop_max) || 2,
 };
 function syncCoins(bump) { state.coins = wallet.balance + wallet.pending; updateCoinUI(bump); }
 const money = (v, cur) => (cur === 'MYR' ? 'RM' + v.toFixed(2) : cur === 'IDR' ? 'Rp' + Math.round(v).toLocaleString('en') : 'S$' + v.toFixed(2));
@@ -1220,14 +1227,14 @@ function buildGame(hot) {
     return g;
   }
 
-  /* one awning for everyone: Sellio blue-violet, with the same slope, stripes and valance on every stall and shop */
+  /* Sellio's awning (AWNINGS): the same slope, stripes and valance on every stall, and on every shop */
   const awnMats = new Map();
-  function buildAwning(w, run, drop, yBack, zBack, stripes) {
-    const g = new THREE.Group(), [a, b] = AWNING;
-    if (!awnMats.has(stripes)) awnMats.set(stripes, [
+  function buildAwning(w, run, drop, yBack, zBack, stripes, colors) {
+    const g = new THREE.Group(), [a, b] = colors, key = a + b + stripes;
+    if (!awnMats.has(key)) awnMats.set(key, [
       new THREE.MeshStandardMaterial({ map: stripeTex(a, b, stripes), roughness: 0.85 }),
       new THREE.MeshStandardMaterial({ map: valanceTex(a, b, stripes), side: THREE.DoubleSide, roughness: 0.85 })]);
-    const [top, skirt] = awnMats.get(stripes);
+    const [top, skirt] = awnMats.get(key);
     const len = Math.hypot(run, drop), ang = Math.atan2(drop, run);
     const canopy = new THREE.Mesh(G.box, top); canopy.castShadow = true; canopy.receiveShadow = true;
     canopy.scale.set(w, 0.05, len); canopy.rotation.x = ang; canopy.position.set(0, yBack - drop / 2, zBack + run / 2); g.add(canopy);
@@ -1359,7 +1366,7 @@ function buildGame(hot) {
     return s;
   }
 
-  /* a market stall, exactly as on the original street, under the shared awning */
+  /* a market stall, exactly as on the original street, under Pop-up Street's purple and white awning */
   function buildStallBody(root, def) {
     const floor = mesh(G.box, std('#6d4d6b'), false); floor.scale.set(W + 0.5, 0.06, 2.5); floor.position.set(0, 0.03, 0.15); root.add(floor);
     const shelf = mesh(G.box, std('#efe2d6')); shelf.scale.set(W - 0.1, 1.5, 0.38); shelf.position.set(0, 0.75, -0.62); root.add(shelf);
@@ -1369,12 +1376,12 @@ function buildGame(hot) {
     const top = mesh(G.box, std('#c98a5c')); top.scale.set(W + 0.1, 0.08, 0.84); top.position.set(0, 1.02, 0.38); root.add(top);
     for (const [px, pz, h] of [[-1.36, 0.7, 2.72], [1.36, 0.7, 2.72], [-1.36, -0.72, 2.92], [1.36, -0.72, 2.92]]) { const p = mesh(G.post, std('#4a3550'), false); p.scale.y = h; p.position.set(px, h / 2, pz); root.add(p); }
     (GOODS[def.goods] || GOODS.none).forEach(([shape, color], k) => { const o = good(shape, color); o.position.set(-1.0 + k * 0.5, 1.06, 0.42); o.traverse(m => { if (m.isMesh) m.castShadow = false; }); root.add(o); });
-    const aw = buildAwning(W + 0.4, 2.2, 0.35, 2.95, -0.95, 8); root.add(aw.g);
+    const aw = buildAwning(W + 0.4, 2.2, 0.35, 2.95, -0.95, 8, AWNINGS.stall); root.add(aw.g);
     const hit = new THREE.Mesh(G.box, hitMat); hit.scale.set(W + 0.8, 4.4, 2.8); hit.position.set(0, 2.2, 0.2);
     return { hit, labelY: 4.75, focusDist: 1, info: { signY: 3.32, signZ: 1.0, rods: true, frontY: aw.frontY, frontZ: aw.frontZ, halfW: 1.6 } };
   }
 
-  /* a storefront for the F&B, Retail and Services streets: a small building with a lit shopfront under the shared awning */
+  /* a storefront for the F&B, Retail and Services streets: a small building with a lit shopfront under the businesses' orange and white awning */
   const pastel = (hex, t) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#fff7ee'), t).getHexString();
   function shopFacade(def, kind) {
     const Wd = 512, Hd = 354, vac = !!def.vacant, wall = vac ? '#d3c8da' : pastel(def.tint, 0.8), trim = vac ? '#8f809c' : def.tint;
@@ -1428,8 +1435,9 @@ function buildGame(hot) {
       }
       if (vac && !em) {
         c.save(); c.translate(Wd / 2, top + 92); c.rotate(-0.07);
-        c.fillStyle = '#ffffff'; rr(c, -112, -34, 224, 68, 10); c.fill();
-        c.fillStyle = '#2a1838'; c.font = `700 44px ${FONT_D}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('TO LET', 0, 3);
+        c.fillStyle = '#ffffff'; rr(c, -150, -46, 300, 92, 12); c.fill();
+        c.fillStyle = '#2a1838'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = `700 34px ${FONT_D}`; c.fillText('OPEN FOR', 0, -17); c.font = `700 40px ${FONT_D}`; c.fillText('LEASE!', 0, 22);
         c.restore();
       }
     };
@@ -1445,7 +1453,7 @@ function buildGame(hot) {
     const box = mesh(G.box, std(wall)); box.scale.set(SHOP_W, SHOP_H, 3.4); box.position.set(0, SHOP_H / 2, -1.76); root.add(box);
     const face = new THREE.Mesh(G.plane, shopFacade(def, kind)); face.scale.set(SHOP_W, SHOP_H, 1); face.position.set(0, SHOP_H / 2, -0.05); face.receiveShadow = true; face.userData.dispose = true; root.add(face);
     const roof = mesh(G.box, std('#3b2a45')); roof.scale.set(SHOP_W + 0.3, 0.16, 3.7); roof.position.set(0, SHOP_H + 0.08, -1.7); root.add(roof);
-    const aw = buildAwning(5.0, 1.4, 0.38, 2.8, -0.04, 12); root.add(aw.g);
+    const aw = buildAwning(5.0, 1.4, 0.38, 2.8, -0.04, 12, AWNINGS.shop); root.add(aw.g);
     const tintM = std(def.tint), cream = std('#fbf3ea');
     if (!def.vacant && kind === 'cafe') {
       for (const x of [-1.55, 1.55]) {
@@ -1587,7 +1595,7 @@ function buildGame(hot) {
     hit.userData.coin = c; pickables.push(hit); coins.push(c); scene.add(grp);
     return c;
   }
-  const pickValue = () => { const r = Math.random() * 100; return r < 36 ? 1 : r < 64 ? 2 : r < 82 ? 3 : r < 93 ? 4 : 5; };
+  const pickValue = () => (Math.random() < 0.6 ? 1 : 2); /* street coins are worth 1 or 2 */
   function coinSpot(minFromPlayer) {
     for (let i = 0; i < 80; i++) {
       let x, z;
@@ -1611,17 +1619,17 @@ function buildGame(hot) {
     }
   }
   if (!LIVE) {
-    [[2.7, 7.3, 1], [4.8, 4.2, 1], [5.5, 0.4, 2], [4.8, -3.6, 1], [2.6, -7.2, 2], [0, -10.6, 1], [0, -14.2, 3], [0, -23.5, 5]].forEach(([x, z, v]) => spawnCoin(x, z, v));
+    [[2.7, 7.3, 1], [4.8, 4.2, 1], [5.5, 0.4, 2], [4.8, -3.6, 1], [2.6, -7.2, 2], [0, -10.6, 1], [0, -14.2, 2], [0, -23.5, 2]].forEach(([x, z, v]) => spawnCoin(x, z, v));
     while (coins.length < COIN_TARGET) { const [x, z] = coinSpot(4); spawnCoin(x, z, pickValue()); }
-  } else if (wallet.live) addDrops(boot.profile.drops || []);
+  } else if (wallet.live) { addDrops(boot.profile.drops || []); if (wallet.capLeft === 0) setTimeout(limitReached, 1500); }
   else if (wallet.guest && boot.street && boot.street.open) {
     /* signed out: the street shows coins, and walking into one asks the visitor to sign in */
     const r = rng(20261117), span = POPUP_D.len + 5.5 - 3;
-    for (let i = 0; i < 15; i++) { const p = toWorld(POPUP_D, (r() * 2 - 1) * 3.2, 5.5 - (i + 0.15 + r() * 0.7) * span / 15); spawnCoin(p.x, p.z, [1, 1, 1, 2, 2, 3, 3, 4, 5][Math.floor(r() * 9)]).guest = true; }
+    for (let i = 0; i < 15; i++) { const p = toWorld(POPUP_D, (r() * 2 - 1) * 3.2, 5.5 - (i + 0.15 + r() * 0.7) * span / 15); spawnCoin(p.x, p.z, [1, 1, 1, 2, 2][Math.floor(r() * 5)]).guest = true; }
   }
   let claimChain = Promise.resolve(), lastClaim = 0, guestNag = 0;
   function claimLive(c) {
-    wallet.claimed.add(c.dropId); wallet.pending += c.value; syncCoins(true);
+    wallet.claimed.add(c.dropId); wallet.pending += c.give; wallet.capPending += c.give; syncCoins(true);
     claimChain = claimChain.then(async () => {
       const gap = 340 - (Date.now() - lastClaim); if (gap > 0) await sleep(gap); /* the server takes one pickup every 300 ms */
       for (let attempt = 1; ; attempt++) {
@@ -1634,15 +1642,35 @@ function buildGame(hot) {
         }
       }
     }).then(r => {
-      wallet.pending -= c.value; if (r && typeof r.balance === 'number') wallet.balance = r.balance; syncCoins();
+      wallet.pending -= c.give; wallet.capPending -= c.give;
+      if (r && typeof r.balance === 'number') wallet.balance = r.balance;
+      if (r && r.ok === false && r.reason === 'daily_limit') wallet.capLeft = 0;
+      else if (r && typeof r.cap_left === 'number') wallet.capLeft = Math.max(0, r.cap_left - wallet.capPending);
+      else if (r && r.ok === false && wallet.capLeft !== null) wallet.capLeft += c.give; /* nothing was paid (taken already) */
+      syncCoins();
+      if (wallet.capLeft === 0) limitReached();
       for (const a of (r && r.unlocked) || []) toast(`Achievement: ${a.name}. +${a.reward} coins.`);
-    }, e => { wallet.pending -= c.value; syncCoins(); toast(e.message); });
+    }, e => {
+      wallet.pending -= c.give; wallet.capPending -= c.give; if (wallet.capLeft !== null) wallet.capLeft += c.give;
+      syncCoins(); toast(e.message);
+    });
+  }
+  /* today's limit is reached: the rest of today's coins leave the street until tomorrow */
+  function limitReached() {
+    for (const c of coins.slice()) if (c.dropId && c.collecting < 0) removeCoin(c);
+    if (wallet.limitShown) return;
+    wallet.limitShown = true;
+    toast(wallet.dailyCap ? `You've collected today's ${wallet.dailyCap} coins. More tomorrow.` : "You've collected today's coins. More tomorrow.");
   }
   async function refreshSession() {
     if (!wallet.live) return;
     try {
       const p = await host.call('session');
-      wallet.balance = p.balance; wallet.visitsLeft = p.visits_left; wallet.visited = new Set(p.visited_today || []); syncCoins();
+      wallet.balance = p.balance; wallet.visitsLeft = p.visits_left; wallet.visited = new Set(p.visited_today || []);
+      wallet.dailyCap = p.daily_cap || null; wallet.dropMax = p.drop_max || wallet.dropMax;
+      wallet.capLeft = typeof p.cap_left === 'number' ? Math.max(0, p.cap_left - wallet.capPending) : null;
+      if (wallet.capLeft !== 0) wallet.limitShown = false;
+      syncCoins();
       const ids = new Set((p.drops || []).map(d => d.id));
       for (const c of coins.slice()) if (c.dropId && c.collecting < 0 && !ids.has(c.dropId)) removeCoin(c);
       addDrops(p.drops || []);
@@ -1794,11 +1822,19 @@ function buildGame(hot) {
   /* ---------- coins update ---------- */
   function collect(c) {
     if (c.guest) { if (performance.now() - guestNag > 5000) { guestNag = performance.now(); toast('Sign in to collect Sellio Coins.'); } return; }
-    c.collecting = 0;
+    /* live: a coin pays what's left of today's limit at most */
+    let give = c.value;
+    if (LIVE && wallet.capLeft !== null) {
+      give = Math.min(c.value, wallet.capLeft);
+      if (give <= 0) { limitReached(); return; }
+      wallet.capLeft -= give;
+    }
+    c.collecting = 0; c.give = give;
     if (LIVE) claimLive(c); else { state.coins += c.value; saveState(); updateCoinUI(true); }
+    if (LIVE && wallet.capLeft === 0) limitReached();
     const [sx, sy] = screenOf(tmpV.set(c.grp.position.x, 1.2, c.grp.position.z));
-    popAt(sx, sy, '+' + c.value, c.value === 5);
-    sfx.coin(c.value); bumpGoal('picked', c.value);
+    popAt(sx, sy, '+' + give, give === 5);
+    sfx.coin(give); bumpGoal('picked', give);
     if (!LIVE) respawnAt.push(performance.now() + 7000 + Math.random() * 6000);
     if (ui.style.open) renderStyle();
   }
@@ -1881,8 +1917,10 @@ function buildGame(hot) {
       if (s.def.mine) return ['Your own stall does not earn visit coins', false];
       if (wallet.guest) return ['Sign in to earn coins for visiting', false];
       if (wallet.visited.has(s.def.tenant_id)) return ["Today's visit reward collected", true];
+      if (wallet.capLeft === 0) return ["You've collected today's coins. Visits earn coins again tomorrow", true];
       if (wallet.visitsLeft <= 0) return ["You have collected all of today's visit rewards", true];
-      return [`Visit today to earn +${wallet.visitReward} coins`, false];
+      const give = wallet.capLeft === null ? wallet.visitReward : Math.min(wallet.visitReward, wallet.capLeft);
+      return [`Visit today to earn +${give} coin${give === 1 ? '' : 's'}`, false];
     }
     if (s.def.mine) return ['Your own stall does not earn visit coins', false];
     if (state.visits[s.def.id] === todayKey()) return ["Today's visit reward collected", true];
@@ -1914,18 +1952,22 @@ function buildGame(hot) {
       const d = s.def;
       if (d.vacant) { host.call('navigate', d.href); return; }
       const openShop = () => host.call('navigate', `/store/${encodeURIComponent(d.slug)}`);
-      if (!wallet.live || d.mine || !d.tenant_id || wallet.visited.has(d.tenant_id) || wallet.visitsLeft <= 0) { openShop(); return; }
+      if (!wallet.live || d.mine || !d.tenant_id || wallet.visited.has(d.tenant_id) || wallet.visitsLeft <= 0 || wallet.capLeft === 0) { openShop(); return; }
       const btn = $('#btnVisit'); btn.disabled = true;
       try {
         const r = await host.call('claimVisit', d.tenant_id);
+        if (r && typeof r.cap_left === 'number') wallet.capLeft = Math.max(0, r.cap_left - wallet.capPending);
         if (r && r.ok) {
           if (typeof r.balance === 'number') wallet.balance = r.balance;
+          const got = typeof r.value === 'number' ? r.value : wallet.visitReward;
           wallet.visited.add(d.tenant_id); wallet.visitsLeft = Math.max(0, wallet.visitsLeft - 1); syncCoins(true); sfx.coin(2);
-          toast(`+${wallet.visitReward} coins for today's visit.`);
+          toast(`+${got} coin${got === 1 ? '' : 's'} for today's visit.`);
           for (const a of r.unlocked || []) toast(`Achievement: ${a.name}. +${a.reward} coins.`);
+          if (wallet.capLeft === 0) limitReached();
           await sleep(750);
         } else if (r && r.reason === 'already') wallet.visited.add(d.tenant_id);
         else if (r && r.reason === 'daily_cap') wallet.visitsLeft = 0;
+        else if (r && r.reason === 'daily_limit') { wallet.capLeft = 0; limitReached(); }
       } catch (e) { /* the shop still opens */ }
       btn.disabled = false; openShop(); return;
     }
@@ -1968,7 +2010,7 @@ function buildGame(hot) {
     const slot = ui.style.slot, pv = ui.style.preview;
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.slot === slot)));
     $('#itemGrid').setAttribute('aria-labelledby', 'tab-' + slot);
-    $('#itemGrid').innerHTML = CATALOG[slot].map(item => {
+    $('#itemGrid').innerHTML = CATALOG[slot].filter(item => !item.off || lookOf(ui.style.target.def.id)[slot] === item.id).map(item => {
       const owned = isOwned(slot, item.id), eq = lookOf(ui.style.target.def.id)[slot] === item.id, isPv = pv && pv.slot === slot && pv.id === item.id;
       const cls = eq ? 'is-equipped' : owned ? 'is-owned' : 'is-locked';
       const meta = eq ? 'Equipped' : owned ? 'Owned · tap to use' : item.locked ? `${LOCK}Stall level ${item.level}` : `${LOCK}<span class="coin-ico sm" aria-hidden="true"></span>${item.price}<span class="sr"> coins</span>`;
@@ -1989,6 +2031,8 @@ function buildGame(hot) {
     if (typeof st.balance === 'number') { wallet.balance = st.balance; syncCoins(); }
     if (Array.isArray(st.catalog)) {
       state.owned = st.catalog.filter(c => c.owned).map(c => c.id);
+      /* items Sellio has taken off sale (Admin → Coins) aren't in the server's catalog, so they're hidden here too */
+      for (const slot of SLOTS) for (const it of CATALOG[slot]) it.off = !st.catalog.some(c => c.slot === slot && c.code === it.id);
       for (const c of st.catalog) { const it = CATALOG[c.slot] && CATALOG[c.slot].find(i => i.id === c.code); if (it) { it.price = c.price; it.locked = !!c.level_locked; it.level = c.min_stall_level; } }
     }
     if (st.style) state.equipped[ui.style.target.def.id] = { sign: lookId('sign', st.style.sign), lights: lookId('lights', st.style.lights), decor: lookId('decor', st.style.decor) };
@@ -2165,7 +2209,8 @@ function buildGame(hot) {
   if (LIVE) {
     $('#goalChip').hidden = true; $('#goalsLabel').hidden = true; $('#goalList').hidden = true; $('#btnReset').hidden = true;
     $('#btnStyle').hidden = !myStalls.length;
-    $('#helpCoins').textContent = 'Walk over the coins on Pop-up Street. New ones arrive every day, with extra in the evening, and each is worth 1 to 5. Your first visits to shops each day earn coins too.';
+    const worth = wallet.dropMax <= 1 ? '1 coin' : wallet.dropMax === 2 ? '1 or 2' : `1 to ${wallet.dropMax}`;
+    $('#helpCoins').textContent = `Walk over the coins on Pop-up Street. New ones arrive every day, with extra in the evening, and each is worth ${worth}. Your first visits to shops each day earn coins too${wallet.dailyCap ? `, up to ${wallet.dailyCap} coins a day in all` : ''}.`;
     const leave = $('#btnLeave'); leave.hidden = false; leave.addEventListener('click', () => host.call('leave'));
     if (wallet.guest) { const chip = $('#coinChip'); chip.classList.add('signin'); chip.setAttribute('role', 'button'); chip.tabIndex = 0; chip.addEventListener('click', () => host.call('navigate', (boot.links && boot.links.signIn) || '/Auth')); }
   }
@@ -2254,7 +2299,7 @@ function buildGame(hot) {
   }
   const statusOf = D => {
     const n = D.shops.length, v = D.shops.filter(s => s.vacant).length, res = D.shops.filter(s => s.reserved).length;
-    return D.key === 'popup' ? `${n - v - res} stalls open · ${res} reserved · ${v} lots for sale` : `${n - v} example shops · ${v} to let`;
+    return D.key === 'popup' ? `${n - v - res} stalls open · ${res} reserved · ${v} lots for sale` : `${n - v} example shops · ${v} open for lease`;
   };
   function renderPlaces() {
     const here = curPlace || PLAZA;

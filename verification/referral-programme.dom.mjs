@@ -3,7 +3,9 @@
 // join). Checks lib/referral.js (codes, the 60 days on this device, ref_CODE in sign-up
 // checkouts), the invite page (/r/CODE), Refer & earn (/refer) in each of its states, the share
 // and "i" sheets, the Me row, and the code fields in the two plan windows, against a stand-in
-// for Sellio's database.
+// for Sellio's database. Since 24 Nov 2026 (Alvin: every shop has a code, and it earns Sellio
+// Coins): every owner's code and coins, a home shop's code earning once, becoming a distributor
+// as the business part, the invite page's free home shop, and Admin → Coins.
 // Run: node verification/referral-programme.dom.mjs   (jsdom installed in /tmp/sellio-verification)
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -107,6 +109,11 @@ win.open = (url = '') => { const tab = { url, location: { href: url }, closed: f
 
 const RATES = { monthly: 0.03, yearly: 0.05, friendMonthly: 0.01, friendYearly: 0.03, milestoneShops: 10 };
 const KOPI = { found: true, code: '4PWJDZ', shopName: 'Kopi Corner', logoUrl: null, firstName: 'Ah Hock', whatsapp: '6591234567' };
+// Every shop's code (referral_overview): Kopi Corner's, two home sellers and a business in; a home shop's, nobody yet.
+const OVERVIEW = { code: '4PWJDZ', link: 'https://sellio.sg/r/4PWJDZ', homeShop: false, canShare: true, coins: { free: 50, merchant: 100 },
+  uses: null, invited: { waiting: 1, sellers: 2, businesses: 1, coins: 200 }, balance: 230 };
+const HOME_OVERVIEW = { ...OVERVIEW, code: 'MEY234', link: 'https://sellio.sg/r/MEY234', homeShop: true, uses: { limit: 1, left: 1 },
+  invited: { waiting: 0, sellers: 0, businesses: 0, coins: 0 }, balance: 0 };
 
 try {
   await build({
@@ -117,6 +124,7 @@ try {
         "export { default as Refer } from '@/pages/Refer';",
         "export { default as ReferralInvite } from '@/pages/ReferralInvite';",
         "export { default as ExploreMe } from '@/components/explore/ExploreMe';",
+        "export { default as CoinsAdmin } from '@/components/admin/CoinsAdmin';",
         "export { default as PricingModal } from '@/components/subscription/PricingModal';",
         "export { default as AuthPricingModal } from '@/components/auth/AuthPricingModal';",
         "export { default as TenantContext } from '@/components/tenant/TenantContext';",
@@ -140,7 +148,7 @@ try {
     await settle();
     return async () => { await act(async () => root.unmount()); host.remove(); document.body.innerHTML = ''; };
   }
-  const reset = () => { calls.length = 0; answers = {}; globalThis.toasts = []; clipboard.length = 0; tabs.length = 0; referral.forgetReferral(); };
+  const reset = () => { calls.length = 0; answers = { referral_overview: () => ({ data: OVERVIEW, error: null }) }; globalThis.toasts = []; clipboard.length = 0; tabs.length = 0; referral.forgetReferral(); };
   const owner = (tenant = {}, extra = {}) => {
     const shop = { id: 'shop-1', name: 'Kopi Corner', slug: 'kopi-corner', seller_type: 'merchant', owner_email: 'hock@kopi.sg', ...tenant };
     globalThis.appUserState = { appUser: { id: 'u-1', full_name: 'Ah Hock Tan', email: 'hock@kopi.sg', phone: '91234567', tenant_id: shop.id }, clearAppUser() {} };
@@ -258,15 +266,18 @@ try {
   answers.referral_join = () => { joined = true; return { data: { ok: true, code: '4PWJDZ' }, error: null }; };
   close = await show(h(app.Refer), ['/refer']);
   assert.deepEqual(callsTo('referral_dashboard')[0][1], { p_tenant_id: 'shop-1' });
-  assert.match(text(byTestId('refer-pitch')), /Earn on every shop you bring to Sellio 3% of every monthly payment and 5% of every yearly payment from shops that join with your code\./);
+  assert.deepEqual(callsTo('referral_overview')[0][1], { p_tenant_id: 'shop-1' });
+  assert.equal(text(byTestId('refer-code')), '4PWJDZ', 'every shop has its code before it becomes a distributor');
+  assert.match(text(byTestId('refer-pitch')), /Become a Sellio distributor 3% of every monthly payment and 5% of every yearly payment from shops that join with your code\./);
   assert.match(text(byTestId('refer-pitch')), /By tapping, you agree to the Sellio Distributor Terms\./);
   assert.match(pageText(), /Share your code WhatsApp it, show the QR on your phone, or tell owners the code\./);
   await click(byTestId('refer-join'));
   assert.deepEqual(callsTo('referral_join')[0][1], { p_tenant_id: 'shop-1', p_terms_version: '2026-11-draft' }, 'the terms version shown');
-  assert.equal(text(byTestId('refer-code')), '4PWJDZ', 'the code, straight away');
-  assert.deepEqual(globalThis.toasts.at(-1), ['success', 'Your referral code is ready.']);
+  assert.match(text(byTestId('refer-distributor')), /^You’re a Sellio distributor 3% of every monthly payment/, 'a distributor now, under the same code');
+  assert.equal(text(byTestId('refer-code')), '4PWJDZ');
+  assert.deepEqual(globalThis.toasts.at(-1), ['success', 'You’re a Sellio distributor now.']);
   await close();
-  passed('first visit: the rates from Sellio, and "Get my referral code" joins with the terms version it showed');
+  passed('first visit: the code from the start; "Become a distributor" joins with the terms version it showed'); 
 
   // Refused: the database's words, in the screen's words.
   reset();
@@ -291,10 +302,10 @@ try {
 
   // 5. Not yet: still on the free trial (Alvin: paying shops only), joining closed, plan lapsed.
   for (const [label, setup, dashboard, admin, want] of [
-    ['trial', () => owner({}, { subscription: { status: 'trial', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'trial' }, false, /Refer & earn opens after your shop’s first payment\. Your code will be here then\./],
-    ['trial', () => owner(), { joiningOpen: true, canJoin: false, joinBlock: 'no payment' }, false, /Refer & earn opens after your shop’s first payment\./],
-    ['soon', () => owner(), { joiningOpen: false, canJoin: true, joinBlock: null }, false, /Refer & earn isn't open yet\./],
-    ['inactive', () => owner({}, { subscription: { status: 'cancelled', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'plan lapsed' }, false, /Refer & earn opens when your business plan is active\./],
+    ['trial', () => owner({}, { subscription: { status: 'trial', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'trial' }, false, /You can become a distributor after your shop’s first payment\./],
+    ['trial', () => owner(), { joiningOpen: true, canJoin: false, joinBlock: 'no payment' }, false, /You can become a distributor after your shop’s first payment\./],
+    ['soon', () => owner(), { joiningOpen: false, canJoin: true, joinBlock: null }, false, /Distributor earnings aren’t open yet\. Your code earns coins in the meantime\./],
+    ['inactive', () => owner({}, { subscription: { status: 'cancelled', tier: 'growth' } }), { joiningOpen: true, canJoin: false, joinBlock: 'plan lapsed' }, false, /You can become a distributor when your business plan is active\./],
   ]) {
     reset();
     setup();
@@ -303,6 +314,8 @@ try {
     close = await show(h(app.Refer), ['/refer']);
     assert.match(text(byTestId(`refer-${label}`)), want, label);
     assert.equal(byTestId('refer-join'), null, `${label}: no join button`);
+    assert.equal(text(byTestId('refer-code')), '4PWJDZ', `${label}: the code all the same`);
+    assert.ok(byTestId('refer-copy'), `${label}: and it's shared`);
     await close();
   }
   // Joining closed, but a Sellio admin: can join (to try it before it opens).
@@ -383,6 +396,7 @@ try {
     reset();
     owner();
     answers.referral_dashboard = () => ({ data: { ...joinedAnswer, ...extra }, error: null });
+    answers.referral_overview = () => ({ data: { ...OVERVIEW, canShare: shares }, error: null }); // referral_overview: not while paused or closed
     close = await show(h(app.Refer), ['/refer']);
     assert.match(text(byTestId('refer-not-earning')), want);
     assert.equal(!!byTestId('refer-copy'), shares, shares ? 'still shared' : 'not shared');
@@ -390,18 +404,44 @@ try {
   }
   passed('not earning: a lapsed plan, a paused code and a closed one each say so; a paused or closed code has no share buttons');
 
-  // 9. Not for them: a free home shop (no call to Sellio), a staff login, signed out.
+  // 9. A free home shop: its code earns coins, once, with no distributor part. Not for a staff
+  // login, someone with no shop yet, or a signed-out visitor.
   reset();
-  owner({ seller_type: 'individual' });
+  owner({ seller_type: 'individual', name: 'Mei Bakes' });
+  answers.referral_overview = () => ({ data: HOME_OVERVIEW, error: null });
   close = await show(h(app.Refer), ['/refer']);
-  assert.equal(text(byTestId('refer-not-for-you')), 'Refer & earn is for the owners of business shops on a paid plan.');
-  assert.equal(callsTo('referral_dashboard').length, 0);
+  assert.equal(text(byTestId('refer-code')), 'MEY234');
+  assert.equal(text(byTestId('refer-code-once')), 'A home shop’s code earns once: for the first shop that joins with it.');
+  assert.equal(text(byTestId('refer-coins-free')), '50 coins when a home seller opens a free shop with your code and lists their first item.');
+  assert.equal(text(byTestId('refer-coins-merchant')), '100 coins when a business signs up with your code and makes its first payment.');
+  assert.equal(text(byTestId('refer-balance')), 'You have 0 coins. Spend them on your stall in Sellio World');
+  assert.equal(decodeURIComponent(byTestId('refer-card-whatsapp').getAttribute('href').split('text=')[1]),
+    'Hi! I sell from home with Mei Bakes on Sellio. Open your own shop free with my link: https://sellio.sg/r/MEY234', "a home seller's message");
+  assert.equal(byTestId('refer-pitch'), null, 'no distributor part');
+  assert.equal(byTestId('refer-info'), null);
+  assert.equal(callsTo('referral_dashboard').length, 0, "…and the distributor's dashboard isn't asked");
+  await close();
+  reset();
+  owner({ seller_type: 'individual', name: 'Mei Bakes' });
+  answers.referral_overview = () => ({ data: { ...HOME_OVERVIEW, canShare: false, uses: { limit: 1, left: 0 }, invited: { waiting: 0, sellers: 1, businesses: 0, coins: 50 }, balance: 50 }, error: null });
+  close = await show(h(app.Refer), ['/refer']);
+  assert.equal(text(byTestId('refer-code-used')), 'Your code has earned its coins. Thank you for bringing someone to Sellio!');
+  assert.equal(byTestId('refer-copy'), null, 'used: not shared any more');
+  assert.equal(text(byTestId('refer-count-sellers')), '1 Home sellers');
+  assert.equal(text(byTestId('refer-count-coins')), '50 Coins earned');
   await close();
   reset();
   owner({}, { isOwner: false });
   close = await show(h(app.Refer), ['/refer']);
   assert.equal(text(byTestId('refer-not-for-you')), "Only the shop's owner can see this.");
-  assert.equal(callsTo('referral_dashboard').length, 0);
+  assert.equal(callsTo('referral_dashboard').length + callsTo('referral_overview').length, 0);
+  await close();
+  reset();
+  globalThis.appUserState = { appUser: { id: 'u-2', full_name: 'Siti Rahman', email: 'siti@example.com', tenant_id: null }, clearAppUser() {} };
+  globalThis.tenantState = { tenant: null, isOwner: false, subscription: null, noStore: true, isLoading: false, hasPermission: () => false };
+  close = await show(h(app.Refer), ['/refer']);
+  assert.equal(text(byTestId('refer-not-for-you')), 'Every Sellio shop has a referral code. Open a free home shop to get yours.');
+  assert.equal(byTestId('refer-open-shop').getAttribute('href'), '/Join');
   await close();
   reset();
   globalThis.appUserState = { appUser: null };
@@ -409,32 +449,34 @@ try {
   close = await show(h(app.Refer), ['/refer']);
   assert.match(pageText(), /Log in to your shop to see your referral code\./);
   await close();
-  passed("a free home shop, a staff login and a signed-out visitor don't get a code (and Sellio isn't asked)");
+  passed("a free home shop's code earns coins once (a home seller's message, no distributor part); staff, no shop yet and signed out get no code");
 
-  // 10. The Me row: a business shop's owner, once joining is open (or a Sellio admin before).
-  async function meRow(dashboard, { admin = false, setup = () => owner() } = {}) {
+  // 10. The Me row: every shop's owner, with the code (NEW until someone joins with it); Sellio's
+  // admins also get Admin → Coins.
+  async function meRow(overview, { admin = false, setup = () => owner() } = {}) {
     reset();
     setup();
-    answers.referral_dashboard = () => ({ data: dashboard, error: null });
+    answers.referral_overview = () => ({ data: overview, error: null });
     answers.am_i_sellio_admin = () => ({ data: admin, error: null });
     const done = await show(h(app.ExploreMe), ['/explore/me']);
     await settle();
     const row = byTestId('refer-row');
-    const result = row ? { text: text(row), href: row.getAttribute('href') } : null;
+    const coins = document.body.querySelector('a[href="/admin/coins"]');
+    const result = row ? { text: text(row), href: row.getAttribute('href'), coins: coins ? text(coins) : null } : null;
     await done();
     return result;
   }
-  let row = await meRow(joinedAnswer);
+  let row = await meRow(OVERVIEW);
   assert.equal(row?.href, '/refer');
   assert.equal(row?.text, 'Refer & earn Your code: 4PWJDZ');
-  row = await meRow({ joined: false, joiningOpen: true, canJoin: true, rates: RATES });
-  assert.equal(row?.text, 'Refer & earn NEW Earn 3% of monthly and 5% of yearly payments from shops you bring to Sellio');
-  assert.equal(await meRow({ joined: false, joiningOpen: false, canJoin: true, rates: RATES }), null, 'joining closed: no row');
-  assert.ok(await meRow({ joined: false, joiningOpen: false, canJoin: true, rates: RATES }, { admin: true }), "a Sellio admin's row, to try it");
-  assert.equal(await meRow(joinedAnswer, { setup: () => owner({ seller_type: 'individual' }) }), null, 'a free home shop: no row');
-  assert.equal(callsTo('referral_dashboard').length, 0, '…and no call');
-  assert.equal(await meRow(joinedAnswer, { setup: () => owner({}, { isOwner: false }) }), null, 'staff: no row');
-  passed("Me: the Refer & earn row for a business shop's owner (their code once joined), once joining opens or for a Sellio admin");
+  assert.equal(row?.coins, null, 'Admin → Coins: admins only');
+  row = await meRow(HOME_OVERVIEW, { setup: () => owner({ seller_type: 'individual' }) });
+  assert.equal(row?.text, 'Refer & earn NEW Your code: MEY234', 'a free home shop too, NEW until someone joins with its code');
+  row = await meRow(OVERVIEW, { admin: true });
+  assert.equal(row?.coins, 'Sellio Coins Coin prices, the daily limit and referral coins');
+  assert.equal(await meRow(OVERVIEW, { setup: () => owner({}, { isOwner: false }) }), null, 'staff: no row');
+  assert.equal(callsTo('referral_overview').length, 0, '…and no call');
+  passed("Me: the Refer & earn row for every shop's owner, with the code (NEW until someone joins); Admin → Coins for Sellio's admins");
 
   // 11. The shop's plan window: a free home shop moving to a business plan names its distributor.
   const homeShop = () => owner({ seller_type: 'individual', has_used_trial: false }, { subscription: null });
@@ -530,6 +572,88 @@ try {
   assert.match(appSource, /<Route path="\/refer" element=\{<LayoutWrapper currentPageName="Explore"><Refer \/><\/LayoutWrapper>\} \/>/);
   passed("the landing page's plan buttons carry a kept code; /r/CODE is public and /refer is in the app");
 
+  // 12. A home seller's invitation: selling from home comes first (the code kept for the new shop),
+  // and the line says it earns coins, not a commission. A distributor's has it after the plans.
+  reset();
+  globalThis.appUserState = { appUser: null };
+  const MEI = { found: true, code: 'MEY234', shopName: 'Mei Bakes', logoUrl: null, firstName: 'Mei', homeShop: true, distributor: false, whatsapp: null };
+  answers.referral_code_info = () => ({ data: MEI, error: null });
+  close = await show(h(Routes, null, h(Route, { path: '/r/:code', element: h(app.ReferralInvite) })), ['/r/MEY234']);
+  let homeCard = byTestId('invite-home-shop');
+  assert.ok(homeCard, 'the free home shop card');
+  assert.ok(homeCard.compareDocumentPosition(byTestId('invite-trial')) & win.Node.DOCUMENT_POSITION_FOLLOWING, 'before the business plans');
+  assert.equal(byTestId('invite-home-shop-start').getAttribute('href'), '/Join', 'signed out: the account first');
+  assert.equal(text(byTestId('invite-disclosure')), 'Mei earns Sellio Coins if you join with this code. It costs you nothing.');
+  assert.equal(referral.keptReferral()?.code, 'MEY234', 'kept for the new shop');
+  await close();
+  reset();
+  owner();
+  answers.referral_code_info = () => ({ data: { ...KOPI, homeShop: false, distributor: true }, error: null });
+  close = await show(h(Routes, null, h(Route, { path: '/r/:code', element: h(app.ReferralInvite) })), ['/r/4PWJDZ']);
+  homeCard = byTestId('invite-home-shop');
+  const planButtons = allByTestId('invite-trial');
+  assert.ok(planButtons.at(-1).compareDocumentPosition(homeCard) & win.Node.DOCUMENT_POSITION_FOLLOWING, "a business's invitation: after the plans");
+  assert.equal(byTestId('invite-home-shop-start').getAttribute('href'), '/Account', 'signed in: straight to opening the shop');
+  assert.equal(text(byTestId('invite-disclosure')), 'Ah Hock earns a commission from Sellio if you subscribe. Your price is the same.');
+  await close();
+  passed("the invite page: a free home shop for every code (first for a home seller's), and the coins line for a code that isn't a distributor's");
+
+  // 13. Admin → Coins: Sellio's admins change the rules and the prices; only what changed is
+  // sent, every value is checked first, and others are turned away.
+  const COINS = {
+    settings: { drop_max_value: 2, daily_cap: 30, referral_coins_free: 50, referral_coins_merchant: 100, referral_free_code_uses: 1 },
+    items: [
+      { id: 'sign:wood', slot: 'sign', code: 'wood', name: 'Timber Board', price: 0, active: true, starter: true, owners: 0 },
+      { id: 'sign:neon', slot: 'sign', code: 'neon', name: 'Neon Tube', price: 30, active: true, starter: false, owners: 2 },
+      { id: 'decor:balloons', slot: 'decor', code: 'balloons', name: 'Balloons', price: 18, active: true, starter: false, owners: 0 },
+    ],
+    players: { wallets: 3, coins: 0 }, referrals: { waiting: 0, sellers: 0, businesses: 0, coins: 0 },
+  };
+  reset();
+  owner();
+  answers.am_i_sellio_admin = () => ({ data: true, error: null });
+  answers.coins_admin_overview = () => ({ data: COINS, error: null });
+  answers.coins_admin_save = ({ p_settings }) => ({ data: { ...COINS, settings: { ...COINS.settings, ...p_settings } }, error: null });
+  close = await show(h(app.CoinsAdmin), ['/admin/coins']);
+  await settle();
+  assert.equal(text(byTestId('coins-admin-changes')), 'No changes');
+  assert.ok(byTestId('coins-admin-save').disabled);
+  assert.match(text(byTestId('coins-item-wood')), /Starting look: free, always on/);
+  assert.equal(byTestId('coins-item-wood').querySelector('input'), null, 'the starting look has no price to change');
+  assert.match(text(byTestId('coins-item-neon')), /2 stalls have it/);
+  await type(document.body.querySelector('#rule-daily_cap'), '40');
+  await type(document.body.querySelector('[id="price-sign:neon"]'), '99');
+  await click(byTestId('coins-item-balloons-active'));
+  assert.equal(text(byTestId('coins-admin-changes')), '3 changes to save');
+  await type(document.body.querySelector('#rule-drop_max_value'), '9');
+  assert.equal(text(byTestId('coins-admin-changes')), 'Fix the fields in red to save.', 'a coin worth 9: out of range');
+  assert.ok(byTestId('coins-admin-save').disabled);
+  await type(document.body.querySelector('#rule-drop_max_value'), '2');
+  await click(byTestId('coins-admin-save'));
+  assert.deepEqual(callsTo('coins_admin_save')[0][1], { p_settings: { daily_cap: 40 }, p_items: [{ id: 'sign:neon', price: 99 }, { id: 'decor:balloons', active: false }] });
+  assert.deepEqual(globalThis.toasts.at(-1), ['success', 'Saved 3 changes.']);
+  await close();
+  reset();
+  owner();
+  answers.am_i_sellio_admin = () => ({ data: true, error: null });
+  answers.coins_admin_overview = () => ({ data: COINS, error: null });
+  answers.coins_admin_save = () => ({ data: null, error: { code: '22023', message: 'daily_cap must be a whole number from 0 to 1000.' } });
+  close = await show(h(app.CoinsAdmin), ['/admin/coins']);
+  await settle();
+  await type(document.body.querySelector('#rule-daily_cap'), '45');
+  await click(byTestId('coins-admin-save'));
+  assert.deepEqual(globalThis.toasts.at(-1), ['error', 'daily_cap must be a whole number from 0 to 1000.'], "the database's words");
+  await close();
+  reset();
+  owner();
+  answers.am_i_sellio_admin = () => ({ data: false, error: null });
+  close = await show(h(app.CoinsAdmin), ['/admin/coins']);
+  await settle();
+  assert.ok(byTestId('coins-admin-denied'));
+  assert.equal(callsTo('coins_admin_overview').length, 0);
+  await close();
+  passed('Admin → Coins: the rules and prices saved together (only what changed), every value checked first, the database\'s refusals shown; others turned away');
+
   // 14. In 中文 (and the other languages): the explore group's words.
   reset();
   await app.resetAppTextForTests({ preview: 'zh', choice: 'zh' });
@@ -537,9 +661,10 @@ try {
   answers.referral_dashboard = () => ({ data: { joined: false, joiningOpen: true, termsVersion: '2026-11-draft', canJoin: true, rates: RATES }, error: null });
   close = await show(h(app.Refer), ['/refer']);
   await settle(10);
-  assert.match(pageText(), /推荐赚佣金/);
-  assert.match(text(byTestId('refer-join')), /获取我的推荐码/);
-  assert.match(text(byTestId('refer-pitch')), /每笔按月付款您赚 3%，每笔按年付款赚 5%/);
+  assert.match(pageText(), /推荐赚奖励/);
+  assert.match(text(byTestId('refer-join')), /成为分销商/);
+  assert.match(text(byTestId('refer-pitch')), /成为 Sellio 分销商.*每笔按月付款您赚 3%，每笔按年付款赚 5%/);
+  assert.match(text(byTestId('refer-coins-free')), /^居家卖家用您的推荐码开设免费店铺并发布第一件商品时，您得 50 金币。$/);
   await close();
   await app.resetAppTextForTests();
   passed('Refer & earn in 中文');

@@ -19,6 +19,12 @@ import { N_, englishText } from '@/lib/appText';
 //
 // Alvin, 20 Nov 2026: the code part first; the wallet and how earnings are paid out wait. So
 // nothing here reads the wallet, pending earnings or the plan fee back.
+//
+// Alvin, 24 Nov 2026: every shop has a code, free home shops too, and it earns Sellio Coins (no
+// vouchers until MAS has cleared them): 50 for a home seller who opens a free shop with it and
+// lists something, 100 for a business that signs up with it and pays. A free seller's code earns
+// once; a business's has no limit. Both amounts and the limit are Sellio's to change (Admin →
+// Coins). A distributor's code is its shop's code, so a business that becomes one keeps it.
 
 export const KEEP_DAYS = 60;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -156,6 +162,17 @@ export const referralDashboard = (tenantId) => rpc('referral_dashboard', { p_ten
 export const joinReferral = (tenantId, termsVersion) => rpc('referral_join', { p_tenant_id: tenantId, p_terms_version: termsVersion });
 export const attachReferral = (tenantId, code) => rpc('referral_attach', { p_tenant_id: tenantId, p_code: code });
 export const setReferralWhatsapp = (tenantId, show) => rpc('referral_set_whatsapp', { p_tenant_id: tenantId, p_show: !!show });
+// Every shop's owner: the shop's code (made the first time) and what it has earned. {code, link,
+// homeShop, canShare, coins: {free, merchant}, uses: {limit, left} or null (no limit), invited:
+// {waiting, sellers, businesses, coins}, balance}. canShare is false once a free seller's code has
+// earned, or while Sellio has paused the shop's distributor code.
+export const referralOverview = (tenantId) => rpc('referral_overview', { p_tenant_id: tenantId });
+// A new free home shop (its first 7 days) names whose code brought it: typed, or from a link.
+export const attachFreeReferral = (tenantId, code, { typed = false } = {}) => rpc('referral_attach_free', { p_tenant_id: tenantId, p_code: code, p_typed: !!typed });
+// Admin → Coins (Sellio's admins): {settings, items, players, referrals}; saving takes the settings
+// that changed ({key: number}) and the items that changed ([{id, price?, active?}]).
+export const coinsAdminOverview = () => rpc('coins_admin_overview');
+export const coinsAdminSave = (settings, items) => rpc('coins_admin_save', { p_settings: settings || {}, p_items: items || [] });
 
 // What those functions say when they refuse, word for word (a screen shows them through its t).
 const DATABASE_SAYS = new Set([
@@ -172,6 +189,8 @@ const DATABASE_SAYS = new Set([
   N_("A referral code can only be added before the shop's first payment."),
   N_("This shop's referral is settled already."),
   N_("This shop hasn't joined Refer & earn."),
+  N_('This code has been used already.'),
+  N_('A referral code can only be added when a shop is new.'),
 ]);
 export function referralErrorMessage(error, t = englishText, fallback = null) {
   const message = error?.message;

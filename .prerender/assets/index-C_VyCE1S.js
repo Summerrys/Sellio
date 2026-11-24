@@ -707,7 +707,11 @@ const signup = {
   "Message Sellio on WhatsApp and we’ll help you set up.": "Kirim pesan ke Sellio lewat WhatsApp, kami akan membantu Anda memulai.",
   "WhatsApp Sellio": "WhatsApp Sellio",
   "Already selling from home on Sellio? {link} and move your shop to a business plan. The code stays applied.": "Sudah berjualan dari rumah di Sellio? {link} lalu pindahkan toko Anda ke paket usaha. Kodenya tetap terpasang.",
-  "{name} earns a commission from Sellio if you subscribe. Your price is the same.": "{name} mendapat komisi dari Sellio jika Anda berlangganan. Harga Anda tetap sama."
+  "{name} earns a commission from Sellio if you subscribe. Your price is the same.": "{name} mendapat komisi dari Sellio jika Anda berlangganan. Harga Anda tetap sama.",
+  "Open a free home shop": "Buka toko rumahan gratis",
+  "Selling from home?": "Berjualan dari rumah?",
+  "Open a home shop on Sellio for free: your own shop page, orders and chats with buyers. The code stays applied.": "Buka toko rumahan di Sellio gratis: halaman toko sendiri, pesanan, dan chat dengan pembeli. Kodenya tetap terpasang.",
+  "{name} earns Sellio Coins if you join with this code. It costs you nothing.": "{name} mendapat Koin Sellio jika Anda bergabung dengan kode ini. Anda tidak dikenai biaya apa pun."
 };
 const Dashboard = "Dasbor";
 const Categories = "Kategori";
@@ -2820,7 +2824,9 @@ const shop = {
   "Open the packing photo of order #{number}": "Buka foto kemasan pesanan #{number}",
   "Packed {when}": "Dikemas {when}",
   "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "Pembeli akan melihat foto ini. Tulis {number} di paket atau secarik catatan, dan pastikan terlihat di foto.",
-  "Packed · take photo": "Sudah dikemas · ambil foto"
+  "Packed · take photo": "Sudah dikemas · ambil foto",
+  "This code has been used already.": "Kode ini sudah dipakai.",
+  "A referral code can only be added when a shop is new.": "Kode referal hanya bisa ditambahkan saat toko masih baru."
 };
 const All = "Semua";
 const Goods = "Barang";
@@ -2915,6 +2921,7 @@ const Ordering = "Pemesanan";
 const Design = "Tampilan";
 const NEW = "BARU";
 const Copy = "Salin";
+const Businesses = "Usaha";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3473,7 +3480,7 @@ const explore = {
   "Your code: {code}": "Kode Anda: {code}",
   "Earn {monthly} of monthly and {yearly} of yearly payments from shops you bring to Sellio": "Dapatkan {monthly} dari pembayaran bulanan dan {yearly} dari pembayaran tahunan toko yang Anda ajak ke Sellio",
   NEW,
-  "Refer & earn": "Ajak & dapat komisi",
+  "Refer & earn": "Ajak & dapat hadiah",
   "How Refer & earn works": "Cara kerja Ajak & dapat komisi",
   "{monthly} of monthly, {yearly} of yearly payments": "{monthly} dari pembayaran bulanan, {yearly} dari pembayaran tahunan",
   "Every time a shop that joined with your code pays its plan, for as long as it stays. Free trials and failed payments don’t earn.": "Setiap kali toko yang bergabung dengan kode Anda membayar paketnya, selama toko itu bertahan. Uji coba gratis dan pembayaran yang gagal tidak menghasilkan komisi.",
@@ -3545,7 +3552,32 @@ const explore = {
   "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "Tunjukkan ini saat pesanan Anda diantar. Penjual atau kurirnya akan memindainya untuk memastikan pesanan sudah Anda terima.",
   "Open the packing photo": "Buka foto kemasan",
   "Your order, packed": "Pesanan Anda, sudah dikemas",
-  "Packed {when}. The seller took this photo in Sellio.": "Dikemas {when}. Penjual mengambil foto ini di Sellio."
+  "Packed {when}. The seller took this photo in Sellio.": "Dikemas {when}. Penjual mengambil foto ini di Sellio.",
+  "Sellio Coins": "Koin Sellio",
+  "Coin prices, the daily limit and referral coins": "Harga koin, batas harian, dan koin referal",
+  "Hi! I sell from home with {shop} on Sellio. Open your own shop free with my link: {link}": "Halo! Saya berjualan dari rumah lewat {shop} di Sellio. Buka toko Anda sendiri gratis lewat tautan saya: {link}",
+  "Hi! I sell from home on Sellio. Open your own shop free with my link: {link}": "Halo! Saya berjualan dari rumah di Sellio. Buka toko Anda sendiri gratis lewat tautan saya: {link}",
+  "This code has been used already.": "Kode ini sudah dipakai.",
+  "A referral code can only be added when a shop is new.": "Kode referal hanya bisa ditambahkan saat toko masih baru.",
+  "Become a Sellio distributor": "Jadi distributor Sellio",
+  "Earn Sellio Coins": "Dapatkan Koin Sellio",
+  "{coins} coins when a home seller opens a free shop with your code and lists their first item.": "{coins} koin saat penjual rumahan membuka toko gratis dengan kode Anda dan mengunggah produk pertamanya.",
+  "{coins} coins when a business signs up with your code and makes its first payment.": "{coins} koin saat usaha mendaftar dengan kode Anda dan melakukan pembayaran pertamanya.",
+  Businesses,
+  "Still to list or pay": "Belum mengunggah atau membayar",
+  "Coins earned": "Koin didapat",
+  "You have {coins} coins. {link}": "Anda punya {coins} koin. {link}",
+  "Spend them on your stall in Sellio World": "Pakai untuk lapak Anda di Sellio World",
+  "You’re a Sellio distributor now.": "Anda sekarang distributor Sellio.",
+  "Every Sellio shop has a referral code. Open a free home shop to get yours.": "Setiap toko Sellio punya kode referal. Buka toko rumahan gratis untuk mendapatkan kode Anda.",
+  "Open a free home shop": "Buka toko rumahan gratis",
+  "Your code has earned its coins. Thank you for bringing someone to Sellio!": "Kode Anda sudah mendapatkan koinnya. Terima kasih sudah mengajak seseorang ke Sellio!",
+  "A home shop’s code earns once: for the first shop that joins with it.": "Kode toko rumahan hanya menghasilkan sekali: untuk toko pertama yang bergabung dengannya.",
+  "Become a distributor": "Jadi distributor",
+  "Distributor earnings aren’t open yet. Your code earns coins in the meantime.": "Penghasilan distributor belum dibuka. Sementara itu, kode Anda menghasilkan koin.",
+  "You can become a distributor after your shop’s first payment.": "Anda bisa menjadi distributor setelah pembayaran pertama toko Anda.",
+  "You can become a distributor when your business plan is active.": "Anda bisa menjadi distributor saat paket usaha Anda aktif.",
+  "You’re a Sellio distributor": "Anda distributor Sellio"
 };
 const GROUPS = { signup, shop, explore };
 export {

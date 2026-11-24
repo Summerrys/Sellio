@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift, Coins } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -9,7 +9,7 @@ import { amIModerator, moderationQueue, ratingReviewQueue, ratingText, shopRatin
 import { itemWords } from '@/lib/planFeatures';
 import { purchaseSummary } from '@/lib/purchases';
 import { amISellioAdmin, feedbackSummary } from '@/lib/appFeedback';
-import { ratePercent, referralDashboard } from '@/lib/referral';
+import { referralOverview } from '@/lib/referral';
 import AccountProfileModal from '@/components/profile/AccountProfileModal';
 import PricingModal from '@/components/subscription/PricingModal';
 import { ProfileAvatar, ProfilePhotoEditor } from '@/components/profile/ProfilePhoto';
@@ -48,7 +48,7 @@ function Row({ to, href, icon: Icon, label, detail, onClick, pulse = false }) {
 }
 
 export default function ExploreMe() {
-  const { t, textKey, locale } = useAppText('explore');
+  const { t, textKey } = useAppText('explore');
   const { appUser, clearAppUser } = useAppUser() || {};
   const { user, tenant, hasPermission, isOwner, subscription, noStore } = useTenant();
   const [signingOut, setSigningOut] = useState(false);
@@ -122,23 +122,20 @@ export default function ExploreMe() {
     : appFeedback.lowOpen === 1 ? t('1 low rating to look at')
       : appFeedback.lowOpen > 1 ? t('{count} low ratings to look at', { count: appFeedback.lowOpen })
         : t('How people rate the Sellio app');
-  // Refer & earn (/refer): for the owner of a business shop, once joining is open (before that,
-  // only Sellio's admins, to try it). A distributor's row shows their code.
-  const canRefer = hasShop && !!isOwner && !!tenant?.id && tenant.seller_type !== 'individual';
-  const [referral, setReferral] = useState(null); // referral_dashboard's answer
+  // Refer & earn (/refer): every shop's owner, free home shops too (Alvin, 24 Nov 2026). The row
+  // shows the shop's code (referral_overview makes it the first time), NEW until someone joins.
+  const canRefer = hasShop && !!isOwner && !!tenant?.id;
+  const [referral, setReferral] = useState(null); // referral_overview's answer
   useEffect(() => {
     if (!canRefer) { setReferral(null); return undefined; }
     let cancelled = false;
-    referralDashboard(tenant.id).then((answer) => { if (!cancelled) setReferral(answer || null); })
+    referralOverview(tenant.id).then((answer) => { if (!cancelled) setReferral(answer || null); })
       .catch(() => { if (!cancelled) setReferral(null); });
     return () => { cancelled = true; };
   }, [canRefer, tenant?.id]);
-  const showRefer = !!referral && (referral.joined || referral.joiningOpen || sellioAdmin);
-  const referLine = !referral ? null
-    : referral.joined ? t('Your code: {code}', { code: referral.code })
-      : t('Earn {monthly} of monthly and {yearly} of yearly payments from shops you bring to Sellio', {
-        monthly: ratePercent(referral.rates?.monthly, locale), yearly: ratePercent(referral.rates?.yearly, locale),
-      });
+  const showRefer = !!referral?.code;
+  const referralNew = !!referral && !(Number(referral.invited?.waiting) + Number(referral.invited?.sellers) + Number(referral.invited?.businesses) > 0);
+  const referLine = referral?.code ? t('Your code: {code}', { code: referral.code }) : null;
   let moderation = null;
   if (toCheck) {
     const { held, reported } = toCheck;
@@ -244,7 +241,7 @@ export default function ExploreMe() {
                 <span className="flex-1 min-w-0">
                   <span className="flex items-center gap-2">
                     <span className="text-[15px] font-semibold text-slate-900">{t('Refer & earn')}</span>
-                    {!referral.joined && <span className="h-[22px] px-2 rounded-full bg-purple-50 text-purple-700 text-[11px] font-bold inline-flex items-center">{t('NEW')}</span>}
+                    {referralNew && <span className="h-[22px] px-2 rounded-full bg-purple-50 text-purple-700 text-[11px] font-bold inline-flex items-center">{t('NEW')}</span>}
                   </span>
                   <span className="block text-xs text-slate-500">{referLine}</span>
                 </span>
@@ -265,6 +262,11 @@ export default function ExploreMe() {
               {feedbackLine && (
                 <div className="border-t border-slate-100">
                   <Row to="/admin/feedback" icon={MessageSquareHeart} label={t('App feedback')} detail={feedbackLine} pulse={appFeedback.lowOpen > 0} />
+                </div>
+              )}
+              {sellioAdmin && (
+                <div className="border-t border-slate-100">
+                  <Row to="/admin/coins" icon={Coins} label={t('Sellio Coins')} detail={t('Coin prices, the daily limit and referral coins')} />
                 </div>
               )}
             </section>

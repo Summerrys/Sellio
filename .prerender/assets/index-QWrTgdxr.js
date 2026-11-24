@@ -707,7 +707,11 @@ const signup = {
   "Message Sellio on WhatsApp and we’ll help you set up.": "通过 WhatsApp 联系 Sellio，我们会帮您完成设置。",
   "WhatsApp Sellio": "WhatsApp 联系 Sellio",
   "Already selling from home on Sellio? {link} and move your shop to a business plan. The code stays applied.": "已经在 Sellio 居家销售？{link}，把您的店铺转为商业方案。推荐码会保留。",
-  "{name} earns a commission from Sellio if you subscribe. Your price is the same.": "如果您订阅，{name} 会从 Sellio 获得佣金。您的价格不变。"
+  "{name} earns a commission from Sellio if you subscribe. Your price is the same.": "如果您订阅，{name} 会从 Sellio 获得佣金。您的价格不变。",
+  "Open a free home shop": "开设免费的居家店铺",
+  "Selling from home?": "在家卖东西？",
+  "Open a home shop on Sellio for free: your own shop page, orders and chats with buyers. The code stays applied.": "在 Sellio 免费开设居家店铺：拥有专属店铺页面、订单，还能和买家聊天。推荐码会保留。",
+  "{name} earns Sellio Coins if you join with this code. It costs you nothing.": "如果您用这个推荐码加入，{name} 会获得 Sellio 金币。您无需支付任何费用。"
 };
 const Dashboard = "概览";
 const Categories = "分类";
@@ -2820,7 +2824,9 @@ const shop = {
   "Open the packing photo of order #{number}": "打开订单 #{number} 的包装照片",
   "Packed {when}": "{when} 包装好",
   "The buyer sees this photo. Write {number} on the parcel or a note, and keep it in the photo.": "买家会看到这张照片。请把 {number} 写在包裹或纸条上，并让它出现在照片里。",
-  "Packed · take photo": "已包装 · 拍照"
+  "Packed · take photo": "已包装 · 拍照",
+  "This code has been used already.": "该推荐码已被使用。",
+  "A referral code can only be added when a shop is new.": "推荐码只能在店铺新开设时添加。"
 };
 const All = "全部";
 const Goods = "商品";
@@ -2915,6 +2921,7 @@ const Ordering = "订单";
 const Design = "设计";
 const NEW = "新";
 const Copy = "复制";
+const Businesses = "商家";
 const explore = {
   All,
   "Food & drinks": "餐饮",
@@ -3473,7 +3480,7 @@ const explore = {
   "Your code: {code}": "您的推荐码：{code}",
   "Earn {monthly} of monthly and {yearly} of yearly payments from shops you bring to Sellio": "您带来 Sellio 的店铺，按月付款您赚 {monthly}，按年付款赚 {yearly}",
   NEW,
-  "Refer & earn": "推荐赚佣金",
+  "Refer & earn": "推荐赚奖励",
   "How Refer & earn works": "推荐赚佣金如何运作",
   "{monthly} of monthly, {yearly} of yearly payments": "按月付款的 {monthly}，按年付款的 {yearly}",
   "Every time a shop that joined with your code pays its plan, for as long as it stays. Free trials and failed payments don’t earn.": "用您的推荐码加入的店铺，每次支付方案费用您都有佣金，只要它继续使用 Sellio。免费试用和付款失败不计佣金。",
@@ -3545,7 +3552,32 @@ const explore = {
   "Show this when your order is delivered. The seller or their courier scans it to confirm you’ve got it.": "收货时出示此二维码，卖家或其快递员扫描后即确认您已收到。",
   "Open the packing photo": "打开包装照片",
   "Your order, packed": "您的订单，已包装好",
-  "Packed {when}. The seller took this photo in Sellio.": "{when} 包装好。卖家在 Sellio 里拍了这张照片。"
+  "Packed {when}. The seller took this photo in Sellio.": "{when} 包装好。卖家在 Sellio 里拍了这张照片。",
+  "Sellio Coins": "Sellio 金币",
+  "Coin prices, the daily limit and referral coins": "金币价格、每日上限和推荐金币",
+  "Hi! I sell from home with {shop} on Sellio. Open your own shop free with my link: {link}": "您好！我在 Sellio 上居家经营 {shop}。用我的链接免费开设您自己的店铺：{link}",
+  "Hi! I sell from home on Sellio. Open your own shop free with my link: {link}": "您好！我在 Sellio 上居家销售。用我的链接免费开设您自己的店铺：{link}",
+  "This code has been used already.": "该推荐码已被使用。",
+  "A referral code can only be added when a shop is new.": "推荐码只能在店铺新开设时添加。",
+  "Become a Sellio distributor": "成为 Sellio 分销商",
+  "Earn Sellio Coins": "赚取 Sellio 金币",
+  "{coins} coins when a home seller opens a free shop with your code and lists their first item.": "居家卖家用您的推荐码开设免费店铺并发布第一件商品时，您得 {coins} 金币。",
+  "{coins} coins when a business signs up with your code and makes its first payment.": "商家用您的推荐码注册并完成首次付款时，您得 {coins} 金币。",
+  Businesses,
+  "Still to list or pay": "尚未发布商品或付款",
+  "Coins earned": "已赚金币",
+  "You have {coins} coins. {link}": "您有 {coins} 金币。{link}",
+  "Spend them on your stall in Sellio World": "在 Sellio World 装扮您的摊位",
+  "You’re a Sellio distributor now.": "您现在是 Sellio 分销商了。",
+  "Every Sellio shop has a referral code. Open a free home shop to get yours.": "每家 Sellio 店铺都有推荐码。开设免费的居家店铺，即可获得您的推荐码。",
+  "Open a free home shop": "开设免费的居家店铺",
+  "Your code has earned its coins. Thank you for bringing someone to Sellio!": "您的推荐码已赚到金币。感谢您把朋友带来 Sellio！",
+  "A home shop’s code earns once: for the first shop that joins with it.": "居家店铺的推荐码只能赚一次，即第一家用它加入的店铺。",
+  "Become a distributor": "成为分销商",
+  "Distributor earnings aren’t open yet. Your code earns coins in the meantime.": "分销商佣金尚未开放。在此之前，您的推荐码会为您赚金币。",
+  "You can become a distributor after your shop’s first payment.": "您的店铺首次付款后，即可成为分销商。",
+  "You can become a distributor when your business plan is active.": "您的商业方案生效后，即可成为分销商。",
+  "You’re a Sellio distributor": "您是 Sellio 分销商"
 };
 const GROUPS = { signup, shop, explore };
 export {
