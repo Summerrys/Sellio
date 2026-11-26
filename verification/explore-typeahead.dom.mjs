@@ -44,7 +44,8 @@ globalThis.fakeClient = {
       if (globalThis.slowFor === args.p_search) await new Promise((resolve) => setTimeout(resolve, 600));
       return { data: SUGGESTIONS[args.p_search] || [], error: null };
     }
-    if (name === 'explore_feed') {
+    // explore_feed: Explore's feed; explore_search: a search's results (from the moment the box is tapped).
+    if (name === 'explore_feed' || name === 'explore_search') {
       const q = String(args.p_search || '').toLowerCase();
       return { data: !q ? fresh : q.includes('dumpling') ? dumplings : [], error: null };
     }
@@ -145,7 +146,7 @@ try {
   await sleep(120);
   assert.equal(input().value, 'dumplings');
   assert.equal(list(), null, 'the list closes');
-  assert.equal(globalThis.calls.filter(([n]) => n === 'explore_feed').at(-1)?.[1]?.p_search, 'dumplings', 'searched at once');
+  assert.equal(globalThis.calls.filter(([n]) => n === 'explore_search').at(-1)?.[1]?.p_search, 'dumplings', 'searched at once');
   assert.match(text(container), /Results for “dumplings”/);
   passed('a tap on a suggestion searches it at once and closes the list');
 
@@ -178,7 +179,7 @@ try {
   await key('Enter');
   await sleep(100);
   assert.equal(list(), null);
-  assert.equal(globalThis.calls.filter(([n]) => n === 'explore_feed').at(-1)?.[1]?.p_search, 'du', 'searched now, no wait');
+  assert.equal(globalThis.calls.filter(([n]) => n === 'explore_search').at(-1)?.[1]?.p_search, 'du', 'searched now, no wait');
   passed('Enter with nothing picked searches what’s typed straight away');
 
   // A shop opens the shop.
@@ -205,7 +206,10 @@ try {
   globalThis.slowFor = null;
   passed('while the next answer is on its way, the list narrows to what still fits');
 
-  // The chosen kind goes along; off the box, no list.
+  // The chosen kind goes along; off the box, no list. (Cancel first: the categories are Explore's,
+  // and a search shows its own filters in their place.)
+  container.querySelector('[data-testid="explore-search-cancel"]').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await sleep(80);
   const homeChip = [...container.querySelectorAll('[role="tablist"] button')].find((b) => /Home/.test(text(b)));
   homeChip.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await sleep(150);

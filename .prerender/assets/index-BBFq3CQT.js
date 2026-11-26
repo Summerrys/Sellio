@@ -2922,6 +2922,11 @@ const Design = "Tampilan";
 const NEW = "BARU";
 const Copy = "Salin";
 const Businesses = "Usaha";
+const Recent = "Terbaru";
+const Filters = "Filter";
+const Clear = "Hapus";
+const Min = "Min";
+const Max = "Maks";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3583,7 +3588,36 @@ const explore = {
   "Back to Explore": "Kembali ke Jelajahi",
   "You have {coins} coins to spend when Sellio World opens.": "Anda punya {coins} koin untuk dipakai saat Sellio World dibuka.",
   "Sellio World": "Sellio World",
-  "Admins only, until it opens": "Khusus admin, sampai dibuka"
+  "Admins only, until it opens": "Khusus admin, sampai dibuka",
+  "Best match": "Paling sesuai",
+  Recent,
+  "Price: high to low": "Harga: tertinggi ke terendah",
+  "Price: low to high": "Harga: terendah ke tertinggi",
+  "Meet-up": "Ketemuan",
+  "All countries": "Semua negara",
+  "Up to {price}": "Hingga {price}",
+  "From {price}": "Mulai {price}",
+  Filters,
+  "Filters · {count}": "Filter · {count}",
+  "Sort: {sort}": "Urutkan: {sort}",
+  "All categories": "Semua kategori",
+  "Meet-up or delivery": "Ketemuan atau pengiriman",
+  "Deal method": "Cara transaksi",
+  "Sort and filter": "Urutkan dan filter",
+  "Sort by": "Urutkan",
+  Clear,
+  "Show results": "Lihat hasil",
+  "No matches": "Tidak ada yang cocok",
+  "Show 1 result": "Lihat 1 hasil",
+  "Show {count} results": "Lihat {count} hasil",
+  "Meet-up: you collect it from the seller. Delivery: the seller sends it to you.": "Ketemuan: Anda ambil sendiri dari penjual. Pengiriman: penjual mengirimkannya kepada Anda.",
+  "Lowest price": "Harga terendah",
+  Min,
+  "Highest price": "Harga tertinggi",
+  Max,
+  "With a price set, only listings priced in {currency} show.": "Jika harga diisi, hanya produk dengan harga dalam {currency} yang tampil.",
+  "No listings match these filters": "Tidak ada produk yang cocok dengan filter ini",
+  "Try removing a filter, or widen the price.": "Coba hapus satu filter, atau perluas rentang harga."
 };
 const GROUPS = { signup, shop, explore };
 export {

@@ -2922,6 +2922,11 @@ const Design = "设计";
 const NEW = "新";
 const Copy = "复制";
 const Businesses = "商家";
+const Recent = "最新";
+const Filters = "筛选";
+const Clear = "清除";
+const Min = "最低";
+const Max = "最高";
 const explore = {
   All,
   "Food & drinks": "餐饮",
@@ -3583,7 +3588,36 @@ const explore = {
   "Back to Explore": "返回“发现”",
   "You have {coins} coins to spend when Sellio World opens.": "您有 {coins} 金币，Sellio World 开放后即可使用。",
   "Sellio World": "Sellio World",
-  "Admins only, until it opens": "开放前仅限管理员"
+  "Admins only, until it opens": "开放前仅限管理员",
+  "Best match": "最相关",
+  Recent,
+  "Price: high to low": "价格：从高到低",
+  "Price: low to high": "价格：从低到高",
+  "Meet-up": "面交",
+  "All countries": "所有国家",
+  "Up to {price}": "{price}以内",
+  "From {price}": "{price}起",
+  Filters,
+  "Filters · {count}": "筛选 · {count}",
+  "Sort: {sort}": "排序：{sort}",
+  "All categories": "所有分类",
+  "Meet-up or delivery": "面交或送货",
+  "Deal method": "交易方式",
+  "Sort and filter": "排序和筛选",
+  "Sort by": "排序方式",
+  Clear,
+  "Show results": "查看结果",
+  "No matches": "没有符合的商品",
+  "Show 1 result": "查看 1 个结果",
+  "Show {count} results": "查看 {count} 个结果",
+  "Meet-up: you collect it from the seller. Delivery: the seller sends it to you.": "面交：您向卖家自取。送货：卖家把商品送给您。",
+  "Lowest price": "最低价",
+  Min,
+  "Highest price": "最高价",
+  Max,
+  "With a price set, only listings priced in {currency} show.": "设定价格后，只显示以 {currency} 标价的商品。",
+  "No listings match these filters": "没有符合筛选条件的商品",
+  "Try removing a filter, or widen the price.": "试试去掉一个筛选条件，或放宽价格范围。"
 };
 const GROUPS = { signup, shop, explore };
 export {

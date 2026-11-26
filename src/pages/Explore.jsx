@@ -23,6 +23,9 @@ import ExploreNoResults from '@/components/explore/ExploreNoResults';
 import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/components/explore/ExploreSuggestions';
 import { formatMoney } from '@/lib/money';
 import { useAppText, N_ } from '@/lib/appText';
+import { useBackToClose } from '@/lib/useBackToClose';
+import { activeFilterCount, searchArgs, searchFilters } from '@/lib/exploreSearch';
+import { FilterChips, FilterSheet } from '@/components/explore/ExploreFilters';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -275,9 +278,14 @@ function SkeletonGrid() {
 // sits fixed over the page and only moves (transform and opacity), never resizing
 // anything, so the slide stays smooth and the page under it never jumps. It keeps its
 // own scroll state, so the feed doesn't re-render as it slides.
+//
+// Searching (Alvin, 26 Nov 2026), from the moment the search box is tapped: the logo row folds
+// away so the search box sits at the top, "Cancel" (or the phone's Back) leaves the search, and
+// the categories give way to the search's sort and filter chips (ExploreFilters), which stay put
+// while the results scroll.
 const FOLD_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 
-function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop }) {
+function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search }) {
   const { t } = useAppText('explore');
   const [scrolled, setScrolled] = useState(false);
   // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
@@ -287,7 +295,8 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
   const listId = useId();
   const [focused, setFocused] = useState(false);
   const [closedFor, setClosedFor] = useState(null);
-  const suggestions = useExploreSuggestions(query, kind === 'all' ? null : kind, focused);
+  const suggestKind = searching ? filters.kind : kind;
+  const suggestions = useExploreSuggestions(query, suggestKind === 'all' ? null : suggestKind, focused);
   const showList = focused && closedFor !== query && suggestions.length > 0;
   const pickSuggestion = (s) => {
     setClosedFor(s.type === 'search' ? s.text : query);
@@ -300,6 +309,19 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     onSubmit: () => { setClosedFor(query); searchRef.current?.blur(); onSearchNow(query); },
     onClose: () => setClosedFor(query),
   });
+  // The filter sheet: which part is open (null: none). n starts each opening afresh.
+  const [sheet, setSheet] = useState({ section: null, n: 0 });
+  const openSheet = (section) => {
+    searchRef.current?.blur();
+    setSheet((was) => ({ section, n: was.n + 1 }));
+  };
+  const closeSheet = useCallback(() => setSheet((was) => ({ ...was, section: null })), []);
+  const cancelSearch = () => {
+    setFocused(false);
+    setClosedFor(null);
+    searchRef.current?.blur();
+    onSearchCancel();
+  };
   const [peek, setPeek] = useState(false);
   const peekRef = useRef({ open: false, fromY: 0 });
   useEffect(() => {
@@ -325,7 +347,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
   useEffect(() => {
     if (!scrolled) { peekRef.current.open = false; setPeek(false); }
   }, [scrolled]);
-  const folded = scrolled && !peek;
+  const folded = !searching && scrolled && !peek;
   const openCategories = () => {
     peekRef.current = { open: true, fromY: window.scrollY };
     setPeek(true);
@@ -348,9 +370,16 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
           the page under it never moves. Where they were, the feed shows through. */}
       <header className="sticky top-0 z-30 pointer-events-none">
         <div
-          className={`relative z-[2] bg-white pointer-events-auto border-b transition-colors duration-200 ${folded ? 'border-slate-100' : 'border-transparent'}`}
+          className={`relative z-[2] bg-white pointer-events-auto border-b transition-colors duration-200 ${folded || searching ? 'border-slate-100' : 'border-transparent'}`}
           style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
+          {/* Searching: the logo row folds away, and nothing in it can be reached meanwhile. */}
+          <div
+            data-testid="explore-top-bar"
+            aria-hidden={searching || undefined}
+            {...(searching ? { inert: '' } : {})}
+            className={`overflow-hidden transition-[height,opacity] duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)] ${searching ? 'h-0 opacity-0' : 'h-14 opacity-100'}`}
+          >
             <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
               {/* In the app, Sellio's home is this page: the logo stays here instead of
                   reloading it and adding a second copy to Back. Websites keep the home link. */}
@@ -402,98 +431,120 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                 )}
               </div>
             </div>
-          {/* The cart sits beside the search (the row above has no room for it on phones);
-              its 44px tap area overhangs the row's padding, so the row keeps its height. */}
-          <div className="relative max-w-6xl mx-auto px-3 sm:px-4 pb-2 flex items-center gap-1">
-            <label className="relative block flex-1 min-w-0">
-              <span className="sr-only">{t('Search Sellio Explore')}</span>
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={(e) => onQuery(e.target.value)}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onKeyDown={keys.onKeyDown}
-                role="combobox"
-                aria-autocomplete="list"
-                aria-expanded={showList}
-                aria-controls={showList ? listId : undefined}
-                aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
-                placeholder={t('Search for an item or shop')}
-                enterKeyHint="search"
-                className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
-              />
-              {query && (
+          </div>
+          {/* The search, and while searching its chips; the suggestions open under both. */}
+          <div className="relative max-w-6xl mx-auto">
+            {/* The cart sits beside the search (the row above has no room for it on phones);
+                its 44px tap area overhangs the row's padding, so the row keeps its height.
+                While searching, Cancel takes its place. */}
+            <div className={`px-3 sm:px-4 pb-2 flex items-center gap-1 ${searching ? 'pt-2' : ''}`}>
+              <label className="relative block flex-1 min-w-0">
+                <span className="sr-only">{t('Search Sellio Explore')}</span>
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  onChange={(e) => onQuery(e.target.value)}
+                  onFocus={() => { setFocused(true); if (!searching) onSearchStart(); }}
+                  onBlur={() => setFocused(false)}
+                  onKeyDown={keys.onKeyDown}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={showList}
+                  aria-controls={showList ? listId : undefined}
+                  aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
+                  placeholder={t('Search for an item or shop')}
+                  enterKeyHint="search"
+                  className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => onQuery('')}
+                    aria-label={t('Clear search')}
+                    className="absolute right-1.5 top-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200"
+                    style={{ transform: `translate3d(${folded ? -36 : 0}px, -50%, 0)`, transition: `transform 220ms ${FOLD_EASE}` }}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => onQuery('')}
-                  aria-label={t('Clear search')}
-                  className="absolute right-1.5 top-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200"
-                  style={{ transform: `translate3d(${folded ? -36 : 0}px, -50%, 0)`, transition: `transform 220ms ${FOLD_EASE}` }}
+                  onClick={openCategories}
+                  tabIndex={folded ? 0 : -1}
+                  aria-hidden={folded ? undefined : true}
+                  aria-label={kind === 'all' ? t('Show categories') : t('Show categories ({pickedLabel} picked)', { pickedLabel })}
+                  className="absolute right-1 top-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
+                  style={{
+                    transform: `translate3d(0, -50%, 0) scale(${folded ? 1 : 0.6})`,
+                    opacity: folded ? 1 : 0,
+                    pointerEvents: folded ? 'auto' : 'none',
+                    transition: `transform 220ms ${FOLD_EASE}, opacity 160ms ease`,
+                  }}
                 >
-                  <X className="w-4 h-4" />
+                  <SlidersHorizontal className="w-4 h-4" />
+                  {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
                 </button>
+              </label>
+              {searching ? (
+                <button
+                  type="button"
+                  onClick={cancelSearch}
+                  data-testid="explore-search-cancel"
+                  className="flex-shrink-0 h-11 -my-[3px] pl-2 pr-1 -mr-1 rounded-md text-[15px] font-semibold text-slate-700 whitespace-nowrap hover:bg-slate-50"
+                >
+                  {t('Cancel')}
+                </button>
+              ) : (
+                <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
               )}
-              <button
-                type="button"
-                onClick={openCategories}
-                tabIndex={folded ? 0 : -1}
-                aria-hidden={folded ? undefined : true}
-                aria-label={kind === 'all' ? t('Show categories') : t('Show categories ({pickedLabel} picked)', { pickedLabel })}
-                className="absolute right-1 top-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
-                style={{
-                  transform: `translate3d(0, -50%, 0) scale(${folded ? 1 : 0.6})`,
-                  opacity: folded ? 1 : 0,
-                  pointerEvents: folded ? 'auto' : 'none',
-                  transition: `transform 220ms ${FOLD_EASE}, opacity 160ms ease`,
-                }}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
-              </button>
-            </label>
-            <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
+            </div>
+            {searching && <FilterChips filters={filters} kinds={KINDS} onOpen={openSheet} />}
             {showList && (
               <SuggestionList id={listId} items={suggestions} typed={query} active={keys.active} onPick={pickSuggestion} onHover={keys.setActive} />
             )}
           </div>
         </div>
-        <div
-          className="relative z-[1] bg-white border-b border-slate-100"
-          aria-hidden={folded || undefined}
-          style={{
-            transform: folded ? 'translate3d(0, -100%, 0)' : 'translate3d(0, 0, 0)',
-            opacity: folded ? 0 : 1,
-            visibility: folded ? 'hidden' : 'visible',
-            pointerEvents: folded ? 'none' : 'auto',
-            willChange: 'transform',
-            transition: `transform 240ms ${FOLD_EASE}, opacity 180ms ease, visibility 0s linear ${folded ? '240ms' : '0s'}`,
-          }}
-        >
-          <div className="max-w-6xl mx-auto">
-            <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
-              {KINDS.map(({ key, label }) => {
-                const active = kind === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => pick(key)}
-                    className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-                    style={active ? { background: BRAND_GRADIENT } : undefined}
-                  >
-                    {t(label)}
-                  </button>
-                );
-              })}
+        {!searching && (
+          <div
+            className="relative z-[1] bg-white border-b border-slate-100"
+            aria-hidden={folded || undefined}
+            style={{
+              transform: folded ? 'translate3d(0, -100%, 0)' : 'translate3d(0, 0, 0)',
+              opacity: folded ? 0 : 1,
+              visibility: folded ? 'hidden' : 'visible',
+              pointerEvents: folded ? 'none' : 'auto',
+              willChange: 'transform',
+              transition: `transform 240ms ${FOLD_EASE}, opacity 180ms ease, visibility 0s linear ${folded ? '240ms' : '0s'}`,
+            }}
+          >
+            <div className="max-w-6xl mx-auto">
+              <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
+                {KINDS.map(({ key, label }) => {
+                  const active = kind === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => pick(key)}
+                      className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                      style={active ? { background: BRAND_GRADIENT } : undefined}
+                    >
+                      {t(label)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </header>
+      {searching && (
+        <FilterSheet key={sheet.n} section={sheet.section} filters={filters} kinds={KINDS} search={search} onApply={onFilters} onClose={closeSheet} />
+      )}
     </>
   );
 }
@@ -508,6 +559,12 @@ export default function Explore() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('all');
+  // Searching: from the moment the search box is tapped until Cancel or the phone's Back. The
+  // search's sort and filters (lib/exploreSearch.js) start from the category picked on Explore;
+  // total: how many listings the search finds (explore_search's total_count).
+  const [searching, setSearching] = useState(false);
+  const [filters, setFilters] = useState(() => searchFilters());
+  const [total, setTotal] = useState(null);
   const [items, setItems] = useState([]);
   const [itemsKind, setItemsKind] = useState('all');
   const [shops, setShops] = useState([]);
@@ -564,10 +621,34 @@ export default function Explore() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  const startSearch = useCallback(() => {
+    setFilters(searchFilters(kind));
+    setSearching(true);
+    if (window.scrollY > 0) window.scrollTo({ top: 0 });
+  }, [kind]);
+  // Back to Explore as it was before the search (its category chip as it was).
+  const cancelSearch = useCallback(() => {
+    setSearching(false);
+    setQuery('');
+    setSearch('');
+    setTotal(null);
+    if (typeof document !== 'undefined') document.activeElement?.blur?.();
+    window.scrollTo({ top: 0 });
+  }, []);
+  useBackToClose(searching, cancelSearch);
+  const filtersOn = searching && activeFilterCount(filters) > 0;
+  const clearFilters = () => setFilters((f) => ({ ...searchFilters('all', f.currency), sort: f.sort }));
+
   // Items for every chip except Merchants, which lists storefronts instead.
   // The feed is interleaved by shop on the server, so one shop can't fill it.
+  // Searching: explore_search, with the search's sort and filters (always items).
   const fetchPage = useCallback(async (offset) => {
     const supabase = await getSupabase();
+    if (searching) {
+      const { data, error } = await supabase.rpc('explore_search', { ...searchArgs(search, filters), p_limit: PAGE_SIZE, p_offset: offset });
+      if (error) throw error;
+      return { kind: 'search', rows: data || [] };
+    }
     const { data, error } = kind === 'merchants'
       ? await supabase.rpc('explore_merchants', { p_search: search || null, p_limit: PAGE_SIZE, p_offset: offset })
       : await supabase.rpc('explore_feed', {
@@ -578,11 +659,11 @@ export default function Explore() {
       });
     if (error) throw error;
     return { kind, rows: data || [] };
-  }, [search, kind]);
+  }, [search, kind, searching, filters]);
 
   useEffect(() => {
     const id = ++requestId.current;
-    const everything = !search && kind === 'all';
+    const everything = !searching && !search && kind === 'all';
     setStatus('loading');
     setHasMore(false);
     fetchPage(0)
@@ -591,6 +672,7 @@ export default function Explore() {
         setItems(rows);
         setItemsKind(forKind);
         setHasMore(rows.length === PAGE_SIZE);
+        setTotal(forKind === 'search' ? (Number(rows[0]?.total_count) || 0) : null);
         setStatus('ready');
         setFeedAt(Date.now());
         setFeedKept(false);
@@ -611,7 +693,7 @@ export default function Explore() {
         }
         setStatus('error');
       });
-  }, [fetchPage, reloadKey, search, kind]);
+  }, [fetchPage, reloadKey, search, kind, searching]);
 
   // The connection is back: a feed that couldn't load (or is the copy) loads again.
   const feedStale = useRef(false);
@@ -667,10 +749,12 @@ export default function Explore() {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  const filtered = !!search || kind !== 'all';
+  const filtered = searching || !!search || kind !== 'all';
   const picked = KINDS.find((k) => k.key === kind)?.label;
   const kindLabel = kind === 'merchants' ? t('Merchants on Sellio') : (picked ? t(picked) : '');
-  const heading = search ? t('Results for “{search}”', { search }) : kind === 'all' ? t('Fresh finds') : kindLabel;
+  const heading = search ? t('Results for “{search}”', { search })
+    : searching ? t('All listings')
+      : kind === 'all' ? t('Fresh finds') : kindLabel;
   const sellHref = hasShop ? '/explore/listings?new=1' : '/join';
 
   return (
@@ -683,6 +767,12 @@ export default function Explore() {
         onKind={setKind}
         signedIn={signedIn}
         hasShop={hasShop}
+        searching={searching}
+        onSearchStart={startSearch}
+        onSearchCancel={cancelSearch}
+        filters={filters}
+        onFilters={setFilters}
+        search={search}
       />
 
       <main className="max-w-6xl mx-auto px-2 sm:px-4 pb-32">
@@ -706,7 +796,12 @@ export default function Explore() {
         )}
 
         <section aria-labelledby="explore-feed-heading" className={!filtered && shops.length > 0 ? '' : 'pt-2.5'}>
-          <h2 id="explore-feed-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{heading}</h2>
+          <div className="flex items-baseline justify-between gap-2 mb-2 px-1 sm:px-0">
+            <h2 id="explore-feed-heading" className="min-w-0 truncate text-[15px] font-bold text-slate-900">{heading}</h2>
+            {searching && status === 'ready' && total != null && (
+              <span data-testid="explore-search-count" className="flex-shrink-0 text-xs text-slate-500">{total === 1 ? t('1 listing') : t('{count} listings', { count: total })}</span>
+            )}
+          </div>
 
           {status === 'loading' && <LoadingShapes label={t('Loading listings')} t={t}><SkeletonGrid /></LoadingShapes>}
 
@@ -732,17 +827,38 @@ export default function Explore() {
             </div>
           )}
 
+          {/* Searching with filters on and nothing found: one tap takes the filters off. */}
+          {status === 'ready' && items.length === 0 && filtersOn && (
+            <div data-testid="explore-no-match" className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+              <p className="text-[15px] font-bold text-slate-900">{t('No listings match these filters')}</p>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-600">{t('Try removing a filter, or widen the price.')}</p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-3.5 h-10 px-5 rounded-full text-sm font-semibold text-white"
+                style={{ background: BRAND_GRADIENT }}
+              >
+                {t('Clear filters')}
+              </button>
+            </div>
+          )}
+
           {/* A search that found nothing: the likely spelling, and popular listings to try. */}
-          {status === 'ready' && items.length === 0 && !!search && (
+          {status === 'ready' && items.length === 0 && !!search && !filtersOn && (
             <ExploreNoResults
               search={search}
-              kind={kind === 'all' ? null : kind}
+              kind={searching ? (filters.kind === 'all' ? null : filters.kind) : (kind === 'all' ? null : kind)}
               onSearch={(text) => { setQuery(text); setSearch(text.trim()); }}
-              onShowAll={() => { setQuery(''); setSearch(''); setKind('all'); }}
+              onShowAll={() => {
+                setQuery('');
+                setSearch('');
+                if (searching) setFilters((f) => ({ ...f, kind: 'all' }));
+                else setKind('all');
+              }}
             />
           )}
 
-          {status === 'ready' && items.length === 0 && !search && (
+          {status === 'ready' && items.length === 0 && !search && !filtersOn && (
             <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
               {filtered ? (
                 <>

@@ -2922,6 +2922,11 @@ const Design = "Reka bentuk";
 const NEW = "BAHARU";
 const Copy = "Salin";
 const Businesses = "Perniagaan";
+const Recent = "Terbaharu";
+const Filters = "Penapis";
+const Clear = "Kosongkan";
+const Min = "Min";
+const Max = "Maks";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3583,7 +3588,36 @@ const explore = {
   "Back to Explore": "Kembali ke Teroka",
   "You have {coins} coins to spend when Sellio World opens.": "Anda ada {coins} syiling untuk dibelanjakan apabila Sellio World dibuka.",
   "Sellio World": "Sellio World",
-  "Admins only, until it opens": "Admin sahaja, sehingga dibuka"
+  "Admins only, until it opens": "Admin sahaja, sehingga dibuka",
+  "Best match": "Paling sepadan",
+  Recent,
+  "Price: high to low": "Harga: tinggi ke rendah",
+  "Price: low to high": "Harga: rendah ke tinggi",
+  "Meet-up": "Berjumpa",
+  "All countries": "Semua negara",
+  "Up to {price}": "Sehingga {price}",
+  "From {price}": "Dari {price}",
+  Filters,
+  "Filters · {count}": "Penapis · {count}",
+  "Sort: {sort}": "Isih: {sort}",
+  "All categories": "Semua kategori",
+  "Meet-up or delivery": "Berjumpa atau penghantaran",
+  "Deal method": "Cara urus niaga",
+  "Sort and filter": "Isih dan tapis",
+  "Sort by": "Isih mengikut",
+  Clear,
+  "Show results": "Tunjuk hasil",
+  "No matches": "Tiada padanan",
+  "Show 1 result": "Tunjuk 1 hasil",
+  "Show {count} results": "Tunjuk {count} hasil",
+  "Meet-up: you collect it from the seller. Delivery: the seller sends it to you.": "Berjumpa: anda ambil sendiri daripada penjual. Penghantaran: penjual menghantarnya kepada anda.",
+  "Lowest price": "Harga terendah",
+  Min,
+  "Highest price": "Harga tertinggi",
+  Max,
+  "With a price set, only listings priced in {currency} show.": "Apabila harga ditetapkan, hanya produk berharga {currency} ditunjukkan.",
+  "No listings match these filters": "Tiada produk yang sepadan dengan penapis ini",
+  "Try removing a filter, or widen the price.": "Cuba buang satu penapis, atau luaskan julat harga."
 };
 const GROUPS = { signup, shop, explore };
 export {
