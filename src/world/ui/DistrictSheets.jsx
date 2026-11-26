@@ -1,5 +1,5 @@
 import React from 'react';
-import { DoorOpen, Footprints, Sparkles, Tag, Globe2, Eye, Zap, Coffee, Store, ShoppingBag, Flower2, MapPin } from 'lucide-react';
+import { DoorOpen, Footprints, Sparkles, Tag, Globe2, Eye, Zap, Coffee, Store, ShoppingBag, Flower2, MapPin, KeyRound } from 'lucide-react';
 import { Sheet, CloseButton, Coin } from './Sheet';
 import { formatPrice } from './StallSheet';
 
@@ -20,21 +20,22 @@ function hoursLine(shop) {
   return `${fmt(h.open)} – ${fmt(h.close)}`;
 }
 
-function rewardLine({ signedIn, canEarn, visited, visitsLeft, reward }) {
+function rewardLine({ signedIn, canEarn, visited, visitsLeft, reward, capLeft }) {
   if (!signedIn) return [`Sign in to earn +${reward} coins for visiting`, false];
   if (!canEarn) return ['Visit rewards start when Pop-up Street opens', false];
   if (visited) return ["Today's visit reward collected", true];
   if (visitsLeft <= 0) return ["You've collected all of today's visit rewards", true];
-  return [`Step inside today to earn +${reward} coins`, false];
+  if (capLeft === 0) return ["You've collected today's coins. Visits earn coins again tomorrow", true];
+  return [`Step inside today to earn +${reward} coin${reward === 1 ? '' : 's'}`, false];
 }
 
 // A café or restaurant on the F&B boulevard: its name and colours, today's
 // hours, a few things from the menu and the way in to its real storefront.
-export function StorefrontSheet({ open, shop, onClose, onVisit, busy, signedIn, canEarn, visited, visitsLeft, reward }) {
+export function StorefrontSheet({ open, shop, onClose, onVisit, busy, signedIn, canEarn, visited, visitsLeft, reward, capLeft = null }) {
   const s = shop || { name: '', menu: [] };
   const name = (s.name || '').trim();
   const hours = shop ? hoursLine(s) : null;
-  const [line, done] = shop ? rewardLine({ signedIn, canEarn, visited, visitsLeft, reward }) : ['', false];
+  const [line, done] = shop ? rewardLine({ signedIn, canEarn, visited, visitsLeft, reward, capLeft }) : ['', false];
   return (
     <Sheet open={open} labelId="pw-store-name" className="storefront">
       {s.banner_url && <div className="pw-banner" style={{ backgroundImage: `url("${String(s.banner_url).replace(/"/g, '%22')}")` }} aria-hidden="true" />}
@@ -76,26 +77,33 @@ export function StorefrontSheet({ open, shop, onClose, onVisit, busy, signedIn, 
   );
 }
 
-// An empty storefront on the boulevard.
-export function FnbPlotSheet({ open, onClose, onAction }) {
+// A vacant unit on the F&B boulevard, Retail Avenue or Services Garden.
+const LEASE_COPY = {
+  fnb: ['Every café, restaurant and bakery on a Sellio plan gets a full storefront on this boulevard, in its own colours, with its name over the door and its menu inside. Shoppers walk in from here to order.', 'Bring my café to Sellio'],
+  retail: ['Boutiques and product shops on a Sellio plan get a full storefront on Retail Avenue, in their own colours, with their name over the door. Shoppers walk in from the street to browse and buy.', 'Bring my shop to Sellio'],
+  services: ['Studios, salons, clinics and other appointment-led businesses on a Sellio plan get a full storefront in Services Garden, in their own colours, with their name over the door.', 'Bring my business to Sellio'],
+};
+export function LeaseSheet({ open, district, unit, onClose, onAction }) {
+  const d = district || { key: 'retail', name: '' };
+  const [text, cta] = LEASE_COPY[d.key] || LEASE_COPY.retail;
   return (
-    <Sheet open={open} labelId="pw-fnbplot-title">
+    <Sheet open={open} labelId="pw-lease-title">
       <div className="pw-head">
-        <span className="pw-avatar" aria-hidden="true"><Sparkles size={22} /></span>
-        <div className="pw-min0"><h2 id="pw-fnbplot-title">Your café here</h2><p className="pw-sub">F&B District · free storefront</p></div>
+        <span className="pw-avatar" aria-hidden="true"><KeyRound size={22} /></span>
+        <div className="pw-min0"><h2 id="pw-lease-title">Open for lease!</h2><p className="pw-sub">{d.name}{unit ? ` · Unit ${unit}` : ''}</p></div>
         <CloseButton onClick={onClose} />
       </div>
       <div className="pw-scroll">
-        <p className="pw-tagline">Every café, restaurant and bakery on Sellio gets a full storefront on this boulevard, in its own colours, with its name over the door and its menu inside. Shoppers walk in from here to order.</p>
+        <p className="pw-tagline">{text}</p>
       </div>
       <div className="pw-actions">
-        <button type="button" className="pw-primary" onClick={() => onAction('merchants')}><Sparkles size={18} aria-hidden="true" />Bring my café to Sellio</button>
+        <button type="button" className="pw-primary" onClick={() => onAction('merchants')}><Sparkles size={18} aria-hidden="true" />{cta}</button>
       </div>
     </Sheet>
   );
 }
 
-// Retail Avenue and Services Garden, before they open.
+// A district that has not opened yet (none at the moment: every district is open).
 export function ComingSoonSheet({ open, district, onClose, onLook }) {
   const d = district || { name: '', blurb: '' };
   const Icon = ICONS[d.key] || Sparkles;

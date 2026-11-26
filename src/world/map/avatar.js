@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { buildCharacter } from '../engine/characters';
+import { buildCharacter, characterOf, DEFAULT_CHARACTER } from '../engine/characters';
 
 const TAU = Math.PI * 2;
 export const lerpAngle = (a, b, t) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return a + d * t; };
@@ -9,20 +9,29 @@ const RUN_SPEED = 8.5;           // m/s for long walks elsewhere on the island
 const RUN_AFTER = 26;            // metres left before Mochi breaks into a run
 
 /**
- * Mochi on the map: follows paths from the walk grid or the arrow keys, with
- * a soft shadow, a ring at its feet, a pointer to the nearest coin, a pin
- * that keeps Mochi findable when the map is zoomed out, and the Sellio Hop.
- * Positions are map metres (x east, y north).
+ * The player's hero on the map: follows paths from the walk grid or the arrow
+ * keys, with a soft shadow, a ring at its feet, a pointer to the nearest coin,
+ * a pin that keeps the hero findable when the map is zoomed out, and the
+ * Sellio Hop. Positions are map metres (x east, y north).
  */
-export function createAvatar(kit, scene, { motion = 1, nav, isStreet }) {
+export function createAvatar(kit, scene, { motion = 1, nav, isStreet, character = DEFAULT_CHARACTER }) {
   const { G } = kit;
   const own = [];
   const keep = (o) => { own.push(o); return o; };
   const tex = (...a) => keep(kit.untrack(kit.canvasTex(...a)));
   const root = new THREE.Group(); root.name = 'mochi'; scene.add(root);
-  const char = buildCharacter(kit, 'mochi');
-  const body = new THREE.Group(); body.add(char.group); root.add(body);
-  char.group.scale.setScalar(1.5); // a touch larger than life, so Mochi reads at map scale
+  const body = new THREE.Group(); root.add(body);
+  let char = null, charId = null, pop = 0;
+  function setCharacter(id, { celebrate = false } = {}) {
+    const next = characterOf(id).id;
+    if (next === charId) return;
+    if (char) { body.remove(char.group); char.dispose(); }
+    char = buildCharacter(kit, next); charId = next;
+    char.group.scale.setScalar(char.scale);
+    body.add(char.group);
+    paintPin();
+    if (celebrate) pop = 1;
+  }
 
   const shadowTex = tex(64, 64, (c) => { const g = c.createRadialGradient(32, 32, 4, 32, 32, 32); g.addColorStop(0, 'rgba(40,20,50,.42)'); g.addColorStop(1, 'rgba(40,20,50,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); });
   const shadow = new THREE.Mesh(G.plane, keep(new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })));
@@ -37,18 +46,24 @@ export function createAvatar(kit, scene, { motion = 1, nav, isStreet }) {
   const arrowGeo = keep(new THREE.ShapeGeometry(arrowShape)); arrowGeo.rotateX(Math.PI / 2);
   const arrow = new THREE.Mesh(arrowGeo, arrowMat); arrow.position.y = 0.05; arrow.renderOrder = 2; root.add(arrow);
 
-  // the pin above Mochi when the camera is far away (kept a steady size on screen)
-  const pinTex = tex(128, 160, (c) => {
+  // the pin above the hero when the camera is far away (kept a steady size on screen)
+  const pinCanvas = document.createElement('canvas'); pinCanvas.width = 128; pinCanvas.height = 160;
+  const pinTex = keep(new THREE.CanvasTexture(pinCanvas)); pinTex.colorSpace = THREE.SRGBColorSpace;
+  function paintPin() {
+    const c = pinCanvas.getContext('2d'), who = characterOf(charId);
+    c.clearRect(0, 0, 128, 160);
     const g = c.createLinearGradient(0, 0, 128, 128); g.addColorStop(0, '#fb923c'); g.addColorStop(0.55, '#e0449a'); g.addColorStop(1, '#8b2fc9');
     c.fillStyle = g; c.beginPath(); c.arc(64, 60, 56, Math.PI * 0.82, Math.PI * 2.18); c.lineTo(64, 156); c.closePath(); c.fill();
-    c.fillStyle = '#fff8f2'; c.beginPath(); c.ellipse(64, 64, 38, 33, 0, 0, TAU); c.fill();
+    c.fillStyle = who.skin || '#fff8f2'; c.beginPath(); c.ellipse(64, 64, 38, who.kind === 'mochi' ? 33 : 38, 0, 0, TAU); c.fill();
     c.fillStyle = '#20142b'; for (const x of [50, 78]) { c.beginPath(); c.ellipse(x, 62, 5, 6.5, 0, 0, TAU); c.fill(); }
-    c.fillStyle = '#ff9ec4'; for (const x of [40, 88]) { c.beginPath(); c.ellipse(x, 72, 6, 3.5, 0, 0, TAU); c.fill(); }
+    if (who.kind === 'mochi') { c.fillStyle = '#ff9ec4'; for (const x of [40, 88]) { c.beginPath(); c.ellipse(x, 72, 6, 3.5, 0, 0, TAU); c.fill(); } }
     c.strokeStyle = '#20142b'; c.lineWidth = 3; c.beginPath(); c.arc(64, 70, 6, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
-    c.fillStyle = '#4caf6e'; c.beginPath(); c.ellipse(56, 30, 10, 4, -0.5, 0, TAU); c.fill(); c.beginPath(); c.ellipse(72, 30, 10, 4, 0.5, 0, TAU); c.fill();
-  });
+    if (who.kind === 'mochi') { c.fillStyle = '#4caf6e'; c.beginPath(); c.ellipse(56, 30, 10, 4, -0.5, 0, TAU); c.fill(); c.beginPath(); c.ellipse(72, 30, 10, 4, 0.5, 0, TAU); c.fill(); }
+    pinTex.needsUpdate = true;
+  }
   const pinMat = keep(new THREE.SpriteMaterial({ map: pinTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
   const pin = new THREE.Sprite(pinMat); pin.center.set(0.5, 0); pin.renderOrder = 20; root.add(pin);
+  setCharacter(character);
 
   const state = {
     x: 0, y: 0, heading: Math.PI, path: [], goal: null, keys: { x: 0, y: 0 }, moving: false, phase: 0, hop: null, hidden: false, speed: 0,
@@ -130,6 +145,8 @@ export function createAvatar(kit, scene, { motion = 1, nav, isStreet }) {
     } else state.speed = Math.min(state.speed, WALK_SPEED);
     sync();
     char.animate(dt, t, state.moving, state.phase, motion);
+    // a little jump when the player picks a new hero
+    if (pop > 0) { pop = Math.max(0, pop - dt * 2.6); if (!state.hop) body.position.y = Math.sin((1 - pop) * Math.PI) * 0.4 * motion; }
     ring.scale.setScalar(1 + Math.sin(t * 3) * 0.08 * motion);
     ringMat.opacity = state.hop ? 0 : 0.85;
     shadow.scale.setScalar(1.9 * (state.hop ? body.scale.x : 1));
@@ -164,5 +181,7 @@ export function createAvatar(kit, scene, { motion = 1, nav, isStreet }) {
     get busy() { return !!state.hop; },
     setKeys(x, y) { state.keys.x = x; state.keys.y = y; },
     setHidden(on) { state.hidden = !!on; root.visible = !on; },
+    setCharacter,
+    get character() { return charId; },
   };
 }

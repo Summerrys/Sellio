@@ -2,12 +2,15 @@ import * as THREE from 'three';
 import { rr, fitFont, hashSeed, rng } from '../engine/kit';
 import { FONT_DISPLAY as FONT_D } from '../engine/constants';
 import { loadImage } from '../engine/images';
+import { AWNINGS } from '../engine/catalog';
 
 // Full storefront buildings for the F&B District, in the spirit of the
 // Cafetelier render: a two-storey stone, brick or stucco shophouse with the
 // merchant's colour on the trim and awnings, a lit display window, a door
 // with steps, lamps, topiaries and the shop's name and logo. Each building is
 // a few merged meshes; small details hide when the camera is far away.
+// Every unit wears Sellio's orange and white awning. A unit with no shop yet
+// is the same shophouse, shuttered, with "Open for lease!" over the door.
 
 const W = 12.5, D = 11.5, H = 8.6;
 const FRONT = D / 2;
@@ -39,6 +42,11 @@ export function createStorefrontFactory(kit) {
     }, [W / 4, H / 4])));
     facadeTex.set(f.name, t); return t;
   };
+  const facadeMats = new Map();
+  const facadeMat = (f) => {
+    if (!facadeMats.has(f.name)) facadeMats.set(f.name, keep(new THREE.MeshStandardMaterial({ map: wallTexture(f), roughness: 0.92 })));
+    return facadeMats.get(f.name);
+  };
   const awningMats = new Map();
   const awningMat = (a, b) => {
     const k = a + b;
@@ -60,16 +68,40 @@ export function createStorefrontFactory(kit) {
   const lampMat = std('#fff3d1', { emissive: '#ffd27a', emissiveIntensity: 1.6 });
   const shadowTex = keep(kit.untrack(canvasTex(128, 128, (c) => { const g = c.createRadialGradient(64, 64, 20, 64, 64, 64); g.addColorStop(0, 'rgba(40,20,50,.35)'); g.addColorStop(1, 'rgba(40,20,50,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128); })));
   const shadowMat = keep(new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
-  const plotSignTex = keep(kit.untrack(canvasTex(512, 200, (c, w, h) => {
-    const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#fb923c'); g.addColorStop(0.55, '#e0449a'); g.addColorStop(1, '#8b2fc9');
-    c.fillStyle = g; rr(c, 0, 0, w, h, 26); c.fill();
+  /* "Open for lease!" units: shared between every vacant unit */
+  const GRAD = ['#fb923c', '#e0449a', '#8b2fc9'];
+  const leaseFasciaTex = keep(kit.untrack(canvasTex(1024, 128, (c, w, h) => {
+    const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, GRAD[0]); g.addColorStop(0.55, GRAD[1]); g.addColorStop(1, GRAD[2]);
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 5; c.setLineDash([18, 12]); c.strokeRect(10, 10, w - 20, h - 20); c.setLineDash([]);
     c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    fitFont(c, 'Your café here', 700, FONT_D, 58, w - 60); c.fillText('Your café here', w / 2, 82);
-    c.fillStyle = 'rgba(255,255,255,.88)'; fitFont(c, 'Open a Sellio storefront', 500, FONT_D, 30, w - 60); c.fillText('Open a Sellio storefront', w / 2, 142);
+    c.font = `700 76px ${FONT_D}`; c.fillText('Open for lease!', w / 2, h / 2 + 4);
   })));
-  const plotSignMat = keep(new THREE.MeshStandardMaterial({ map: plotSignTex, emissive: 0xffffff, emissiveMap: plotSignTex, emissiveIntensity: 0.25 }));
-  const hoardingTex = keep(kit.untrack(canvasTex(256, 64, (c, w, h) => { c.fillStyle = '#f6eefa'; c.fillRect(0, 0, w, h); c.fillStyle = '#e0449a'; for (let x = -h; x < w; x += 28) { c.beginPath(); c.moveTo(x, h); c.lineTo(x + 14, h); c.lineTo(x + 14 + h, 0); c.lineTo(x + h, 0); c.fill(); } })));
-  const hoardingMat = keep(new THREE.MeshStandardMaterial({ map: hoardingTex, roughness: 0.9 }));
+  const leaseFasciaMat = keep(new THREE.MeshStandardMaterial({ map: leaseFasciaTex, emissive: 0xffffff, emissiveMap: leaseFasciaTex, emissiveIntensity: 0.18, roughness: 0.6 }));
+  // the roundel over the fascia: Sellio's coin
+  const leaseSignTex = keep(kit.untrack(canvasTex(512, 300, (c, w, h) => {
+    c.fillStyle = '#fdfaff'; rr(c, 6, 6, w - 12, h - 12, 120); c.fill();
+    c.strokeStyle = '#f3c14b'; c.lineWidth = 10; rr(c, 14, 14, w - 28, h - 28, 112); c.stroke();
+    const g = c.createRadialGradient(w / 2 - 24, h / 2 - 28, 8, w / 2, h / 2, 96); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#ffc23d'); g.addColorStop(1, '#d88e0c');
+    c.fillStyle = g; c.beginPath(); c.arc(w / 2, h / 2, 92, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6b3f00'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `700 124px ${FONT_D}`; c.fillText('S', w / 2, h / 2 + 8);
+  })));
+  const leaseSignMat = keep(new THREE.MeshStandardMaterial({ map: leaseSignTex, emissive: 0xffffff, emissiveMap: leaseSignTex, emissiveIntensity: 0.15, roughness: 0.5, transparent: true, alphaTest: 0.5 }));
+  // a papered-over display window with a notice in it
+  const leaseWindowTex = keep(kit.untrack(canvasTex(512, 192, (c, w, h) => {
+    c.fillStyle = '#efe6d8'; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(120,96,70,.10)'; for (let x = 0; x < w; x += 64) c.fillRect(x, 0, 2, h);
+    c.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 20; x < w; x += 128) { c.save(); c.translate(x, 0); c.rotate(0.35); c.fillRect(0, -40, 26, h + 120); c.restore(); }
+    c.fillStyle = '#fff'; rr(c, w / 2 - 118, 30, 236, 132, 12); c.fill();
+    c.strokeStyle = '#f97316'; c.lineWidth = 6; rr(c, w / 2 - 118, 30, 236, 132, 12); c.stroke();
+    c.fillStyle = '#2a1838'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `700 40px ${FONT_D}`; c.fillText('Your shop here', w / 2, 80);
+    c.fillStyle = '#8b2fc9'; c.font = `600 26px ${FONT_D}`; c.fillText('sellio.sg', w / 2, 126);
+  })));
+  const leaseWindowMat = keep(new THREE.MeshStandardMaterial({ map: leaseWindowTex, emissive: 0xffffff, emissiveMap: leaseWindowTex, emissiveIntensity: 0.12, roughness: 0.85 }));
+  const leaseDoorMat = keep(new THREE.MeshStandardMaterial({ color: '#4a3550', roughness: 0.7 }));
+  const leaseShells = new Map(); // facade name -> the shell's merged geometry
+  const LEASE_TRIM = '#6f5a86';
 
   // The view into the shop: warm light, shelves, a pastry counter and a menu screen.
   function interiorTexture(tint, seed) {
@@ -115,17 +147,9 @@ export function createStorefrontFactory(kit) {
     })));
   }
 
-  /** A storefront for `shop` on a plot, facing +z in its own frame. */
-  function buildStorefront(shop) {
-    const seed = hashSeed(String(shop.tenant_id || shop.slug || shop.name));
-    const r = rng(seed);
-    const tint = validColour(shop.tint, '#5b2a86');
-    const trim = shade(tint, 0.62), trimLight = shade(tint, 0.9);
-    const f = FACADES[seed % FACADES.length];
-    const root = new THREE.Group(); root.name = `storefront:${shop.slug || shop.tenant_id}`;
-    const near = new THREE.Group(); root.add(near);
-
-    // shell: body, cornices, pilasters, plinth and roof parapet in one mesh
+  // The building itself: body, cornices, pilasters, plinth, roof, upper
+  // windows, topiaries and planters, merged into one mesh.
+  function shellGeometry(f, trim, trimLight, r) {
     const parts = [
       [G.box, mm(T(0, H / 2, 0), S(W, H, D)), f.wall],
       [G.box, mm(T(0, 0.25, FRONT + 0.15), S(W + 0.4, 0.5, 0.5)), f.base],
@@ -169,13 +193,24 @@ export function createStorefrontFactory(kit) {
     // planters under the display window
     parts.push([G.box, mm(T(2.35, 0.3, FRONT + 0.55), S(6.2, 0.6, 0.7)), f.base]);
     for (let k = 0; k < 12; k++) parts.push([G.ico, mm(T(-0.5 + k * 0.52, 0.7, FRONT + 0.55 + (k % 2) * 0.12), S(0.26)), ['#57b77f', '#e0449a', '#b77cff', '#ffc23d', '#3f9d6b'][k % 5]]);
-    const shellGeo = keep(mergeParts(parts));
-    const shell = new THREE.Mesh(shellGeo, kit.vcMat); shell.castShadow = false; shell.receiveShadow = false;
+    return mergeParts(parts);
+  }
+
+  /** A storefront for `shop` on a plot, facing +z in its own frame. */
+  function buildStorefront(shop) {
+    const seed = hashSeed(String(shop.tenant_id || shop.slug || shop.name));
+    const r = rng(seed);
+    const tint = validColour(shop.tint, '#5b2a86');
+    const trim = shade(tint, 0.62), trimLight = shade(tint, 0.9);
+    const f = FACADES[seed % FACADES.length];
+    const root = new THREE.Group(); root.name = `storefront:${shop.slug || shop.tenant_id}`;
+    const near = new THREE.Group(); root.add(near);
+
+    const shell = new THREE.Mesh(keep(shellGeometry(f, trim, trimLight, r)), kit.vcMat); shell.castShadow = false; shell.receiveShadow = false;
     root.add(shell);
 
     // walls textured (front only; sides share the shell colour)
-    const wallMat = keep(new THREE.MeshStandardMaterial({ map: wallTexture(f), roughness: 0.92 }));
-    const wall = new THREE.Mesh(G.plane, wallMat); wall.scale.set(W - 0.02, H - 0.02, 1); wall.position.set(0, H / 2, FRONT + 0.006); root.add(wall);
+    const wall = new THREE.Mesh(G.plane, facadeMat(f)); wall.scale.set(W - 0.02, H - 0.02, 1); wall.position.set(0, H / 2, FRONT + 0.006); root.add(wall);
 
     // display window and door, lit from inside
     const inside = interiorTexture(tint, seed);
@@ -186,7 +221,7 @@ export function createStorefrontFactory(kit) {
     const door = new THREE.Mesh(G.plane, doorMat); door.scale.set(1.6, 2.6, 1); door.position.set(-2.9, 1.3, FRONT + 0.14); near.add(door);
 
     // awnings over the window and the door
-    const aw = awningMat(tint, '#fff4ea');
+    const aw = awningMat(AWNINGS.shop[0], AWNINGS.shop[1]);
     const awning = (x, width, y) => {
       const m = new THREE.Mesh(G.box, aw); m.scale.set(width, 0.06, 1.5); m.rotation.x = 0.42; m.position.set(x, y, FRONT + 0.7); near.add(m);
     };
@@ -232,19 +267,37 @@ export function createStorefrontFactory(kit) {
     };
   }
 
-  /** An empty plot: hoarding and a "Your café here" sign. */
-  function buildEmptyPlot(index) {
-    const root = new THREE.Group(); root.name = `fnb-plot:${index}`;
-    const hoard = new THREE.Mesh(G.box, hoardingMat); hoard.scale.set(W - 1, 2.2, 0.15); hoard.position.set(0, 1.1, FRONT - 0.6); root.add(hoard);
-    for (const s of [-1, 1]) { const side = new THREE.Mesh(G.box, hoardingMat); side.scale.set(0.15, 2.2, D - 1.5); side.position.set(s * (W - 1) / 2, 1.1, 0); root.add(side); }
-    const sign = new THREE.Mesh(G.plane, plotSignMat); sign.scale.set(4.2, 1.64, 1); sign.position.set(0, 3.4, FRONT - 0.5); root.add(sign);
-    const post = new THREE.Mesh(G.box, std('#4a3550')); post.scale.set(0.12, 2.3, 0.12); post.position.set(0, 1.15, FRONT - 0.55); root.add(post);
-    const hit = new THREE.Mesh(G.box, kit.hitMat); hit.scale.set(W, 4, D); hit.position.y = 2; root.add(hit);
-    hit.userData.fnbPlot = index;
-    return { root, hit, setNear() {}, dispose() { root.removeFromParent(); } };
+  /** A vacant unit: the same shophouse, shuttered, "Open for lease!" over the door. */
+  function buildLeaseUnit(district, index) {
+    const f = FACADES[(index + (district === 'services' ? 2 : district === 'retail' ? 1 : 0)) % FACADES.length];
+    const root = new THREE.Group(); root.name = `lease:${district}:${index}`;
+    const near = new THREE.Group(); root.add(near);
+    if (!leaseShells.has(f.name)) leaseShells.set(f.name, keep(shellGeometry(f, LEASE_TRIM, shade(LEASE_TRIM, 1.25), rng(77))));
+    const shell = new THREE.Mesh(leaseShells.get(f.name), kit.vcMat); shell.castShadow = false; shell.receiveShadow = false;
+    root.add(shell);
+    const wall = new THREE.Mesh(G.plane, facadeMat(f)); wall.scale.set(W - 0.02, H - 0.02, 1); wall.position.set(0, H / 2, FRONT + 0.006); root.add(wall);
+    const win = new THREE.Mesh(G.plane, leaseWindowMat); win.scale.set(6.1, 2.25, 1); win.position.set(2.35, 1.8, FRONT + 0.02); near.add(win);
+    const glass = new THREE.Mesh(G.plane, glassMat); glass.scale.set(6.1, 2.25, 1); glass.position.set(2.35, 1.8, FRONT + 0.06); near.add(glass);
+    const door = new THREE.Mesh(G.plane, leaseDoorMat); door.scale.set(1.6, 2.6, 1); door.position.set(-2.9, 1.3, FRONT + 0.14); near.add(door);
+    const aw = awningMat(AWNINGS.shop[0], AWNINGS.shop[1]);
+    for (const [x, width, y] of [[2.35, 6.6, 3.25], [-2.9, 2.4, 3.1]]) {
+      const m = new THREE.Mesh(G.box, aw); m.scale.set(width, 0.06, 1.5); m.rotation.x = 0.42; m.position.set(x, y, FRONT + 0.7); near.add(m);
+    }
+    const fascia = new THREE.Mesh(G.plane, leaseFasciaMat); fascia.scale.set(8.6, 1.07, 1); fascia.position.set(0, 4.05, FRONT + 0.12); root.add(fascia);
+    const sign = new THREE.Mesh(G.plane, leaseSignMat); sign.scale.set(3.3, 1.93, 1); sign.position.set(0, 6.05, FRONT + 0.14); root.add(sign);
+    const shadow = new THREE.Mesh(G.plane, shadowMat); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(W + 4, D + 4, 1); shadow.position.y = 0.02; root.add(shadow);
+    const hit = new THREE.Mesh(G.box, kit.hitMat); hit.scale.set(W, H, D); hit.position.y = H / 2; root.add(hit);
+    hit.userData.lease = { district, index };
+    return { root, hit, near, lease: { district, index }, setNear(on) { near.visible = on; }, dispose() { root.removeFromParent(); } };
+  }
+  function setLeaseTheme(name) {
+    const dusk = name === 'dusk';
+    leaseFasciaMat.emissiveIntensity = dusk ? 0.5 : 0.18;
+    leaseSignMat.emissiveIntensity = dusk ? 0.45 : 0.15;
+    leaseWindowMat.emissiveIntensity = dusk ? 0.3 : 0.12;
   }
 
-  function dispose() { for (const o of own) o.dispose?.(); own.length = 0; facadeTex.clear(); awningMats.clear(); }
-  return { buildStorefront, buildEmptyPlot, dispose, size: { W, D, H } };
+  function dispose() { for (const o of own) o.dispose?.(); own.length = 0; facadeTex.clear(); facadeMats.clear(); awningMats.clear(); leaseShells.clear(); }
+  return { buildStorefront, buildLeaseUnit, setLeaseTheme, dispose, size: { W, D, H } };
 }
 export { W as STOREFRONT_W, D as STOREFRONT_D };

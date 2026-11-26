@@ -10,8 +10,10 @@ import { StylePanel } from './ui/StylePanel';
 import { DailyPanel } from './ui/DailyPanel';
 import { HelpSheet } from './ui/HelpSheet';
 import { PlotSheet, SignInSheet } from './ui/PlotSheet';
-import { StorefrontSheet, FnbPlotSheet, ComingSoonSheet, HopSheet } from './ui/DistrictSheets';
+import { StorefrontSheet, LeaseSheet, ComingSoonSheet, HopSheet } from './ui/DistrictSheets';
+import { HeroSheet, HeroButton } from './ui/HeroSheet';
 import { Hub, AreaTitle } from './ui/Hub';
+import { DEFAULT_CHARACTER, characterOf, loadHero, saveHero } from './engine/characters';
 
 const FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Figtree:wght@400;500;600;700&family=Fredoka:wght@500;600;700&display=swap';
 const RETURN_KEY = 'sellio-world-return';
@@ -42,13 +44,14 @@ function readReturn() {
   } catch { return null; }
 }
 
-const LINK_WORDS = { signIn: 'the sign-in page', join: 'account sign-up', openShop: 'free shop sign-up', shopSetup: 'your shop setup', merchants: 'Sellio plans for cafés and restaurants' };
+const LINK_WORDS = { signIn: 'the sign-in page', join: 'account sign-up', openShop: 'free shop sign-up', shopSetup: 'your shop setup', merchants: 'Sellio plans for shops' };
 
 /**
- * Sellio World: the whole island as a map you can explore, with the F&B
- * District's storefronts, Pop-up Street's stalls and coins, and the districts
- * still to come. `backend` is the Supabase backend in the app (or the demo
- * backend) and `navigate(url)` leaves the game for another Sellio page.
+ * Sellio World: the whole island as a map you can explore with a hero of your
+ * choice: Pop-up Street's stalls and coins, the F&B District's storefronts,
+ * and Retail Avenue and Services Garden, whose units are open for lease.
+ * `backend` is the Supabase backend in the app (or the demo backend) and
+ * `navigate(url)` leaves the game for another Sellio page.
  */
 export default function WorldGame({ backend, navigate, debug = false, onReset }) {
   const game = useWorldGame(backend);
@@ -61,6 +64,9 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
   const [shopId, setShopId] = useState(null);
   const [storeId, setStoreId] = useState(null);
   const [plot, setPlot] = useState(null);
+  const [lease, setLease] = useState(null);
+  const [hero, setHero] = useState(loadHero); // the hero this player chose, or null before they have
+  const [heroPreview, setHeroPreview] = useState(null);
   const [soonKey, setSoonKey] = useState(null);
   const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState('Tap the ground to walk · drag to look around');
@@ -75,6 +81,10 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
   const [here, setHere] = useState(null);
   const [area, setArea] = useState({ title: '', sub: '', show: false });
   const signInShown = useRef(false);
+  const heroAsked = useRef(false);
+  const heroRef = useRef(hero);
+  heroRef.current = hero;
+  const heroNow = characterOf(hero || DEFAULT_CHARACTER);
   const lastPlayer = useRef(null); // where Mochi was when the world had to be rebuilt
   const returning = useRef(null);
   const enteredRef = useRef(false);
@@ -96,10 +106,10 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
     const n = fnbShops.length;
     const live = street?.shops_live ?? 0, min = street?.min_shops ?? 30;
     return [
-      { ...DISTRICTS[0], note: n === 0 ? 'Storefronts opening soon' : n === 1 ? '1 storefront open' : `${n} storefronts open` },
+      { ...DISTRICTS[0], note: n === 0 ? 'Units open for lease' : n === 1 ? '1 storefront open' : `${n} storefronts open` },
       { ...DISTRICTS[1], status: closed ? 'opening' : 'live', note: closed ? `Opens at ${min} shops · ${live} live` : `${shops.length} home sellers' stalls · coins` },
-      { ...DISTRICTS[2], note: 'Coming soon' },
-      { ...DISTRICTS[3], note: 'Coming soon' },
+      { ...DISTRICTS[2], note: 'Shop units open for lease' },
+      { ...DISTRICTS[3], note: 'Studio units open for lease' },
     ];
   }, [fnbShops, street, shops, closed]);
   const hopList = useMemo(() => [{ key: 'plaza', name: PLAZA.name, status: 'live', note: 'The fountain and the giant coin' }, ...districts], [districts]);
@@ -135,6 +145,7 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
         reduceMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
         coarse: window.matchMedia?.('(pointer: coarse)').matches,
         quality: saver ? 'saver' : 'auto',
+        character: heroRef.current || DEFAULT_CHARACTER,
       });
       worldRef.current = world;
       if (lastPlayer.current) { returning.current = { ...lastPlayer.current, t: Date.now() }; lastPlayer.current = null; setEntered(false); }
@@ -210,6 +221,29 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
   }, [sheet, worldOn, engine]);
 
   const closeSheet = useCallback(() => { setSheet(null); setPlot(null); }, []);
+
+  /* the hero picker: tapping a hero swaps it in the world; closing without choosing puts the old one back */
+  const openHero = useCallback(() => {
+    const w = worldRef.current; if (!w || !enteredRef.current) return;
+    setHeroPreview(heroRef.current || DEFAULT_CHARACTER);
+    setSheet('hero');
+    w.focusPlayer();
+  }, []);
+  const previewHero = useCallback((id) => { setHeroPreview(id); worldRef.current?.setCharacter(id, { celebrate: true }); }, []);
+  const chooseHero = useCallback((id) => {
+    saveHero(id); setHero(id);
+    worldRef.current?.setCharacter(id);
+    setSheet(null);
+  }, []);
+  const lastSheet = useRef(null);
+  useEffect(() => {
+    const was = lastSheet.current; lastSheet.current = sheet;
+    if (sheet === 'hero') return;
+    // closed the first-time picker without choosing: keep the hero they have, and don't ask again
+    if (was === 'hero' && !hero) { saveHero(DEFAULT_CHARACTER); setHero(DEFAULT_CHARACTER); }
+    const w = worldRef.current, want = hero || DEFAULT_CHARACTER;
+    if (w?.character && w.character !== want) w.setCharacter(want);
+  }, [sheet, hero, worldOn]);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && sheet) { e.preventDefault(); closeSheet(); } };
     window.addEventListener('keydown', onKey);
@@ -256,6 +290,15 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.sessionError]);
 
+  /* today's limit on street coins and shop visits: say so once when it is reached */
+  const limitSaid = useRef(null);
+  useEffect(() => {
+    const day = game.profile?.day;
+    if (game.capLeft !== 0 || !day || limitSaid.current === day) return;
+    limitSaid.current = day;
+    push(`You've collected today's ${game.dailyCap ? `${game.dailyCap} ` : ''}coins from the streets. New coins arrive tomorrow.`, { kind: 'reward', duration: 5200 });
+  }, [game.capLeft, game.profile?.day, game.dailyCap, push]);
+
   /* entering, hopping and looking around */
   const showArea = useCallback((key) => {
     if (!key || !PLACE_NAMES[key]) return;
@@ -298,14 +341,23 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
     },
     onComingSoonTap: (key) => { setSoonKey(key); setSheet('soon'); },
     onStorefrontTap: (s) => { setStoreId(s.tenant_id); setSheet('store'); worldRef.current?.focusStorefront(s.tenant_id, true); },
-    onFnbPlotTap: (p) => { setSheet('fnbplot'); worldRef.current?.focusFnbPlot(p.index); },
+    onLeaseTap: (u) => { setLease(u); setSheet('lease'); worldRef.current?.focusLease(u.district, u.index); },
+    onHopEnd: () => {
+      // the first time someone steps onto the island, they choose their hero
+      if (heroRef.current || heroAsked.current || sheet) return;
+      heroAsked.current = true;
+      openHero();
+    },
     onStallTap: (s) => { setShopId(s.tenant_id); setSheet('stall'); worldRef.current?.focusStall(s.tenant_id, true); },
     onPlotTap: (p) => { setPlot(p); setSheet('plot'); worldRef.current?.focusPlot(p.slot); },
     onPadTap: () => setSheet('hop'),
     onCoinCollect: (c) => {
-      popAt(fxRef.current, c.screen.x, c.screen.y, `+${c.value}`, c.value === 5 || c.night);
+      // a coin pays what is left of today's limit at most
+      const give = game.capLeft === null ? c.value : Math.min(c.value, game.capLeft);
+      if (give <= 0) { worldRef.current?.confirmDrop(c.id); return; }
+      popAt(fxRef.current, c.screen.x, c.screen.y, `+${give}`, give >= 5 || c.night);
       setBump((n) => n + 1);
-      game.claimDrop({ id: c.id, value: c.value }).then((r) => {
+      game.claimDrop({ id: c.id, value: give }).then((r) => {
         worldRef.current?.confirmDrop(c.id);
         celebrateUnlocks(r?.unlocked);
       }, (e) => {
@@ -322,7 +374,7 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
     onCanvasTap: () => {
       if (!sheet) return false;
       closeSheet();
-      return sheet !== 'stall' && sheet !== 'store'; // after a shop's sheet, the tap still walks
+      return sheet !== 'stall' && sheet !== 'store' && sheet !== 'lease'; // after a shop's sheet, the tap still walks
     },
     onFirstMove: () => {
       if (game.canCollect && here === 'popup') {
@@ -340,7 +392,7 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
   async function visit(s) {
     if (!s) return;
     const url = backend.links?.storefront?.(s.slug);
-    const claim = game.canCollect && !s.mine && !visitedToday(s) && (game.profile?.visits_left ?? 0) > 0;
+    const claim = game.canCollect && !s.mine && !visitedToday(s) && (game.profile?.visits_left ?? 0) > 0 && game.capLeft !== 0;
     if (claim) {
       setBusy(true);
       try {
@@ -424,10 +476,13 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
   const hubError = engine === 'failed' ? "This browser couldn't start 3D graphics. Try another browser or device." : game.loadError;
   const p = game.profile;
   const levelProgress = p?.next_level_at ? Math.min(1, p.lifetime / p.next_level_at) : 1;
+  const visitPays = game.capLeft === null ? (p?.visit_reward ?? 2) : Math.min(p?.visit_reward ?? 2, Math.max(game.capLeft, 1));
   const soonDistrict = DISTRICTS.find((d) => d.key === soonKey) || null;
+  const leaseDistrict = DISTRICTS.find((d) => d.key === lease?.district) || null;
   const list = here === 'fnb' ? { title: 'Storefronts on the boulevard', items: fnbShops }
     : here === 'popup' ? { title: 'Stalls on the street today', items: shops }
-      : { title: 'Cafés and restaurants', items: fnbShops };
+      : here === 'retail' || here === 'services' ? null
+        : { title: 'Cafés and restaurants', items: fnbShops };
 
   const ui = (
     <div className="pw" ref={rootRef}>
@@ -441,26 +496,28 @@ export default function WorldGame({ backend, navigate, debug = false, onReset })
           {game.mode === 'preview' && !sheet && here === 'popup' && <div className="pw-preview-tag">Preview · only shop owners see the street until it opens</div>}
           <AreaTitle {...area} />
           <p className={`pw-hint${hintGone ? ' gone' : ''}`}>{hint}</p>
-          <Dock primary={primary} following={following} onRecentre={() => worldRef.current?.recentre()} onHelp={() => setSheet('help')} />
+          <HeroButton hero={heroNow} onClick={openHero} />
+          <Dock primary={primary} following={following} heroName={heroNow.name} onRecentre={() => worldRef.current?.recentre()} onHelp={() => setSheet('help')} />
         </>
       )}
       <Toasts toasts={toasts} dismiss={dismiss} />
 
       <StallSheet open={sheet === 'stall'} shop={shop} onClose={closeSheet} onVisit={() => visit(shop)} onStyle={openStyle} busy={busy}
-        signedIn={!!game.user} canEarn={game.canCollect} visited={visitedToday(shop)} visitsLeft={p?.visits_left ?? 0} reward={p?.visit_reward ?? 2} />
+        signedIn={!!game.user} canEarn={game.canCollect} visited={visitedToday(shop)} visitsLeft={p?.visits_left ?? 0} reward={visitPays} capLeft={game.capLeft} />
       <StorefrontSheet open={sheet === 'store'} shop={store} onClose={closeSheet} onVisit={() => visit(store)} busy={busy}
-        signedIn={!!game.user} canEarn={game.canCollect} visited={visitedToday(store)} visitsLeft={p?.visits_left ?? 0} reward={p?.visit_reward ?? 2} />
-      <FnbPlotSheet open={sheet === 'fnbplot'} onClose={closeSheet} onAction={linkAction} />
+        signedIn={!!game.user} canEarn={game.canCollect} visited={visitedToday(store)} visitsLeft={p?.visits_left ?? 0} reward={visitPays} capLeft={game.capLeft} />
+      <LeaseSheet open={sheet === 'lease'} district={leaseDistrict} unit={lease ? lease.index + 1 : 0} onClose={closeSheet} onAction={linkAction} />
+      <HeroSheet open={sheet === 'hero'} value={heroPreview} saved={hero} onPick={previewHero} onChoose={chooseHero} onClose={closeSheet} />
       <ComingSoonSheet open={sheet === 'soon'} district={soonDistrict} onClose={closeSheet} onLook={() => { closeSheet(); if (soonKey) peek(soonKey); }} />
       <HopSheet open={sheet === 'hop'} onClose={closeSheet} districts={hopList} here={here} onHop={hop}
         onPeek={(k) => { closeSheet(); setSoonKey(k); peek(k); }} onOverview={overview} list={list} onWalk={walkTo} />
       <StylePanel open={sheet === 'style'} stall={game.stall} shopName={myShop?.name || ''} balance={game.balance ?? 0} busy={busy}
         onClose={closeSheet} onPreview={onPreview} onBuy={buy} onEquip={equip} />
-      <DailyPanel open={sheet === 'daily'} profile={p} busy={busy} onClose={closeSheet} onClaimDaily={claimDaily} onClaimMission={claimMission} />
+      <DailyPanel open={sheet === 'daily'} profile={p} busy={busy} capLeft={game.capLeft} dailyCap={game.dailyCap} onClose={closeSheet} onClaimDaily={claimDaily} onClaimMission={claimMission} />
       <HelpSheet open={sheet === 'help'} onClose={closeSheet} themeChoice={themeChoice} onTheme={setThemeChoice}
         sound={sound} onSound={(on) => { worldRef.current?.sfx.setEnabled(on); setSound(on); }}
         saver={saver} onSaver={(on) => { worldRef.current?.setQuality(on ? 'saver' : 'auto'); setSaver(on); }}
-        signedIn={!!game.user} onReset={onReset ? () => { onReset(); game.reload(); closeSheet(); } : null} />
+        signedIn={!!game.user} dailyCap={game.dailyCap} visitReward={p?.visit_reward ?? 2} hero={heroNow} onHero={openHero} onReset={onReset ? () => { onReset(); game.reload(); closeSheet(); } : null} />
       <PlotSheet open={sheet === 'plot'} plot={plot} viewer={viewer} minShops={street?.min_shops ?? 30} liveCount={street?.shops_live ?? 0}
         onClose={closeSheet} onAction={linkAction} />
       <SignInSheet open={sheet === 'signin'} onClose={closeSheet} onAction={(k) => linkAction(k === 'signin' ? 'signIn' : 'join')} />

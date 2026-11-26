@@ -2,16 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { Sheet, CloseButton, Coin, Bar } from './Sheet';
 import { Swatch } from './Swatch';
-import { RARITY, SLOT_LABELS } from '../engine/catalog';
-
-const SLOTS = ['awning', 'sign', 'lights', 'decor'];
+import { RARITY, SLOT_LABELS, STYLE_SLOTS as SLOTS } from '../engine/catalog';
 
 // Spend coins on the owner's stall. Tapping an item you don't own puts it on
 // the stall to try; unlocking asks the server, which charges and equips it.
 export function StylePanel({ open, stall, shopName, balance, busy, onClose, onPreview, onBuy, onEquip }) {
-  const [slot, setSlot] = useState('awning');
+  const [slot, setSlot] = useState(SLOTS[0]);
   const [preview, setPreview] = useState(null);
-  useEffect(() => { if (!open) { setPreview(null); setSlot('awning'); } }, [open]);
+  useEffect(() => { if (!open) { setPreview(null); setSlot(SLOTS[0]); } }, [open]);
   useEffect(() => {
     if (!stall) return;
     onPreview(preview ? { ...stall.style, [preview.slot]: preview.code } : null);
@@ -60,6 +58,7 @@ export function StylePanel({ open, stall, shopName, balance, busy, onClose, onPr
         ))}
       </div>
       <div className="pw-scroll">
+        <p className="pw-note">Every stall on Pop-up Street wears the same purple and white awning. Make yours stand out with its signboard, lights and decor.</p>
         {!stall ? <p className="pw-note">Loading your stall…</p> : (
           <div className="pw-items" role="tabpanel" aria-labelledby={`pw-tab-${slot}`}>
             {items.map((item) => {

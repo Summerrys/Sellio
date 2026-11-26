@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { rr, fitFont, rng, hashSeed } from './kit';
-import { LOOKS, safeStyle, goodsFor } from './catalog';
+import { LOOKS, AWNINGS, safeStyle, goodsFor } from './catalog';
 import { STALL_W as W, STALL_X, FONT_DISPLAY as FONT_D, FONT_CHALK as FONT_C } from './constants';
 import { loadImage, drawCover } from './images';
 
@@ -62,13 +62,6 @@ export function createStallFactory(kit, { motion = 1 } = {}) {
       if (!scallop) { c.fillStyle = 'rgba(0,0,0,.14)'; c.fillRect(0, h - 6, w, 6); }
     }),
   }));
-  const glowCanopyTex = canvasTex(256, 64, (c, w, h) => {
-    const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, GRAD[0]); g.addColorStop(0.5, GRAD[1]); g.addColorStop(1, GRAD[2]);
-    c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,.22)'; for (let i = 1; i < 8; i++) c.fillRect(i * w / 8 - 1, 0, 2, h);
-  });
-  const glowCanopyMat = kit.track(new THREE.MeshStandardMaterial({ map: glowCanopyTex, emissive: 0xffffff, emissiveMap: glowCanopyTex, emissiveIntensity: 0.4, side: THREE.DoubleSide, roughness: 0.5 }));
-  const ribsGeo = kit.track(mergeParts([-(W + 0.4) / 2, 0, (W + 0.4) / 2].map((x) => [G.rib, T(x, 2.72, 0), '#f3c14b'])));
-  const ribsMat = kit.track(new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.4, roughness: 0.4 }));
   const canopyGeo = kit.track(new THREE.BoxGeometry(1, 1, 1));
   const bulbMat = std('#ffe2a3', { emissive: '#ffd27a', emissiveIntensity: 1.6 });
   const vcDouble = kit.track(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }));
@@ -161,26 +154,15 @@ export function createStallFactory(kit, { motion = 1 } = {}) {
   }
 
   /* awning, sign, lights and decor; each returns its group and animations */
-  function buildAwning(id) {
+  // Sellio's stall awning: the same slope, stripes and valance on every stall.
+  function buildAwning() {
     const g = new THREE.Group();
-    const look = LOOKS.awning[id] || LOOKS.awning.sunset;
-    if (look.kind === 'pagoda') {
-      const roof = mesh(G.pyramid, std('#c8323c', { flatShading: true, roughness: 0.6 })); roof.scale.set(1.8 * Math.SQRT2, 1.25, 1.35 * Math.SQRT2); roof.position.set(0, 2.8 + 0.625, 0.15); g.add(roof);
-      const trim = mesh(G.box, std('#f3c14b', { metalness: 0.3, roughness: 0.45 }), false); trim.scale.set(3.62, 0.1, 2.72); trim.position.set(0, 2.8, 0.15); g.add(trim);
-      const fin = mesh(G.sphere, std('#f3c14b', { metalness: 0.3, roughness: 0.45 }), false); fin.scale.setScalar(0.11); fin.position.set(0, 4.1, 0.15); g.add(fin);
-      return { g, info: { signY: 2.42, signZ: 1.52, rods: false, frontY: 2.75, frontZ: 1.64, halfW: 1.75, eaves: true } };
-    }
-    if (look.kind === 'glow') {
-      const canopy = mesh(G.canopy, glowCanopyMat); canopy.position.set(0, 2.72, 0); g.add(canopy);
-      const ribs = mesh(ribsGeo, ribsMat, false); g.add(ribs);
-      return { g, info: { signY: 3.22, signZ: 1.44, rods: false, frontY: 2.72, frontZ: 1.38, halfW: 1.6 } };
-    }
-    const [a, b] = look.colors; const scallop = !!look.scallop;
+    const [a, b] = AWNINGS.stall;
     const len = Math.hypot(2.2, 0.35), ang = Math.atan2(0.35, 2.2);
     const canopy = mesh(canopyGeo, stripeMat(a, b));
     canopy.scale.set(W + 0.4, 0.05, len); canopy.rotation.x = ang; canopy.position.set(0, 2.775, 0.15); g.add(canopy);
-    const vh = scallop ? 0.4 : 0.3;
-    const val = own(new THREE.Mesh(new THREE.PlaneGeometry(W + 0.4, vh), valanceMat(a, b, scallop)), { geo: true });
+    const vh = 0.3;
+    const val = own(new THREE.Mesh(new THREE.PlaneGeometry(W + 0.4, vh), valanceMat(a, b, false)), { geo: true });
     val.position.set(0, 2.6 - vh / 2 + 0.01, 1.255); g.add(val);
     return { g, info: { signY: 3.32, signZ: 1.0, rods: true, frontY: 2.6 - vh + 0.02, frontZ: 1.27, halfW: 1.6 } };
   }
@@ -370,11 +352,11 @@ export function createStallFactory(kit, { motion = 1 } = {}) {
 
     stall.setStyle = (style) => {
       const st = safeStyle(style);
-      if (stall.style && Object.keys(st).every((k) => st[k] === stall.style[k])) return;
+      if (stall.style && ['sign', 'lights', 'decor'].every((k) => st[k] === stall.style[k])) return;
       stall.style = st;
       stall.ticks.length = 0;
       for (const s of Object.keys(stall.slots)) clearSlot(stall.slots[s]);
-      const aw = buildAwning(st.awning); stall.slots.awning.add(aw.g);
+      const aw = buildAwning(); stall.slots.awning.add(aw.g);
       const sg = buildSign(st.sign, stall.shop.name, aw.info); stall.slots.sign.add(sg.g);
       const li = buildLights(st.lights, aw.info); stall.slots.lights.add(li.g);
       const de = buildDecor(st.decor); stall.slots.decor.add(de.g);

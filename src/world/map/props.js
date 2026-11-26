@@ -12,8 +12,8 @@ const UMBRELLAS = ['#e0449a', '#fb923c', '#8b2fc9', '#fff4ea', '#1f9e78'];
 
 // Everything on the island that is not a shop, stall or Mochi: the floating
 // rock underneath, clouds, trees, lamps, benches, flower beds, café tables,
-// the plaza fountain with its giant Sellio coin, Sellio Hop pads, the F&B
-// gateway, the canal bridge and the cranes over the districts still being
+// the plaza fountain with its giant Sellio coin, Sellio Hop pads, the
+// gateways, the canal bridge and the cranes over any district still being
 // built. Static pieces are merged into a handful of meshes.
 export function buildProps(kit, scene, layout, { motion = 1 } = {}) {
   const { G, T, S, RY, RX, RZ, mm, mergeParts, canvasTex, std } = kit;
@@ -179,6 +179,15 @@ export function buildProps(kit, scene, layout, { motion = 1 } = {}) {
     pave(sq, terracotta, 0.014).position.set(-175, 0.014, -FNB_BOULEVARD_Y);
     const fore = keep(planarUV(new THREE.CircleGeometry(9.9, 48), 3)); fore.rotateX(-Math.PI / 2);
     pave(fore, terracotta, 0.014).position.set(-28, 0.014, -FNB_BOULEVARD_Y);
+    // Retail Avenue and Services Garden: the same paving, forecourt to end square
+    for (const st of layout.streets) {
+      const from = st.pad + st.dir * 4, len = Math.abs(st.end - from);
+      const road = keep(planarUV(new THREE.PlaneGeometry(len, BOULEVARD_HALF * 2 - 0.2), 3.2)); road.rotateX(-Math.PI / 2);
+      pave(road, st.key === 'services' ? stoneTex : warmTex).position.set((from + st.end) / 2, 0.012, -st.y);
+      const round = keep(planarUV(new THREE.RingGeometry(st.key === 'services' ? 4.7 : 4.4, st.radius - 0.2, 64, 1), 3)); round.rotateX(-Math.PI / 2);
+      pave(round, terracotta, 0.014).position.set(st.end, 0.014, -st.y);
+      pave(fore, terracotta, 0.014).position.set(st.pad, 0.014, -st.y);
+    }
   }
 
   /* --------------------------------------------------------------- trees */
@@ -278,6 +287,19 @@ export function buildProps(kit, scene, layout, { motion = 1 } = {}) {
   for (const [dx, dy, dz, s] of [[0, 4.2, 0, 2.6], [1.6, 4.9, 0.6, 1.8], [-1.5, 4.6, -0.8, 1.9], [0.3, 5.6, -0.4, 1.6]]) flat.push([G.ico, mm(at(-175, FNB_BOULEVARD_Y), T(dx, dy, dz), S(s)), jitter(pick(LEAVES), 0.95 + R() * 0.15)]);
   for (let k = 0; k < 26; k++) { const a = k / 26 * TAU; flat.push([G.ico, mm(at(-175 + Math.cos(a) * 3.9, FNB_BOULEVARD_Y + Math.sin(a) * 3.9), T(0, 0.62, 0), S(0.22)), FLOWERS[k % FLOWERS.length]]); }
   shadows.push([-175, FNB_BOULEVARD_Y, 9]);
+  for (const st of layout.streets) {
+    if (st.key === 'services') {
+      // a stone rim round the garden pond
+      for (let k = 0; k < 28; k++) { const a = k / 28 * TAU; flat.push([G.box, mm(at(st.end + Math.cos(a) * 4.75, st.y + Math.sin(a) * 4.75), RY(a), T(0, 0.16, 0), S(0.5, 0.32, 1.12)), k % 2 ? '#efe6dc' : '#e6dacd']); }
+      for (let k = 0; k < 5; k++) { const a = k * 1.3 + 0.4, r = 1.2 + (k % 3) * 0.9; flat.push([G.cyl, mm(at(st.end + Math.cos(a) * r, st.y + Math.sin(a) * r), T(0, 0.05, 0), S(0.5, 0.03, 0.5)), k % 2 ? '#57b77f' : '#3f9d6b']); }
+      continue;
+    }
+    flat.push([G.cyl, mm(at(st.end, st.y), T(0, 0.25, 0), S(4.4, 0.5, 4.4)), '#e9dccd']);
+    flat.push([G.cyl, mm(at(st.end, st.y), T(0, 1.6, 0), S(0.3, 2.6, 0.3)), '#7a5238']);
+    for (const [dx, dy, dz, s] of [[0, 4.2, 0, 2.6], [1.6, 4.9, 0.6, 1.8], [-1.5, 4.6, -0.8, 1.9], [0.3, 5.6, -0.4, 1.6]]) flat.push([G.ico, mm(at(st.end, st.y), T(dx, dy, dz), S(s)), jitter(pick(LEAVES), 0.95 + R() * 0.15)]);
+    for (let k = 0; k < 26; k++) { const a = k / 26 * TAU; flat.push([G.ico, mm(at(st.end + Math.cos(a) * 3.9, st.y + Math.sin(a) * 3.9), T(0, 0.62, 0), S(0.22)), FLOWERS[k % FLOWERS.length]]); }
+    shadows.push([st.end, st.y, 9]);
+  }
 
   /* --------------------------------------------------- the canal bridge */
   {
@@ -331,19 +353,19 @@ export function buildProps(kit, scene, layout, { motion = 1 } = {}) {
     smooth.push([G.box, mm(at(b.x, b.y), T(0, 3.2, 0), S(6.6, 2.7, 0.1)), '#2a1838']);
   }
 
-  /* ------------------------------------------------- the F&B gateway arch */
-  const archTex = tex(1024, 160, (c, w, h) => {
-    const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, GRAD[0]); g.addColorStop(0.55, GRAD[1]); g.addColorStop(1, GRAD[2]);
-    c.fillStyle = g; c.fillRect(0, 0, w, h);
-    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 4; rr(c, 10, 10, w - 20, h - 20, 16); c.stroke();
-    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.font = `600 24px ${FONT_DISPLAY}`; try { c.letterSpacing = '8px'; } catch { /* older browsers */ }
-    c.fillText('SELLIO WORLD', w / 2, 40);
-    try { c.letterSpacing = '0px'; } catch { /* older browsers */ }
-    c.font = `700 70px ${FONT_DISPLAY}`; c.fillText('F&B District', w / 2, 104);
-  });
-  {
-    const ax = -46, ay = FNB_BOULEVARD_Y, span = BOULEVARD_HALF * 2 - 0.6;
+  /* --------------------------- the gateway arch at each business street */
+  for (const gw of layout.gateways) {
+    const archTex = tex(1024, 160, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, GRAD[0]); g.addColorStop(0.55, GRAD[1]); g.addColorStop(1, GRAD[2]);
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 4; rr(c, 10, 10, w - 20, h - 20, 16); c.stroke();
+      c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `600 24px ${FONT_DISPLAY}`; try { c.letterSpacing = '8px'; } catch { /* older browsers */ }
+      c.fillText('SELLIO WORLD', w / 2, 40);
+      try { c.letterSpacing = '0px'; } catch { /* older browsers */ }
+      c.font = `700 70px ${FONT_DISPLAY}`; c.fillText(gw.name, w / 2, 104);
+    });
+    const ax = gw.x, ay = gw.y, span = BOULEVARD_HALF * 2 - 0.6;
     for (const s of [-1, 1]) {
       smooth.push([G.box, mm(at(ax, ay + s * span / 2), T(0, 2.8, 0), S(0.9, 5.6, 0.9)), '#5b2a86']);
       smooth.push([G.box, mm(at(ax, ay + s * span / 2), T(0, 0.2, 0), S(1.2, 0.4, 1.2)), '#f3c14b']);
@@ -355,7 +377,8 @@ export function buildProps(kit, scene, layout, { motion = 1 } = {}) {
     const f1 = face.clone(); f1.position.set(ax + 0.26, 6.4, -ay); f1.rotation.y = Math.PI / 2;
     const f2 = face.clone(); f2.position.set(ax - 0.26, 6.4, -ay); f2.rotation.y = -Math.PI / 2;
     root.add(f1, f2);
-    for (let k = 0; k <= 16; k++) glowSpots.push(new THREE.Vector3(ax + 0.3, 5.45, -(ay - span / 2 + k * span / 16)));
+    // bulbs under the beam, on the side people walk in from
+    for (let k = 0; k <= 16; k++) glowSpots.push(new THREE.Vector3(ax + gw.face * 0.3, 5.45, -(ay - span / 2 + k * span / 16)));
   }
 
   /* ------------------------------------------------------- merged meshes */

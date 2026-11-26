@@ -6,7 +6,8 @@ function Switch({ checked, onChange, label }) {
 }
 
 // How to play, plus the few settings a player may want.
-export function HelpSheet({ open, onClose, themeChoice, onTheme, sound, onSound, saver, onSaver, signedIn, onReset }) {
+export function HelpSheet({ open, onClose, themeChoice, onTheme, sound, onSound, saver, onSaver, signedIn, dailyCap = null, visitReward = 2, hero, onHero, onReset }) {
+  const who = hero?.name || 'your hero';
   return (
     <Sheet open={open} labelId="pw-help-title">
       <div className="pw-head">
@@ -15,16 +16,22 @@ export function HelpSheet({ open, onClose, themeChoice, onTheme, sound, onSound,
       </div>
       <div className="pw-scroll">
         <dl className="pw-howto">
-          <div><dt>Walk</dt><dd>Tap the ground and Mochi walks there. On a keyboard, use WASD or the arrow keys.</dd></div>
-          <div><dt>Look around</dt><dd>Drag the map to look around, pinch or scroll to zoom, and drag with two fingers (or the right mouse button) to turn and tilt. The target button finds Mochi again.</dd></div>
+          <div><dt>Walk</dt><dd>Tap the ground and {who} walks there. On a keyboard, use WASD or the arrow keys.</dd></div>
+          <div><dt>Look around</dt><dd>Drag the map to look around, pinch or scroll to zoom, and twist with two fingers (or drag with the right mouse button) to turn all the way round and tilt. The target button finds {who} again.</dd></div>
           <div><dt>Hop</dt><dd>Step onto a pink Sellio Hop pad, or open Sellio Hop from the top bar, to jump between districts.</dd></div>
-          <div><dt>Visit shops</dt><dd>Tap a storefront or a stall to see what they sell, then step inside their real Sellio storefront.</dd></div>
+          <div><dt>Visit shops</dt><dd>Tap a storefront or a stall to see what they sell, then step inside their real Sellio storefront. Units marked “Open for lease!” are waiting for their first shop.</dd></div>
           <div><dt>Collect coins</dt><dd>{signedIn ? 'Walk over coins on Pop-up Street. New coins arrive every day, and a yellow arrow points to the nearest one.' : 'Sign in, then walk over coins on Pop-up Street. New coins arrive every day.'}</dd></div>
-          <div><dt>Earn more</dt><dd>Your first storefront visit to a shop each day pays 2 coins (up to 5 shops a day). Collect the daily reward and finish missions for more.</dd></div>
-          <div><dt>Style your stall</dt><dd>Free shop owners spend coins on awnings, signboards, lights and decor. Try an item on before you unlock it. The best items unlock as more buyers pay for your orders.</dd></div>
+          <div><dt>Earn more</dt><dd>Your first storefront visit to a shop each day pays {visitReward} coins (up to 5 shops a day).{dailyCap ? ` Street coins and shop visits add up to ${dailyCap} coins a day at most.` : ''} Collect the daily reward and finish missions for more.</dd></div>
+          <div><dt>Style your stall</dt><dd>Free shop owners spend coins on signboards, lights and decor. Try an item on before you unlock it. The best items unlock as more buyers pay for your orders. Every stall wears the same purple and white awning.</dd></div>
         </dl>
         <h3 className="pw-label">Settings</h3>
         <div className="pw-settings">
+          {hero && onHero && (
+            <div className="pw-setting">
+              <div><strong>Your hero</strong><small>Playing as {hero.name}. Hairstyles, outfits and accessories are coming.</small></div>
+              <button type="button" className="pw-ghost sm" onClick={onHero}>Change</button>
+            </div>
+          )}
           <div className="pw-setting">
             <div><strong>Time of day</strong><small>Auto follows your clock: evening from 6:30pm.</small></div>
             <div className="pw-seg" role="group" aria-label="Time of day">

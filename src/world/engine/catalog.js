@@ -5,6 +5,13 @@
 
 export const DEFAULT_STYLE = { awning: 'sunset', sign: 'wood', lights: 'none', decor: 'none' };
 
+// Sellio's awnings. Every stall on Pop-up Street wears the same purple and
+// white stripes, and every shop unit the same orange and white, in one shape:
+// awnings are not a styling choice (Alvin, 17 and 24 Nov 2026). Owners style
+// their signboard, lights and decor.
+export const AWNINGS = { stall: ['#8b2fc9', '#fff8f0'], shop: ['#f97316', '#fff8f0'] };
+export const STYLE_SLOTS = ['sign', 'lights', 'decor'];
+
 export const LOOKS = {
   awning: {
     sunset: { kind: 'stripes', colors: ['#fb923c', '#fff4ea'] },

@@ -9,22 +9,23 @@ export function formatPrice(value, currency = 'SGD') {
   catch { return `$${n.toFixed(2)}`; }
 }
 
-function rewardLine({ shop, signedIn, canEarn, visited, visitsLeft, reward }) {
+function rewardLine({ shop, signedIn, canEarn, visited, visitsLeft, reward, capLeft }) {
   if (shop.mine) return ['Your own stall does not earn visit coins', false];
   if (!signedIn) return [`Sign in to earn +${reward} coins for visiting`, false];
   if (!canEarn) return ['Visit rewards start when Pop-up Street opens', false];
   if (visited) return ["Today's visit reward collected", true];
   if (visitsLeft <= 0) return ["You've collected all of today's visit rewards", true];
-  return [`Visit the storefront today to earn +${reward} coins`, false];
+  if (capLeft === 0) return ["You've collected today's coins. Visits earn coins again tomorrow", true];
+  return [`Visit the storefront today to earn +${reward} coin${reward === 1 ? '' : 's'}`, false];
 }
 
 // A seller's stall: who they are, three things they sell, and the way into
 // their real storefront.
-export function StallSheet({ open, shop, onClose, onVisit, onStyle, busy, signedIn, canEarn, visited, visitsLeft, reward }) {
+export function StallSheet({ open, shop, onClose, onVisit, onStyle, busy, signedIn, canEarn, visited, visitsLeft, reward, capLeft = null }) {
   const s = shop || { name: '', menu: [] };
   const how = [s.collection && 'Self-collect', s.delivery && 'Delivery'].filter(Boolean).join(' & ');
   const meta = [s.mine ? 'Your stall' : null, s.kind, s.area, how].filter(Boolean).join(' · ');
-  const [line, done] = shop ? rewardLine({ shop: s, signedIn, canEarn, visited, visitsLeft, reward }) : ['', false];
+  const [line, done] = shop ? rewardLine({ shop: s, signedIn, canEarn, visited, visitsLeft, reward, capLeft }) : ['', false];
   return (
     <Sheet open={open} labelId="pw-stall-name">
       <div className="pw-head">

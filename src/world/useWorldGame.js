@@ -20,7 +20,7 @@ function guestDrops(layout, shopCount) {
   const n = 15;
   return Array.from({ length: n }, (_, i) => ({
     id: `guest-${i}`, x: (r() * 2 - 1) * g.x, z: g.zmin + (i + 0.15 + r() * 0.7) * (g.zmax - g.zmin) / n,
-    value: [1, 1, 1, 2, 2, 3, 3, 4, 5][Math.floor(r() * 9)], night: false,
+    value: r() < 0.6 ? 1 : 2, night: false, // street coins are worth 1 or 2 (Alvin, 24 Nov 2026)
   }));
 }
 
@@ -28,6 +28,11 @@ function guestDrops(layout, shopCount) {
  * Game state and server calls for Pop-up Street. The server decides every
  * reward; this hook keeps the latest answers, queues coin pickups so they
  * reach the server in walking order, and shows coins in flight right away.
+ *
+ * Street coins and shop visits share a daily limit (Alvin, 24 Nov 2026: 30
+ * coins a day). The server sends what is left of it (cap_left; null when there
+ * is no limit); `capLeft` here is that, less the coins still on their way to
+ * the server. At zero the rest of today's coins leave the street.
  */
 export function useWorldGame(backend) {
   const [phase, setPhase] = useState('loading');
@@ -38,6 +43,7 @@ export function useWorldGame(backend) {
   const [profile, setProfile] = useState(null);
   const [sessionError, setSessionError] = useState(null);
   const [pending, setPending] = useState(0);
+  const [capPending, setCapPending] = useState(0);
   const [stall, setStall] = useState(null);
   const [levelUp, setLevelUp] = useState(null);
   const queue = useRef(Promise.resolve());
@@ -123,6 +129,7 @@ export function useWorldGame(backend) {
         balance: typeof r.balance === 'number' ? r.balance : p.balance,
         lifetime,
         missions: r.missions || p.missions,
+        cap_left: typeof r.cap_left === 'number' ? r.cap_left : r.ok === false && r.reason === 'daily_limit' ? 0 : p.cap_left,
         achievements: unlocked.size ? p.achievements.map((a) => (unlocked.has(a.code) ? { ...a, unlocked: true } : a)) : p.achievements,
       };
     });
@@ -138,7 +145,7 @@ export function useWorldGame(backend) {
   }, [profile, loadSession]);
 
   const claimDrop = useCallback((drop) => {
-    setPending((n) => n + drop.value);
+    setPending((n) => n + drop.value); setCapPending((n) => n + drop.value);
     const job = queue.current.then(async () => {
       const gap = CLAIM_GAP_MS - (Date.now() - lastClaim.current);
       if (gap > 0) await sleep(gap);
@@ -160,13 +167,13 @@ export function useWorldGame(backend) {
     queue.current = job.catch(() => {});
     return job.then((r) => {
       if (!alive.current) return r;
-      setPending((n) => n - drop.value);
+      setPending((n) => n - drop.value); setCapPending((n) => n - drop.value);
       applyEarn(r);
       setProfile((p) => (p ? { ...p, drops: p.drops.filter((d) => d.id !== drop.id) } : p));
       return r;
     }, (e) => {
       if (alive.current) {
-        setPending((n) => n - drop.value);
+        setPending((n) => n - drop.value); setCapPending((n) => n - drop.value);
         if (e.hint === 'drop_gone') setProfile((p) => (p ? { ...p, drops: p.drops.filter((d) => d.id !== drop.id) } : p));
       }
       throw e;
@@ -181,6 +188,7 @@ export function useWorldGame(backend) {
     } else if (r.reason === 'already') {
       setProfile((p) => (p && !p.visited_today?.includes(shop.tenant_id) ? { ...p, visited_today: [...(p.visited_today || []), shop.tenant_id] } : p));
     } else if (r.reason === 'daily_cap') setProfile((p) => (p ? { ...p, visits_left: 0 } : p));
+    else if (r.reason === 'daily_limit') setProfile((p) => (p ? { ...p, cap_left: 0 } : p));
     return r;
   }, [backend, applyEarn]);
 
@@ -223,11 +231,12 @@ export function useWorldGame(backend) {
     return s;
   }, [backend, myShopId, applyStall]);
 
+  const capLeft = profile && typeof profile.cap_left === 'number' ? Math.max(0, profile.cap_left - capPending) : null;
   const drops = useMemo(() => {
-    if (profile) return profile.drops || [];
+    if (profile) return capLeft === 0 ? [] : profile.drops || [];
     if (user === null && street && street.open) return guestDrops(street.layout, street.shops.length);
     return [];
-  }, [profile, user, street]);
+  }, [profile, user, street, capLeft]);
 
   const claimable = !!profile && (
     (!profile.streak.claimed_today) ||
@@ -239,6 +248,7 @@ export function useWorldGame(backend) {
     user, street, fnb, mode, profile, sessionError,
     balance: profile ? profile.balance + pending : null,
     pending, drops, canCollect: !!profile,
+    capLeft, dailyCap: profile?.daily_cap ?? null,
     myShopId, myStallOnStreet, stall,
     levelUp, clearLevelUp: () => setLevelUp(null),
     claimable,

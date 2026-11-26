@@ -8,12 +8,14 @@ import { createSupabaseBackend, toWorldError } from '@/world/api';
 import { createIslandHost, ISLAND_URL } from '@/world/islandHost';
 import WorldGame from '@/world/WorldGame';
 
-// Sellio World: an island of Sellio's shops to walk around. Sellio Plaza sits in the middle, with
+// Sellio World: an island of Sellio's shops to explore. Sellio Plaza sits in the middle, with
 // Pop-up Street, the F&B District, Retail Avenue and Services Garden leading off it.
 //
-// The game itself is public/assets/world/island.html, shown here in a frame so its own styles and
-// 3D engine stay apart from the rest of Sellio; src/world/islandHost.js answers what it asks for
-// from Supabase. The earlier map version (src/world/WorldGame.jsx) is still at /World?classic=1.
+// The game is the map version (src/world/WorldGame.jsx): the whole island as a map you can pan,
+// zoom, tilt and turn all the way round, on a phone or with a mouse, with a hero that walks where
+// you tap. Alvin asked for it back on 26 Nov 2026. The island version of 17 Nov
+// (public/assets/world/island.html, shown in a frame, answered by src/world/islandHost.js) is kept
+// at /World?island=1.
 //
 // Until Alvin opens it (lib/worldAccess.js), it's for Sellio's admins: everyone else is told it's
 // coming soon.
@@ -26,8 +28,8 @@ export default function World() {
   const go = useCallback((url) => (url.startsWith('/#') ? window.location.assign(url) : navigate(url)), [navigate]);
   if (access === 'checking') return <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#2a1252' }} />;
   if (access !== 'yes') return <WorldSoon />;
-  if (params.get('classic') === '1') return <WorldGame backend={backend} navigate={go} />;
-  return <Island backend={backend} go={go} />;
+  if (params.get('island') === '1') return <Island backend={backend} go={go} />;
+  return <WorldGame backend={backend} navigate={go} />;
 }
 
 function WorldSoon() {

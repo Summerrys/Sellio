@@ -9,7 +9,7 @@ function ladder(streak) {
 }
 
 // Today's rewards: the daily streak, three missions and the badges.
-export function DailyPanel({ open, profile, busy, onClose, onClaimDaily, onClaimMission }) {
+export function DailyPanel({ open, profile, busy, capLeft = null, dailyCap = null, onClose, onClaimDaily, onClaimMission }) {
   if (!profile) return <Sheet open={open} labelId="pw-daily-title"><div className="pw-head"><h2 id="pw-daily-title">Today</h2><CloseButton onClick={onClose} /></div></Sheet>;
   const { streak, missions, achievements } = profile;
   const { done, today } = ladder(streak);
@@ -32,6 +32,13 @@ export function DailyPanel({ open, profile, busy, onClose, onClaimDaily, onClaim
             {profile.next_level_at != null && <Bar value={profile.lifetime} max={profile.next_level_at} label="Progress to the next explorer level" />}
           </div>
         </div>
+
+        {dailyCap != null && capLeft != null && (
+          <div className="pw-today">
+            <div><strong>Street coins and shop visits</strong><small>{capLeft > 0 ? `${dailyCap - capLeft} of ${dailyCap} coins collected today` : `All ${dailyCap} of today's coins collected. More tomorrow.`}</small></div>
+            <Bar value={dailyCap - capLeft} max={dailyCap} label="Today's street coins and shop visits" />
+          </div>
+        )}
 
         <h3 className="pw-label">Daily reward{streak.current > 0 ? ` · ${streak.current}-day streak` : ''}</h3>
         <div className="pw-ladder">

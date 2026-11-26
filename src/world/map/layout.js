@@ -3,15 +3,15 @@ import { rng } from '../engine/kit';
 import { streetGeometry } from '../engine/constants';
 
 // The island of Sellio World, laid out in metres around Sellio Plaza (0, 0).
-// North-west: Retail Avenue (coming soon). North-east: Services Garden
-// (coming soon). South-west: F&B District. South-east: Pop-up Street.
-// Everything the map draws and everything Mochi can walk on comes from here.
+// North-west: Retail Avenue. North-east: Services Garden. South-west: F&B
+// District. South-east: Pop-up Street. Everything the map draws and everything
+// the player can walk on comes from here.
 
 export const DISTRICTS = [
   { key: 'fnb', name: 'F&B District', status: 'live', blurb: 'Cafés, restaurants and bakeries in full storefronts', center: [-150, -80], pad: [-28, -80], view: { zoom: 19.2, bearing: -90, pitch: 58 } },
   { key: 'popup', name: 'Pop-up Street', status: 'live', blurb: 'Home sellers’ stalls, coins and daily rewards', center: [110, -60], pad: [110, -27], view: { zoom: 19.4, bearing: 180, pitch: 58 } },
-  { key: 'retail', name: 'Retail Avenue', status: 'soon', blurb: 'Boutiques and product-led shops', center: [-170, 150], pad: [-96, 86], view: { zoom: 18, bearing: -20, pitch: 55 } },
-  { key: 'services', name: 'Services Garden', status: 'soon', blurb: 'Studios, wellness and appointment-led services', center: [175, 140], pad: [96, 86], view: { zoom: 18, bearing: 20, pitch: 55 } },
+  { key: 'retail', name: 'Retail Avenue', status: 'live', blurb: 'Boutiques and product-led shops', center: [-150, 180], pad: [-88, 160], view: { zoom: 18.6, bearing: -90, pitch: 56 } },
+  { key: 'services', name: 'Services Garden', status: 'live', blurb: 'Studios, wellness and appointment-led services', center: [150, 180], pad: [88, 160], view: { zoom: 18.6, bearing: 90, pitch: 56 } },
 ];
 export const PLAZA = { key: 'plaza', name: 'Sellio Plaza', center: [0, 0], radius: 34, pad: [0, 22] };
 export const STREET_X = 110;           // Pop-up Street's centre line, metres east
@@ -19,7 +19,18 @@ export const STREET_ENTRANCE_Y = -40;  // where the street meets the avenue from
 export const FNB_BOULEVARD_Y = -80;
 export const PAD_RADIUS = 3.6;
 export const BOULEVARD_HALF = 8.5; // storefront fronts stand this far either side of the boulevard's centre
-const OPEN_PLOTS = 5;                  // empty "Your café here" plots after the last café
+const OPEN_PLOTS = 5;                  // "Open for lease!" units after the last café
+// Retail Avenue and Services Garden, laid out like the F&B District: a Sellio
+// Hop pad on a forecourt, a gateway arch, then a boulevard of shop units that
+// ends in a small square. `dir` is the way the boulevard runs from its gate
+// (-1 west, 1 east). Until merchants move in, every unit is "Open for lease!".
+export const BUSINESS_STREETS = [
+  { key: 'retail', name: 'Retail Avenue', pad: -88, gate: -106, y: 160, dir: -1 },
+  { key: 'services', name: 'Services Garden', pad: 88, gate: 106, y: 160, dir: 1 },
+];
+const UNIT_GAP = 14.5;                 // unit centres along a boulevard
+const UNITS_PER_SIDE = 6;
+const SQUARE_RADIUS = 13;
 
 const ISLAND_CTRL = [
   [-330, 40], [-322, 150], [-262, 216], [-120, 242], [-20, 248], [60, 238], [170, 244], [292, 206], [338, 120],
@@ -38,7 +49,7 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   const F = []; // GeoJSON features
   const blockers = []; // polygons Mochi cannot walk through
   const walkways = []; // drawn after the blockers: bridges
-  const trees = [], lamps = [], benches = [], beds = [], cranes = [], boards = [];
+  const trees = [], lamps = [], benches = [], beds = [], cranes = [], boards = []; // (no cranes or boards: every district is open)
 
   /* island and its rim */
   let island = smoothClosed(ISLAND_CTRL, 8);
@@ -71,7 +82,7 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   const canalPoly = [...canal.map(([x, y]) => [x - 7, y]), ...canal.slice().reverse().map(([x, y]) => [x + 7, y])];
   F.push(polygon(canalPoly, { kind: 'water' })); blockers.push(canalPoly);
   const pond = circle(0, 70, 17, 40); F.push(polygon(pond, { kind: 'water' })); blockers.push(pond);
-  for (const [cx, cy, r] of [[150, 160, 16], [214, 118, 12]]) { const p = circle(cx, cy, r, 36); F.push(polygon(p, { kind: 'water' })); blockers.push(p); }
+  for (const [cx, cy, r] of [[150, 114, 12], [252, 124, 13]]) { const p = circle(cx, cy, r, 36); F.push(polygon(p, { kind: 'water' })); blockers.push(p); }
   // A footbridge over the canal joins Retail Avenue and Services Garden.
   const bridge = { x: 2, y: 128, length: 26, width: 4.6 };
   walkways.push(rect(bridge.x, bridge.y, bridge.length, bridge.width));
@@ -87,10 +98,10 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   const path = (pts, width, tone = 'avenue') => { F.push(line(pts, { kind: 'path', width, tone })); paths.push([pts, width]); };
   path(smoothOpen([[-24, -24], [-30, -46], [-28, FNB_BOULEVARD_Y + 8]], 6), 8);
   path(smoothOpen([[24, -24], [56, -34], [STREET_X, STREET_ENTRANCE_Y + 2]], 6), 8);
-  path(smoothOpen([[-20, 28], [-60, 70], [-120, 96], [-170, 120]], 6), 8);
-  path(smoothOpen([[20, 28], [60, 70], [120, 96], [175, 118]], 6), 8);
+  path(smoothOpen([[-20, 28], [-50, 72], [-78, 118], [-86, 152]], 6), 8);
+  path(smoothOpen([[20, 28], [50, 72], [78, 118], [86, 152]], 6), 8);
   path([[0, 34], [0, 52]], 6);
-  path([[-50, bridge.y], [50, bridge.y]], 5);
+  path([[-80, bridge.y], [80, bridge.y]], 5);
 
   /* F&B District: a boulevard of storefronts round Makan Square */
   path([[-32, FNB_BOULEVARD_Y], [-300, FNB_BOULEVARD_Y]], BOULEVARD_HALF * 2 - 0.4, 'boulevard');
@@ -126,8 +137,8 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
       const tx = p.x + 2.6 * (p.side > 0 ? 1 : -1), ty = p.front - p.side * 2.1;
       terraces.push({ x: tx, y: ty, i: p.index }); blockers.push(circle(tx, ty, 1.35, 10));
     }
-    // a shop's steps, planters and topiaries stand just in front of it
-    blockers.push(p.kind === 'shop' ? rect(p.x, p.y - p.side * 0.6, p.w, p.d + 1.2) : rect(p.x, p.y, p.w, p.d - 1.2));
+    // a unit's steps, planters and topiaries stand just in front of it
+    blockers.push(rect(p.x, p.y - p.side * 0.6, p.w, p.d + 1.2));
   });
   // Café tables round Makan Square (drawn in 3D; block walking)
   const umbrellas = [];
@@ -151,23 +162,48 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   }
   blockers.push(rect(STREET_X, toMapY(geo.endZ), 4.2, 1.2)); // the board at the end
 
-  /* Retail Avenue and Services Garden (coming soon): buildings only */
+  /* Retail Avenue and Services Garden: forecourt, gateway, boulevard of units, end square */
   const block = (x, y, w, d, h, color, area, rot = 0) => {
     const pts = rect(x, y, w, d, rot);
     F.push(polygon(pts, { kind: 'building', height: h, color, area }));
     blockers.push(pts);
   };
-  path([[-280, 160], [-60, 160]], 8, 'avenue'); path([[-170, 70], [-170, 215]], 7, 'avenue');
-  for (const [x0, y0, x1, y1] of [[-275, 172, -182, 205], [-158, 172, -66, 205], [-275, 92, -182, 148], [-158, 92, -66, 148]]) {
-    for (let x = x0; x < x1 - 8; x += 16) {
-      const w = 12 + R() * 2;
-      block(x + w / 2, (y0 + y1) / 2 + (R() - 0.5) * 4, w, (y1 - y0) * (0.55 + R() * 0.2), 8 + R() * 10, PASTELS[Math.floor(R() * PASTELS.length)], 'retail');
+  const leasePlots = [];
+  const gateways = [{ key: 'fnb', name: 'F&B District', x: -46, y: FNB_BOULEVARD_Y, face: 1 }];
+  const streets = BUSINESS_STREETS.map((st) => {
+    const first = st.gate + st.dir * 10, last = first + st.dir * (UNITS_PER_SIDE - 1) * UNIT_GAP;
+    return { ...st, first, last, end: last + st.dir * (6.25 + SQUARE_RADIUS + 3), radius: SQUARE_RADIUS }; // `end`: the square at the far end
+  });
+  for (const st of streets) {
+    const { dir, y, first, last, end } = st;
+    path([[st.pad + dir * 4, y], [end, y]], BOULEVARD_HALF * 2 - 0.4, 'boulevard');
+    F.push(polygon(circle(st.pad, y, 10, 40), { kind: 'plaza', tone: 'square' })); // the entrance forecourt
+    F.push(polygon(circle(end, y, SQUARE_RADIUS, 48), { kind: 'plaza', tone: 'square' }));
+    if (st.key === 'services') { const pond = circle(end, y, 4.6, 28); F.push(polygon(pond, { kind: 'water' })); blockers.push(pond); }
+    else { F.push(polygon(circle(end, y, 4.5, 24), { kind: 'park' })); blockers.push(circle(end, y, 4.2, 16)); } // a planted island with a shade tree
+    for (const s of [-1, 1]) beds.push({ x: st.pad + dir * 11, y: y + s * 10.8, w: 6, d: 2.2, rot: 0 });
+    gateways.push({ key: st.key, name: st.name, x: st.gate, y, face: -dir });
+    const plots = [];
+    for (let k = 0; k < UNITS_PER_SIDE; k++) {
+      for (const side of [1, -1]) {
+        const front = y + side * BOULEVARD_HALF, depth = 11.5;
+        plots.push({ district: st.key, kind: 'open', x: first + dir * k * UNIT_GAP, y: front + side * depth / 2, w: 12.5, d: depth, side, facing: side > 0 ? 0 : Math.PI, front });
+      }
     }
+    plots.forEach((p, i) => { // nearest the gate first
+      p.index = i;
+      p.door = [p.x - 2.9 * (p.side > 0 ? 1 : -1), p.front - p.side * 1.6];
+      F.push(polygon(rect(p.x, p.y, p.w, p.d), { kind: 'lot', taken: false }));
+      blockers.push(rect(p.x, p.y - p.side * 0.6, p.w, p.d + 1.2));
+      leasePlots.push(p);
+    });
+    // a quieter back row, to give the street a skyline
+    const tones = st.key === 'retail' ? PASTELS : ['#e8f2ea', '#dcebdf', '#eef3e6', '#d9e9e4'];
+    for (let k = 0; k < 4; k++) block(first + dir * (6 + k * 20), y + 32.5, 13 + R() * 3, 10 + R() * 3, 10 + R() * 7, tones[Math.floor(R() * tones.length)], st.key);
+    for (let x = first - dir * 2; dir * (last + dir * 8 - x) > 0; x += dir * 18) { lamps.push([x, y + 5.9]); lamps.push([x + dir * 9, y - 5.9]); }
+    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + Math.PI / 4; lamps.push([end + Math.cos(a) * (SQUARE_RADIUS - 0.6), y + Math.sin(a) * (SQUARE_RADIUS - 0.6)]); }
+    benches.push({ x: end + dir * 9.5, y: y + 4.5, rot: dir > 0 ? -Math.PI / 2 : Math.PI / 2 }, { x: end + dir * 9.5, y: y - 4.5, rot: dir > 0 ? -Math.PI / 2 : Math.PI / 2 });
   }
-  for (const [x, y, w, d, h] of [[90, 150, 22, 14, 7], [210, 170, 26, 16, 6], [250, 95, 18, 22, 8], [96, 196, 18, 12, 6], [180, 82, 14, 12, 5]]) block(x, y, w, d, h, '#e8f2ea', 'services');
-  cranes.push({ x: -120, y: 150, h: 34, rot: 0.6 }, { x: -230, y: 120, h: 28, rot: 2.2 }, { x: 160, y: 196, h: 30, rot: -0.8 });
-  boards.push({ key: 'retail', x: -170, y: 66, rot: 0 }, { key: 'services', x: 70, y: 66, rot: 0 });
-  for (const b of boards) blockers.push(rect(b.x, b.y, 5, 1));
 
   /* Sellio Hop pads */
   const pads = [{ key: 'plaza', x: PLAZA.pad[0], y: PLAZA.pad[1], live: true }, ...DISTRICTS.map((d) => ({ key: d.key, x: d.pad[0], y: d.pad[1], live: d.status === 'live' }))];
@@ -189,6 +225,7 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   /* trees: avenues, parks and round the plaza */
   const clearOf = (x, y, r) => [...pads.map((p) => [p.x, p.y, PAD_RADIUS + 3])].every(([px, py, pr]) => Math.hypot(x - px, y - py) > pr + r);
   const onPath = (x, y) => (Math.abs(y - FNB_BOULEVARD_Y) < BOULEVARD_HALF + 1.5 && x < -16 && x > -304)
+    || streets.some((st) => Math.abs(y - st.y) < BOULEVARD_HALF + 4 && st.dir * (x - st.pad) > -46 && st.dir * (x - st.end) < SQUARE_RADIUS + 2)
     // keep the view clear behind the camera's first look at each district
     || (x > 92 && x < 128 && y > -28 && y < 8) || (x > -30 && x < 14 && y > -92 && y < -68);
   const nearPath = (x, y, r) => paths.some(([pts, w]) => {
@@ -204,6 +241,10 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   };
   for (let x = -290; x <= -60; x += 15) { tryTree(x, FNB_BOULEVARD_Y + 25, 1.1, 1); tryTree(x + 7, FNB_BOULEVARD_Y - 25, 1.1, 1); }
   for (const s of [-1, 1]) { tryTree(-33, FNB_BOULEVARD_Y + s * 14.5, 1.15, 1); tryTree(-45, FNB_BOULEVARD_Y + s * 14, 1.05, 1); }
+  for (const st of streets) {
+    for (const s of [-1, 1]) { tryTree(st.pad + st.dir * 5, st.y + s * 14.5, 1.15, 1); tryTree(st.pad + st.dir * 17, st.y + s * 14, 1.05, 1); }
+    for (let k = 0; k < 6; k++) { tryTree(st.first + st.dir * (k * 15 - 4), st.y + 24.5, 1.05, k % 3); tryTree(st.first + st.dir * (k * 15 + 3), st.y - 24.5, 1.05, (k + 1) % 3); }
+  }
   for (const p of fnbPlots) if (p.kind === 'garden') { tryTree(p.x - 3.5, p.y + p.side * 2.5, 1.0, 0); tryTree(p.x + 3.5, p.y + p.side * 2.2, 0.9, 2); }
   for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + 0.1; tryTree(Math.cos(a) * 37, Math.sin(a) * 37, 0.95, 1); }
   for (let y = STREET_ENTRANCE_Y - 2; y > streetTo; y -= 9) { tryTree(STREET_X - 17.5, y, 1, 0); tryTree(STREET_X + 17.5, y - 4, 1, 2); }
@@ -232,7 +273,7 @@ export function buildLayout({ popupLayout = null, popupShops = 0, fnbCount = 0 }
   return {
     island, inner, bounds,
     features: { type: 'FeatureCollection', features: F },
-    blockers, walkways, trees, bushes, lamps, terraces, pads, umbrellas, fnbPlots, benches, beds, cranes, boards, bridge, fountain: { x: 0, y: -2, r: 7.2 },
+    blockers, walkways, trees, bushes, lamps, terraces, pads, umbrellas, fnbPlots, leasePlots, gateways, streets, benches, beds, cranes, boards, bridge, fountain: { x: 0, y: -2, r: 7.2 },
     street: { x: STREET_X, entranceY: STREET_ENTRANCE_Y, geo, toMapY, fromY: streetFrom, toY: streetTo },
   };
 }

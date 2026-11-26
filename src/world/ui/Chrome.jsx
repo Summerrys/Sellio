@@ -43,13 +43,13 @@ export function Hud({ onMap, place = 'Sellio World', balance, level, levelProgre
   );
 }
 
-/* Bottom dock: follow Mochi, the main action for this player, help. */
-export function Dock({ primary, onRecentre, following = true, onHelp }) {
+/* Bottom dock: follow your hero, the main action for this player, help. */
+export function Dock({ primary, onRecentre, following = true, onHelp, heroName = 'your hero' }) {
   const Icon = { style: Store, daily: Gift, signin: LogIn, shop: Sparkles }[primary?.icon] || Coins;
   return (
     <nav className="pw-dock" aria-label="World actions">
       <button type="button" className={`pw-round${following ? ' on' : ' nudge'}`} onClick={onRecentre} aria-pressed={following}
-        aria-label={following ? 'The camera is following Mochi' : 'Find Mochi and follow again'}>
+        aria-label={following ? `The camera is following ${heroName}` : `Find ${heroName} and follow again`}>
         {following ? <LocateFixed size={22} aria-hidden="true" /> : <Crosshair size={22} aria-hidden="true" />}
       </button>
       {primary && <button type="button" className="pw-primary" onClick={primary.onClick}><Icon size={20} aria-hidden="true" />{primary.label}</button>}

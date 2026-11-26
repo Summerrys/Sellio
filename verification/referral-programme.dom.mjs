@@ -70,11 +70,12 @@ const mocks = {
   ratings: 'export const amIModerator = async () => false; export const moderationQueue = async () => []; export const ratingReviewQueue = async () => []; export const ratingText = () => ""; export const shopRatingOverview = async () => null;',
   purchases: 'export const purchaseSummary = async () => null;',
   nothing: 'export default function Nothing() { return null; } export const TAB_BAR_SPACE = "80px"; export const markExploreHome = () => {};',
+  worldGame: "import React from 'react'; export default function WorldGame() { return React.createElement('div', { 'data-testid': 'world-game' }); }",
 };
 const plugin = { name: 'referral-fixtures', setup(builder) {
   for (const [filter, key] of [[/tenant\/TenantContext$/, 'tenant'], [/useSubscription$/, 'subscription'], [/supabaseClient$/, 'clients'],
     [/AppUserContext$/, 'profile'], [/^sonner$/, 'toast'], [/pushNotifications$/, 'push'], [/lib\/ratings$/, 'ratings'],
-    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$|(^|\/)ExploreChatCount$|world\/WorldGame$/, 'nothing']]) {
+    [/lib\/purchases$/, 'purchases'], [/(^|\/)ExploreTabBar$|(^|\/)ShopBell$|(^|\/)ExploreChatCount$/, 'nothing'], [/world\/WorldGame$/, 'worldGame']]) {
     builder.onResolve({ filter }, () => ({ path: key, namespace: 'mock' }));
   }
   builder.onLoad({ filter: /.*/, namespace: 'mock' }, (args) => ({ loader: 'js', contents: mocks[args.path], resolveDir: process.cwd() }));
@@ -659,23 +660,27 @@ try {
   passed('Admin → Coins: the rules and prices saved together (only what changed), every value checked first, the database\'s refusals shown; others turned away');
 
   // 13b. Sellio World is for Sellio's admins until Alvin opens it (25 Nov 2026): everyone else is
-  // told it's coming soon; an admin gets the island.
-  for (const admin of [false, true]) {
+  // told it's coming soon. An admin gets the map game (Alvin, 26 Nov 2026: back to the map
+  // version), and the island version of 17 Nov at /World?island=1.
+  for (const [admin, url] of [[false, '/World'], [false, '/World?island=1'], [true, '/World'], [true, '/World?island=1']]) {
     reset();
     owner();
     answers.am_i_sellio_admin = () => ({ data: admin, error: null });
-    close = await show(h(app.World), ['/World']);
+    close = await show(h(app.World), [url]);
     await settle();
+    const island = document.body.querySelector('iframe[title="Sellio World"]');
     if (admin) {
-      assert.ok(document.body.querySelector('iframe[title="Sellio World"]'), "an admin: the island");
       assert.equal(byTestId('world-soon'), null);
+      if (url === '/World') { assert.ok(byTestId('world-game'), 'an admin: the map game'); assert.equal(island, null, 'the island only when asked for'); }
+      else { assert.ok(island, 'an admin, ?island=1: the island'); assert.equal(byTestId('world-game'), null); }
     } else {
       assert.match(text(byTestId('world-soon')), /^S Sellio World is coming soon Walk Sellio’s streets, collect coins and style your stall\. It opens soon\. Back to Explore$/);
-      assert.equal(document.body.querySelector('iframe'), null, 'no island for anyone else');
+      assert.equal(island, null, 'no island for anyone else');
+      assert.equal(byTestId('world-game'), null, 'no game for anyone else');
     }
     await close();
   }
-  passed("Sellio World: admins only until it opens; everyone else is told it's coming soon");
+  passed("Sellio World: admins only until it opens, the map game by default and the island at ?island=1; everyone else is told it's coming soon");
 
   // 14. In 中文 (and the other languages): the explore group's words.
   reset();

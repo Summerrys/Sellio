@@ -1,4 +1,5 @@
-// The island version of Sellio World is one self-contained file, public/assets/world/island.html,
+// The island version of Sellio World (17 Nov 2026; since 26 Nov 2026 kept at /World?island=1, with
+// the map version as the game) is one self-contained file, public/assets/world/island.html,
 // shown in a frame by the World page (src/pages/World.jsx). The game draws and plays; this file
 // answers what it asks for. Every seller, coin, visit reward and stall unlock still comes from
 // the Sellio World functions in Supabase (src/world/api.js): the game never talks to Supabase

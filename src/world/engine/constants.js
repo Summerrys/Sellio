@@ -10,7 +10,6 @@ export const STREET_HALF = 3.6;         // walkable half-width
 export const STALL_W = 2.8;
 export const ARCH_Z = 9.5;
 export const START_Z = 17;
-export const SLOTS = ['awning', 'sign', 'lights', 'decor'];
 
 export const DEFAULT_LAYOUT = { x: 3.2, zmax: 15, first_row_z: 2, row_gap: 7, min_rows: 6, end_margin: 8 };
 

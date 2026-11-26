@@ -1,5 +1,3 @@
-import { metres } from './geo';
-
 // The map's look, in Sellio's colours. Two palettes: bright day and a warm
 // evening. Everything is drawn from the island's own GeoJSON; no map tiles,
 // fonts or sprites are downloaded (labels are HTML, so no glyph server).
@@ -50,8 +48,6 @@ export function buildStyle(features, theme = 'day') {
       { id: 'halo2', type: 'fill', source: 'world', filter: kind('halo2'), paint: { 'fill-color': P.halo2 } },
       { id: 'land', type: 'fill', source: 'world', filter: kind('land'), paint: { 'fill-color': P.land } },
       { id: 'district', type: 'fill', source: 'world', filter: kind('district'), paint: { 'fill-color': districtColour(P) } },
-      { id: 'district-edge', type: 'line', source: 'world', filter: ['all', kind('district'), ['any', ['==', ['get', 'key'], 'retail'], ['==', ['get', 'key'], 'services']]],
-        paint: { 'line-color': '#b39cc8', 'line-width': metres(0.7), 'line-dasharray': [3, 2], 'line-opacity': 0.7 } },
       { id: 'park', type: 'fill', source: 'world', filter: kind('park'), paint: { 'fill-color': P.park } },
       { id: 'path-edge', type: 'line', source: 'world', filter: kind('path'), layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: { 'line-color': P.avenueEdge, 'line-width': widthOf(1.1) } },

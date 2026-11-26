@@ -28,8 +28,9 @@ const LIGHTS = {
 
 /**
  * Sellio World: the whole island as a vector map you can pan, zoom, tilt and
- * turn like a Mapbox map, with a 3D layer on top for Mochi, the shops, stalls,
- * coins and everything else. The world draws and animates; the rules live on
+ * turn like a Mapbox map (all the way round, on a phone or with a mouse), with a
+ * 3D layer on top for the player's hero, the shops, stalls, coins and
+ * everything else. The world draws and animates; the rules live on
  * the server. UI code talks to it through the returned object and hears back
  * through `events`.
  *
@@ -38,7 +39,7 @@ const LIGHTS = {
  * change.
  */
 export function createMapWorld(container, {
-  layoutInput = {}, events = {}, theme = 'day', reduceMotion = false, coarse = false, debug = false, quality = 'auto',
+  layoutInput = {}, events = {}, theme = 'day', reduceMotion = false, coarse = false, debug = false, quality = 'auto', character,
 } = {}) {
   const motion = reduceMotion ? 0 : 1;
   const layout = buildLayout(layoutInput);
@@ -78,7 +79,8 @@ export function createMapWorld(container, {
   const scene = new THREE.Scene();
   let kit = null, props = null, popup = null, avatar = null, fx = null, factory = null, sfx = createSfx();
   const storefronts = new Map(); // tenant_id -> storefront
-  const fnbPlotObjects = [];
+  const fnbLeaseUnits = [];      // "Open for lease!" units after the last café
+  const leaseUnits = [];         // Retail Avenue's and Services Garden's units
   let ready = false, started = false, destroyed = false, frames = 0;
   const hemi = new THREE.HemisphereLight(); scene.add(hemi);
   const sun = new THREE.DirectionalLight(); scene.add(sun, sun.target);
@@ -94,10 +96,11 @@ export function createMapWorld(container, {
       pendingStreet = null;
       factory = createStorefrontFactory(kit);
       fx = createFx(kit, scene, { motion });
-      avatar = createAvatar(kit, scene, { motion, nav, isStreet: (x, y) => districtAt(x, y, layout) === 'popup' });
+      avatar = createAvatar(kit, scene, { motion, nav, character, isStreet: (x, y) => districtAt(x, y, layout) === 'popup' });
       avatar.place(PLAZA.pad[0], PLAZA.pad[1] - 4, Math.PI);
       avatar.setHidden(true);
       setFnbShops(pendingFnb || []);
+      for (const p of layout.leasePlots) leaseUnits.push(placeLeaseUnit(p));
       applyTheme();
       ready = true;
     },
@@ -158,26 +161,37 @@ export function createMapWorld(container, {
     if (!factory) { pendingFnb = shops; return; }
     for (const s of storefronts.values()) s.dispose();
     storefronts.clear();
-    for (const o of fnbPlotObjects) o.dispose();
-    fnbPlotObjects.length = 0;
+    for (const o of fnbLeaseUnits) o.dispose();
+    fnbLeaseUnits.length = 0;
     let si = 0;
     for (const p of layout.fnbPlots) {
       if (p.kind === 'garden') continue;
       const shop = p.kind === 'shop' ? shops[si++] : null;
-      const obj = shop ? factory.buildStorefront(shop) : factory.buildEmptyPlot(p.index);
+      if (!shop) { fnbLeaseUnits.push(placeLeaseUnit({ ...p, district: 'fnb' })); continue; }
+      const obj = factory.buildStorefront(shop);
       obj.root.position.set(p.x, 0, -p.y); obj.root.rotation.y = p.facing;
       obj.plot = p; obj.hit.userData.plotRef = p;
       scene.add(obj.root);
-      if (shop) storefronts.set(shop.tenant_id, obj); else fnbPlotObjects.push(obj);
+      storefronts.set(shop.tenant_id, obj);
     }
+    if (ready) for (const s of storefronts.values()) s.setTheme?.(themeName);
   }
+  function placeLeaseUnit(p) {
+    const obj = factory.buildLeaseUnit(p.district, p.index);
+    obj.root.position.set(p.x, 0, -p.y); obj.root.rotation.y = p.facing;
+    obj.plot = p;
+    scene.add(obj.root);
+    return obj;
+  }
+  const allLeaseUnits = () => [...fnbLeaseUnits, ...leaseUnits];
+  const findLeaseUnit = (district, index) => allLeaseUnits().find((o) => o.lease.district === district && o.lease.index === index);
 
   /* ----------------------------------------------------------- picking */
   const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function pickables() {
     if (!ready) return [];
     return [
-      ...[...storefronts.values()].map((s) => s.hit), ...fnbPlotObjects.map((o) => o.hit),
+      ...[...storefronts.values()].map((s) => s.hit), ...allLeaseUnits().map((o) => o.hit),
       ...popup.pickables, ...popup.coins.pickables, ...props.pickables,
     ];
   }
@@ -254,10 +268,10 @@ export function createMapWorld(container, {
     for (const h of pick(e.point)) {
       const d = h.object.userData;
       if (d.storefront) { tapStorefront(storefronts.get(d.storefront.tenant_id)); return; }
-      if (d.fnbPlot !== undefined) {
-        const o = fnbPlotObjects.find((x) => x.hit === h.object);
-        if (o && distTo(o.plot.door[0], o.plot.door[1]) <= STOREFRONT_REACH) { sfx.tap(); events.onFnbPlotTap?.({ index: d.fnbPlot }); }
-        else if (o) walk(o.plot.door[0], o.plot.door[1], { kind: 'fnbPlot', index: d.fnbPlot, plot: o.plot });
+      if (d.lease) {
+        const o = findLeaseUnit(d.lease.district, d.lease.index);
+        if (o && distTo(o.plot.door[0], o.plot.door[1]) <= STOREFRONT_REACH) { sfx.tap(); avatar.stop(); events.onLeaseTap?.({ ...d.lease }); }
+        else if (o) walk(o.plot.door[0], o.plot.door[1], { kind: 'lease', lease: { ...d.lease }, plot: o.plot });
         return;
       }
       if (d.stall) { tapStall(d.stall); return; }
@@ -266,8 +280,6 @@ export function createMapWorld(container, {
       if (d.pad) { tapPad(d.pad); return; }
       if (d.comingSoon) { sfx.tap(); events.onComingSoonTap?.(d.comingSoon); return; }
     }
-    const soon = map.queryRenderedFeatures(e.point, { layers: ['buildings'] })[0];
-    if (soon) { sfx.tap(); events.onComingSoonTap?.(soon.properties.area); return; }
     const p = fromLngLat([e.lngLat.lng, e.lngLat.lat]);
     if (!walk(p.x, p.y)) sfx.nope();
   });
@@ -278,7 +290,7 @@ export function createMapWorld(container, {
     const now = performance.now();
     if (!ready || !started || now - hoverAt < 90) return;
     hoverAt = now;
-    const hit = pick(e.point).some((h) => { const d = h.object.userData; return d.storefront || d.fnbPlot !== undefined || d.stall || d.plot || d.pad || d.comingSoon || d.coin; });
+    const hit = pick(e.point).some((h) => { const d = h.object.userData; return d.storefront || d.lease || d.stall || d.plot || d.pad || d.comingSoon || d.coin; });
     map.getCanvas().style.cursor = hit ? 'pointer' : '';
   });
 
@@ -325,6 +337,7 @@ export function createMapWorld(container, {
     sun.color.set(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.dir);
     props?.setTheme(themeName); popup?.setTheme(themeName);
     for (const s of storefronts.values()) s.setTheme?.(themeName);
+    factory?.setLeaseTheme(themeName);
     if (map.isStyleLoaded()) applyPalette(map, themeName);
   }
   map.on('style.load', () => applyPalette(map, themeName));
@@ -349,6 +362,7 @@ export function createMapWorld(container, {
       const ev = avatar.update(dt, t, { camera: three.camera, nearestCoin: started ? nearest : null, cameraBearing: map.getBearing() });
       Object.assign(playerLocal, popup.toLocal(avatar.position.x, avatar.position.y));
       if (ev === 'arrived' && pending) arrive(pending);
+      if (ev === 'hopped') events.onHopEnd?.(districtAt(avatar.position.x, avatar.position.y, layout));
       // coins
       const reached = popup.coins.update(dt, t, started && !avatar.busy ? playerLocal : { x: 1e6, z: 1e6 });
       for (const c of reached) handleReach(c);
@@ -357,7 +371,7 @@ export function createMapWorld(container, {
       popup.update(dt, t, three.camera, playerLocal);
       camPos.copy(three.camera.position);
       const target = focus?.target || [avatar.position.x, avatar.position.y];
-      for (const s of [...storefronts.values(), ...fnbPlotObjects]) {
+      for (const s of [...storefronts.values(), ...fnbLeaseUnits, ...leaseUnits]) {
         s.setNear?.(camPos.distanceTo(s.root.position) < 80);
         // cut away a building that stands between the camera and what it looks at
         const cut = camPos.y < 34 && blocksView(s.plot, camPos.x, -camPos.z, target[0], target[1]);
@@ -386,7 +400,9 @@ export function createMapWorld(container, {
     const now = performance.now();
     if (qualityMode === 'auto' && level < 2 && frames > 120 && now - lastChange > 5000) {
       slowFor = ema > 28 ? slowFor + raw : 0;
-      if (slowFor > 2) { level++; slowFor = 0; lastChange = now; map.setPixelRatio(dprFor()); events.onQualityChange?.(QUALITY[level].name); }
+      // (changing the resolution resizes the map, which would cut short a drag,
+      // pinch or turn in progress: wait until fingers are off and the view is still)
+      if (slowFor > 2 && !pressing && !map.isMoving()) { level++; slowFor = 0; lastChange = now; map.setPixelRatio(dprFor()); events.onQualityChange?.(QUALITY[level].name); }
     }
   }
   function start() { if (!raf && !destroyed) { clock.getDelta(); raf = requestAnimationFrame(tick); } }
@@ -415,7 +431,7 @@ export function createMapWorld(container, {
   function arrive(p) {
     pending = null;
     if (p.kind === 'storefront') { const s = storefronts.get(p.id); if (s) { openStorefront(s); focusOn(s.plot); } }
-    else if (p.kind === 'fnbPlot') { sfx.tap(); events.onFnbPlotTap?.({ index: p.index }); focusOn(p.plot); }
+    else if (p.kind === 'lease') { sfx.tap(); events.onLeaseTap?.(p.lease); focusOn(p.plot); }
     else if (p.kind === 'stall' || p.kind === 'plot') { if (stallInReach(p.ref)) openStall(p.ref); }
     else if (p.kind === 'pad') { sfx.tap(); events.onPadTap?.(p.key); }
   }
@@ -429,7 +445,7 @@ export function createMapWorld(container, {
   }
   function padFor(key) { return layout.pads.find((p) => p.key === key); }
   // which way Mochi faces on arrival (three.js y rotation: 0 faces south)
-  const headingFor = (key) => ({ popup: 0, fnb: -Math.PI / 2, plaza: Math.PI }[key] ?? Math.PI);
+  const headingFor = (key) => ({ popup: 0, fnb: -Math.PI / 2, retail: -Math.PI / 2, services: Math.PI / 2, plaza: Math.PI }[key] ?? Math.PI);
   // the zoom that puts MapLibre's camera `d` metres from the centre of the view
   const zoomForDistance = (d) => {
     const h = map.getCanvas().clientHeight || 800;
@@ -529,11 +545,13 @@ export function createMapWorld(container, {
     focusStall(tenantId, close = true) { const s = popup?.stalls.get(tenantId); if (s) focusStreet(s, close); },
     focusPlot(slot) { const p = popup?.plots.find((x) => x.slot === slot); if (p) focusStreet(p, true); },
     focusStorefront(tenantId, close = true) { const s = storefronts.get(tenantId); if (s) focusOn(s.plot, close); },
-    focusFnbPlot(index) { const p = layout.fnbPlots[index]; if (p) focusOn(p, true); },
+    focusLease(district, index) { const o = findLeaseUnit(district, index); if (o) focusOn(o.plot, true); },
+    walkToLease(district, index) { const o = findLeaseUnit(district, index); if (o && started) { focus = null; walk(o.plot.door[0], o.plot.door[1], { kind: 'lease', lease: { district, index }, plot: o.plot }); } },
     clearFocus() {
       if (!focus) return;
+      const back = focus.back; // the hero picker returns to the view it opened on
       focus = null;
-      if (started) { setFollow(true); map.easeTo({ center: mochiLngLat(), zoom: Math.min(map.getZoom(), FOLLOW_ZOOM + 0.3), pitch: 60, duration: reduceMotion ? 0 : 700, padding: padding() }); }
+      if (started) { setFollow(true); map.easeTo({ center: mochiLngLat(), zoom: back ? back.zoom : Math.min(map.getZoom(), FOLLOW_ZOOM + 0.3), pitch: back ? back.pitch : 60, duration: reduceMotion ? 0 : 700, padding: padding() }); }
     },
     walkToStall(tenantId) { const s = popup?.stalls.get(tenantId); if (s && started) { focus = null; tapStall(s); } },
     walkToStorefront(tenantId) { const s = storefronts.get(tenantId); if (s && started) { focus = null; tapStorefront(s); } },
@@ -572,6 +590,18 @@ export function createMapWorld(container, {
       ovPad = { top: 0, bottom: 0, left: 0, right: 0, ...p };
       if (!started) { const o = overview(); map.jumpTo({ center: o.center, zoom: o.zoom, padding: o.padding }); }
     },
+    // The hero picker: swap the hero where it stands, and come in close to look.
+    setCharacter(id, opts) { avatar?.setCharacter(id, opts); if (opts?.celebrate && avatar) { fx.burst(new THREE.Vector3(avatar.position.x, 1.6, -avatar.position.y), 14); sfx.tap(); } },
+    get character() { return avatar?.character ?? null; },
+    focusPlayer() {
+      if (!started || !avatar) return;
+      focus = { kind: 'hero', target: [avatar.position.x, avatar.position.y], back: { zoom: Math.min(map.getZoom(), FOLLOW_ZOOM), pitch: map.getPitch() } };
+      // the hero turns to face the camera (a little side-on), so the player sees who they are choosing
+      avatar.stop(); avatar.place(avatar.position.x, avatar.position.y, -map.getBearing() * Math.PI / 180 + 0.4);
+      const go = (duration) => map.easeTo({ center: mochiLngLat(), zoom: 22.3, pitch: 64, duration: reduceMotion ? 0 : duration, padding: padding() });
+      focus.redo = () => go(500);
+      go(800);
+    },
     get started() { return started; },
     get district() { return district; },
     placePlayer(x, y, heading = Math.PI) { avatar?.place(x, y, heading); },
@@ -589,7 +619,7 @@ export function createMapWorld(container, {
       canvas.removeEventListener('webglcontextlost', onLost);
       sfx.dispose();
       for (const s of storefronts.values()) s.dispose();
-      for (const o of fnbPlotObjects) o.dispose();
+      for (const o of allLeaseUnits()) o.dispose();
       popup?.dispose(); props?.dispose(); avatar?.dispose(); fx?.dispose(); factory?.dispose(); kit?.dispose();
       for (const m of labelMarkers) m.remove();
       try { map.remove(); } catch { /* already gone */ }
@@ -598,7 +628,7 @@ export function createMapWorld(container, {
   };
   if (debug) {
     api.debug = {
-      scene, camera: three.camera, nav, layout, get avatar() { return avatar; }, get popup() { return popup; }, storefronts,
+      scene, camera: three.camera, nav, layout, get avatar() { return avatar; }, get popup() { return popup; }, storefronts, get leaseUnits() { return allLeaseUnits(); },
       get renderer() { return three.renderer; },
       teleport(x, y) { avatar?.place(x, y); },
       setFast(on) { fastTest = !!on; },
