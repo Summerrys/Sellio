@@ -355,35 +355,45 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
               {/* In the app, Sellio's home is this page: the logo stays here instead of
                   reloading it and adding a second copy to Back. Websites keep the home link. */}
               {isNativeApp() ? (
-                <Link to="/explore" replace aria-label={t('Sellio home')} className="flex items-center gap-2">
+                <Link to="/explore" replace aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
                   <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
                 </Link>
               ) : (
-                <a href="/" aria-label={t('Sellio home')} className="flex items-center gap-2">
+                <a href="/" aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
                   <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
                 </a>
               )}
-              <span className="text-sm font-semibold text-slate-400 md:hidden">{t('Explore')}</span>
+              {/* The grey "Explore" shows only when the row has room for all of it. On a narrow
+                  phone or with the phone's text made larger it steps aside, so the buttons on the
+                  right never squeeze ("My shop" wrapped onto two lines on the Oppo Find N5's cover
+                  screen, Nov 2026). The zero-width space before it is where the line may break:
+                  a word that doesn't fit drops to a second line, which this one-line box hides.
+                  The gap after it is the word's own padding (pr-3, with -mr-3 taking back the
+                  row's gap), so a hidden word leaves no gap behind and the buttons get the room. */}
+              <span data-testid="explore-word" className="flex-1 min-w-0 -mr-3 h-[1.5em] leading-[1.5em] overflow-hidden text-sm font-semibold text-slate-400 md:hidden">
+                {'​'}<span className="inline-block whitespace-nowrap pr-3">{t('Explore')}</span>
+              </span>
               <ExploreDesktopTabs />
-              <div className="ml-auto flex items-center gap-2">
+              <div data-testid="explore-top-actions" className="ml-auto flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
                 {signedIn ? (
                   <>
                   <Link
                     to={hasShop ? '/Dashboard' : '/Account'}
-                    className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50"
+                    data-testid="explore-my-shop"
+                    className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap hover:bg-slate-50"
                   >
-                    <Store className="w-4 h-4" /> {hasShop ? t('My shop') : t('My account')}
+                    <Store className="w-4 h-4 flex-shrink-0" /> {hasShop ? t('My shop') : t('My account')}
                   </Link>
                   <ShopBell />
                   </>
                 ) : (
                   <>
-                    <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center hover:bg-slate-50">
+                    <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center flex-shrink-0 whitespace-nowrap hover:bg-slate-50">
                       {t('Log in')}
                     </Link>
                     <Link
                       to="/join"
-                      className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center"
+                      className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center flex-shrink-0 whitespace-nowrap"
                       style={{ background: BRAND_GRADIENT }}
                     >
                       {t('Sign up')}
