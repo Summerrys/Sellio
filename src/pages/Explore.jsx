@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, SlidersHorizontal, Heart } from 'lucide-react';
+import { Search, Plus, X, Loader2, RefreshCw, Store, ChevronRight, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
@@ -24,8 +24,11 @@ import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/comp
 import { formatMoney } from '@/lib/money';
 import { useAppText, N_ } from '@/lib/appText';
 import { useBackToClose } from '@/lib/useBackToClose';
-import { activeFilterCount, searchArgs, searchFilters } from '@/lib/exploreSearch';
+import { SEARCH_COUNTRIES, activeFilterCount, loadExploreCountry, priceRange, saveExploreCountry, searchArgs, searchFilters } from '@/lib/exploreSearch';
+import { useRecentSearches } from '@/lib/recentSearches';
 import { FilterChips, FilterSheet } from '@/components/explore/ExploreFilters';
+import { LocationPin, LocationSheet } from '@/components/explore/ExploreLocation';
+import ExploreRecent from '@/components/explore/ExploreRecent';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -34,6 +37,14 @@ import { FilterChips, FilterSheet } from '@/components/explore/ExploreFilters';
 const LOGO_URL = '/branding/sellio-logo.webp';
 // The visitor's colour: the default gradient, or a seller's own theme once chosen.
 const BRAND_GRADIENT = 'var(--color-primary-gradient, linear-gradient(135deg, #3b82f6 0%, #9333ea 100%))';
+// Explore's softer tone (Alvin, 28 Nov 2026, after Taobao's pink top): Sellio's own orange, pink
+// and purple at 12% on white behind the top of the page (the header, and a fade under it), a soft
+// grey page, and white cards with no outlines. A seller who chose a theme for their shop sees it
+// tinted in that colour instead (--color-wash, components/theme/themeUtils.jsx), to match their
+// buttons.
+const WASH = 'linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), var(--color-wash, linear-gradient(135deg, #fb923c 0%, #e0449a 50%, #8b2fc9 100%))';
+const WASH_FADE = 'linear-gradient(to bottom, #000 0%, transparent 100%)';
+const PAGE_BG = '#f3f4f7';
 const PAGE_SIZE = 24;
 
 const KINDS = [
@@ -55,6 +66,14 @@ function formatPrice(amount, currency) {
 
 const storeUrl = (slug) => `/store/${encodeURIComponent(slug)}`;
 const rowKey = (row) => row.product_id || row.shop_id;
+// Whether a search's sort and filters are still as they started (the price boxes as numbers).
+function sameSearchFilters(a, b) {
+  if (!a || !b) return false;
+  const pa = priceRange(a);
+  const pb = priceRange(b);
+  return a.sort === b.sort && a.kind === b.kind && a.country === b.country
+    && a.deal.join() === b.deal.join() && pa.min === pb.min && pa.max === pb.max;
+}
 
 // Marked here (N_), shown through t().
 function industryLabel(industry) {
@@ -148,7 +167,7 @@ function ItemCard({ item, rating = null, signedIn = false, onNeedSignIn }) {
   const hasDiscount = item.compare_at_price != null && Number(item.compare_at_price) > Number(item.price);
   const href = listingUrl(item.product_id);
   return (
-    <div className="group bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-slate-100 hover:shadow-md transition-shadow" data-testid="item-card">
+    <div className="group bg-white rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-testid="item-card">
       <Link to={href} className="block">
         <div className="flex items-center gap-2 px-2.5 py-2">
           <ShopAvatar name={item.shop_name} logo={item.shop_logo_url} size={26} />
@@ -230,7 +249,7 @@ function MerchantCard({ shop, rating = null }) {
   return (
     <Link
       to={storeUrl(shop.shop_slug)}
-      className="group block bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
+      className="group block bg-white rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="flex items-center gap-3 p-3">
         <ShopAvatar name={shop.shop_name} logo={shop.shop_logo_url} size={44} />
@@ -256,7 +275,7 @@ function SkeletonGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3" aria-hidden="true">
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="bg-white rounded-xl sm:rounded-2xl border border-slate-100 overflow-hidden animate-pulse">
+        <div key={i} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden animate-pulse">
           <div className="flex items-center gap-2 px-2.5 py-2">
             <div className="w-[26px] h-[26px] rounded-full bg-slate-200" />
             <div className="h-3 w-20 rounded bg-slate-200" />
@@ -272,22 +291,29 @@ function SkeletonGrid() {
   );
 }
 
-// Explore's top: the logo row and search stay; the categories under them slide away
-// behind the search bar when scrolling down (a button in the search bar brings them
-// back until the next scroll down) and slide back at the top of the page. The header
-// sits fixed over the page and only moves (transform and opacity), never resizing
-// anything, so the slide stays smooth and the page under it never jumps. It keeps its
-// own scroll state, so the feed doesn't re-render as it slides.
+// Explore's top (Alvin, 28 Nov 2026, after Taobao's home page: "Notice how slim the headerbar with
+// searchbar before the item on pages is? And also the softer color tone"). On a soft wash of the
+// visitor's colour (WASH):
+//  - the logo row (logo, My shop, chats and notifications) scrolls away with the page on phones;
+//    wider screens keep it at the top, with their menu links;
+//  - the search bar stays at the top: a ring in the visitor's colour, with the search button at
+//    its right in the same colour;
+//  - so do the categories under it: words, with a line under the picked one, after the location
+//    pin (ExploreLocation), which picks the country Explore shows.
+// Until 28 Nov 2026 the categories slid away behind the search bar when scrolling, and a button
+// in the search bar brought them back. Alvin had that button taken out: searching has its own
+// filters, and the categories now stay in view.
 //
 // Searching (Alvin, 26 Nov 2026), from the moment the search box is tapped: the logo row folds
 // away so the search box sits at the top, "Cancel" (or the phone's Back) leaves the search, and
 // the categories give way to the search's sort and filter chips (ExploreFilters), which stay put
 // while the results scroll.
-const FOLD_EASE = 'cubic-bezier(0.2, 0, 0, 1)';
+const TOP_BAR = 48; // the logo row's height (h-12)
+const SAFE_TOP = 'env(safe-area-inset-top, 0px)';
+const GRADIENT_TEXT = { background: BRAND_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
 
-function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search }) {
+function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search, country, onCountry }) {
   const { t } = useAppText('explore');
-  const [scrolled, setScrolled] = useState(false);
   // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
   // A pick, Enter or Escape closes the list until something else is typed.
   const navigate = useNavigate();
@@ -298,17 +324,30 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
   const suggestKind = searching ? filters.kind : kind;
   const suggestions = useExploreSuggestions(query, suggestKind === 'all' ? null : suggestKind, focused);
   const showList = focused && closedFor !== query && suggestions.length > 0;
-  const pickSuggestion = (s) => {
-    setClosedFor(s.type === 'search' ? s.text : query);
+  // A search sent (Enter, the search button, a suggestion): the list closes and the keyboard goes
+  // down, so the results show.
+  const send = (text) => {
+    setClosedFor(text);
     searchRef.current?.blur();
-    if (s.type === 'shop') navigate(storeUrl(s.slug));
-    else onSearchNow(s.text);
+    onSearchNow(text);
+  };
+  const pickSuggestion = (s) => {
+    if (s.type !== 'shop') { send(s.text); return; }
+    setClosedFor(query);
+    searchRef.current?.blur();
+    navigate(storeUrl(s.slug));
   };
   const keys = useSuggestionKeys(showList ? suggestions : [], {
     onPick: pickSuggestion,
-    onSubmit: () => { setClosedFor(query); searchRef.current?.blur(); onSearchNow(query); },
+    onSubmit: () => send(query),
     onClose: () => setClosedFor(query),
   });
+  // The search button: sends what's typed; with nothing typed (or before searching) it opens the
+  // search, as a tap on the box does.
+  const pressSearch = () => {
+    if (searching && query.trim()) send(query);
+    else searchRef.current?.focus();
+  };
   // The filter sheet: which part is open (null: none). n starts each opening afresh.
   const [sheet, setSheet] = useState({ section: null, n: 0 });
   const openSheet = (section) => {
@@ -316,25 +355,23 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     setSheet((was) => ({ section, n: was.n + 1 }));
   };
   const closeSheet = useCallback(() => setSheet((was) => ({ ...was, section: null })), []);
+  const [locating, setLocating] = useState(false);
+  const closeLocation = useCallback(() => setLocating(false), []);
   const cancelSearch = () => {
     setFocused(false);
     setClosedFor(null);
     searchRef.current?.blur();
     onSearchCancel();
   };
-  const [peek, setPeek] = useState(false);
-  const peekRef = useRef({ open: false, fromY: 0 });
+  // A hairline under the header once the page scrolls under it.
+  const [stuck, setStuck] = useState(false);
+  const searchingNow = useRef(searching);
+  searchingNow.current = searching;
   useEffect(() => {
     let frame = 0;
     const check = () => {
       frame = 0;
-      const y = window.scrollY;
-      setScrolled((was) => (was ? y > 8 : y > 40));
-      const opened = peekRef.current;
-      if (opened.open) {
-        if (y < opened.fromY) opened.fromY = y;                                // up a little: count from here
-        else if (y - opened.fromY > 12) { opened.open = false; setPeek(false); } // any scroll down folds them
-      }
+      setStuck(window.scrollY > (searchingNow.current ? 1 : TOP_BAR));
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
     check();
@@ -344,103 +381,103 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
-  useEffect(() => {
-    if (!scrolled) { peekRef.current.open = false; setPeek(false); }
-  }, [scrolled]);
-  const folded = !searching && scrolled && !peek;
-  const openCategories = () => {
-    peekRef.current = { open: true, fromY: window.scrollY };
-    setPeek(true);
-  };
+  useEffect(() => { setStuck(window.scrollY > (searching ? 1 : TOP_BAR)); }, [searching]);
   const pick = (key) => {
     onKind(key);
     // Picked while scrolled down: back to the top, where the new results start.
-    if (scrolled) {
-      peekRef.current.open = false;
-      setPeek(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (window.scrollY > TOP_BAR) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const picked = KINDS.find((k) => k.key === kind)?.label;
-  const pickedLabel = picked ? t(picked) : '';
   return (
     <>
-      {/* Sticky, and its height never changes: the categories only slide (transform), so
-          the page under it never moves. Where they were, the feed shows through. */}
-      <header className="sticky top-0 z-30 pointer-events-none">
+      {/* Sellio's iPhone app draws under the status bar: the wash stays behind it while the page
+          scrolls. (No height anywhere else.) */}
+      <div aria-hidden="true" className="fixed inset-x-0 top-0 z-40 pointer-events-none" style={{ height: SAFE_TOP, background: WASH }} />
+      {/* The logo row: part of the page on phones (it scrolls away), at the top on wider screens.
+          Searching, it folds away, and nothing in it can be reached meanwhile. */}
+      <div className="relative md:sticky md:top-0 z-30" style={{ paddingTop: SAFE_TOP, background: WASH }}>
         <div
-          className={`relative z-[2] bg-white pointer-events-auto border-b transition-colors duration-200 ${folded || searching ? 'border-slate-100' : 'border-transparent'}`}
-          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+          data-testid="explore-top-bar"
+          aria-hidden={searching || undefined}
+          {...(searching ? { inert: '' } : {})}
+          className={`overflow-hidden transition-[height,opacity] duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)] ${searching ? 'h-0 opacity-0' : 'h-12 opacity-100'}`}
         >
-          {/* Searching: the logo row folds away, and nothing in it can be reached meanwhile. */}
-          <div
-            data-testid="explore-top-bar"
-            aria-hidden={searching || undefined}
-            {...(searching ? { inert: '' } : {})}
-            className={`overflow-hidden transition-[height,opacity] duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)] ${searching ? 'h-0 opacity-0' : 'h-14 opacity-100'}`}
-          >
-            <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-              {/* In the app, Sellio's home is this page: the logo stays here instead of
-                  reloading it and adding a second copy to Back. Websites keep the home link. */}
-              {isNativeApp() ? (
-                <Link to="/explore" replace aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
-                  <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
+          <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-3">
+            {/* In the app, Sellio's home is this page: the logo stays here instead of
+                reloading it and adding a second copy to Back. Websites keep the home link. */}
+            {isNativeApp() ? (
+              <Link to="/explore" replace aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
+                <img src={LOGO_URL} alt="Sellio" className="h-9 w-auto object-contain" />
+              </Link>
+            ) : (
+              <a href="/" aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
+                <img src={LOGO_URL} alt="Sellio" className="h-9 w-auto object-contain" />
+              </a>
+            )}
+            {/* The grey "Explore" shows only when the row has room for all of it. On a narrow
+                phone or with the phone's text made larger it steps aside, so the buttons on the
+                right never squeeze ("My shop" wrapped onto two lines on the Oppo Find N5's cover
+                screen, Nov 2026). The zero-width space before it is where the line may break:
+                a word that doesn't fit drops to a second line, which this one-line box hides.
+                The gap after it is the word's own padding (pr-3, with -mr-3 taking back the
+                row's gap), so a hidden word leaves no gap behind and the buttons get the room. */}
+            <span data-testid="explore-word" className="flex-1 min-w-0 -mr-3 h-[1.5em] leading-[1.5em] overflow-hidden text-sm font-semibold text-slate-500 md:hidden">
+              {'\u200b'}<span className="inline-block whitespace-nowrap pr-3">{t('Explore')}</span>
+            </span>
+            <ExploreDesktopTabs />
+            <div data-testid="explore-top-actions" className="ml-auto flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+              {signedIn ? (
+                <>
+                <Link
+                  to={hasShop ? '/Dashboard' : '/Account'}
+                  data-testid="explore-my-shop"
+                  className="h-9 px-3 rounded-full bg-white/80 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap hover:bg-white"
+                  style={{ boxShadow: '0 0 0 1px rgba(15,23,42,0.08)' }}
+                >
+                  <Store className="w-4 h-4 flex-shrink-0" /> {hasShop ? t('My shop') : t('My account')}
                 </Link>
+                <ShopBell />
+                </>
               ) : (
-                <a href="/" aria-label={t('Sellio home')} className="flex items-center gap-2 flex-shrink-0">
-                  <img src={LOGO_URL} alt="Sellio" className="h-10 w-auto object-contain" />
-                </a>
-              )}
-              {/* The grey "Explore" shows only when the row has room for all of it. On a narrow
-                  phone or with the phone's text made larger it steps aside, so the buttons on the
-                  right never squeeze ("My shop" wrapped onto two lines on the Oppo Find N5's cover
-                  screen, Nov 2026). The zero-width space before it is where the line may break:
-                  a word that doesn't fit drops to a second line, which this one-line box hides.
-                  The gap after it is the word's own padding (pr-3, with -mr-3 taking back the
-                  row's gap), so a hidden word leaves no gap behind and the buttons get the room. */}
-              <span data-testid="explore-word" className="flex-1 min-w-0 -mr-3 h-[1.5em] leading-[1.5em] overflow-hidden text-sm font-semibold text-slate-400 md:hidden">
-                {'​'}<span className="inline-block whitespace-nowrap pr-3">{t('Explore')}</span>
-              </span>
-              <ExploreDesktopTabs />
-              <div data-testid="explore-top-actions" className="ml-auto flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
-                {signedIn ? (
-                  <>
-                  <Link
-                    to={hasShop ? '/Dashboard' : '/Account'}
-                    data-testid="explore-my-shop"
-                    className="h-9 px-3 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 inline-flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap hover:bg-slate-50"
-                  >
-                    <Store className="w-4 h-4 flex-shrink-0" /> {hasShop ? t('My shop') : t('My account')}
+                <>
+                  <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center flex-shrink-0 whitespace-nowrap hover:bg-white/60">
+                    {t('Log in')}
                   </Link>
-                  <ShopBell />
-                  </>
-                ) : (
-                  <>
-                    <Link to="/Auth" className="h-9 px-3 rounded-full text-sm font-semibold text-slate-700 inline-flex items-center flex-shrink-0 whitespace-nowrap hover:bg-slate-50">
-                      {t('Log in')}
-                    </Link>
-                    <Link
-                      to="/join"
-                      className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center flex-shrink-0 whitespace-nowrap"
-                      style={{ background: BRAND_GRADIENT }}
-                    >
-                      {t('Sign up')}
-                    </Link>
-                  </>
-                )}
-              </div>
+                  <Link
+                    to="/join"
+                    className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center flex-shrink-0 whitespace-nowrap"
+                    style={{ background: BRAND_GRADIENT }}
+                  >
+                    {t('Sign up')}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
-          {/* The search, and while searching its chips; the suggestions open under both. */}
-          <div className="relative max-w-6xl mx-auto">
-            {/* The cart sits beside the search (the row above has no room for it on phones);
-                its 44px tap area overhangs the row's padding, so the row keeps its height.
-                While searching, Cancel takes its place. */}
-            <div className={`px-3 sm:px-4 pb-2 flex items-center gap-1 ${searching ? 'pt-2' : ''}`}>
-              <label className="relative block flex-1 min-w-0">
-                <span className="sr-only">{t('Search Sellio Explore')}</span>
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+      </div>
+      {/* The search and the categories (searching: its chips), at the top while the page
+          scrolls; the suggestions open under both. */}
+      <header
+        data-testid="explore-header"
+        className={`sticky z-30 top-[env(safe-area-inset-top,0px)] ${searching ? '' : 'md:top-[calc(env(safe-area-inset-top,0px)+3rem)]'}`}
+        style={{ background: WASH, boxShadow: stuck ? '0 1px 0 rgba(15,23,42,0.07)' : 'none', transition: 'box-shadow 200ms ease' }}
+      >
+        <div className="relative max-w-6xl mx-auto">
+          {/* The cart sits beside the search (the row above has no room for it on phones);
+              its 44px tap area overhangs the row's padding, so the row keeps its height.
+              While searching, Cancel takes its place. */}
+          <div className={`px-3 sm:px-4 pb-1 flex items-center gap-1.5 ${searching ? 'pt-2' : 'pt-0.5'}`}>
+            {/* The ring is the search's colour; the search button sits inside it, on the right. */}
+            <div
+              data-testid="explore-search-ring"
+              className="flex-1 min-w-0 rounded-full p-[1.5px]"
+              style={{ background: BRAND_GRADIENT, boxShadow: focused ? '0 0 0 3px rgb(var(--color-primary, 59 130 246) / 0.15)' : 'none', transition: 'box-shadow 160ms ease' }}
+            >
+              <div
+                className="h-[38px] rounded-full bg-white flex items-center"
+                onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); searchRef.current?.focus(); } }}
+              >
                 <input
                   ref={searchRef}
                   type="search"
@@ -450,77 +487,60 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                   onBlur={() => setFocused(false)}
                   onKeyDown={keys.onKeyDown}
                   role="combobox"
+                  aria-label={t('Search Sellio Explore')}
                   aria-autocomplete="list"
                   aria-expanded={showList}
                   aria-controls={showList ? listId : undefined}
                   aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
                   placeholder={t('Search for an item or shop')}
                   enterKeyHint="search"
-                  className={`w-full h-[38px] pl-9 ${query ? 'pr-[76px]' : 'pr-11'} rounded-[10px] bg-slate-100 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-pink-200 [&::-webkit-search-cancel-button]:hidden`}
+                  className="flex-1 min-w-0 h-full bg-transparent pl-4 pr-1 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
                   <button
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => onQuery('')}
                     aria-label={t('Clear search')}
-                    className="absolute right-1.5 top-1/2 w-7 h-7 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200"
-                    style={{ transform: `translate3d(${folded ? -36 : 0}px, -50%, 0)`, transition: `transform 220ms ${FOLD_EASE}` }}
+                    className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={openCategories}
-                  tabIndex={folded ? 0 : -1}
-                  aria-hidden={folded ? undefined : true}
-                  aria-label={kind === 'all' ? t('Show categories') : t('Show categories ({pickedLabel} picked)', { pickedLabel })}
-                  className="absolute right-1 top-1/2 w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700"
-                  style={{
-                    transform: `translate3d(0, -50%, 0) scale(${folded ? 1 : 0.6})`,
-                    opacity: folded ? 1 : 0,
-                    pointerEvents: folded ? 'auto' : 'none',
-                    transition: `transform 220ms ${FOLD_EASE}, opacity 160ms ease`,
-                  }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={pressSearch}
+                  aria-label={t('Search')}
+                  data-testid="explore-search-button"
+                  className="flex-shrink-0 h-[30px] w-[52px] mr-1 rounded-full text-white flex items-center justify-center active:scale-95 transition-transform"
+                  style={{ background: BRAND_GRADIENT }}
                 >
-                  <SlidersHorizontal className="w-4 h-4" />
-                  {kind !== 'all' && <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full" style={{ background: 'rgb(var(--color-primary, 37 99 235))' }} />}
+                  <Search className="w-[18px] h-[18px]" strokeWidth={2.5} />
                 </button>
-              </label>
-              {searching ? (
-                <button
-                  type="button"
-                  onClick={cancelSearch}
-                  data-testid="explore-search-cancel"
-                  className="flex-shrink-0 h-11 -my-[3px] pl-2 pr-1 -mr-1 rounded-md text-[15px] font-semibold text-slate-700 whitespace-nowrap hover:bg-slate-50"
-                >
-                  {t('Cancel')}
-                </button>
-              ) : (
-                <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
-              )}
+              </div>
             </div>
-            {searching && <FilterChips filters={filters} kinds={KINDS} onOpen={openSheet} />}
-            {showList && (
-              <SuggestionList id={listId} items={suggestions} typed={query} active={keys.active} onPick={pickSuggestion} onHover={keys.setActive} />
+            {searching ? (
+              <button
+                type="button"
+                onClick={cancelSearch}
+                data-testid="explore-search-cancel"
+                className="flex-shrink-0 h-11 -my-[3px] pl-1.5 pr-1 -mr-1 rounded-md text-[15px] font-semibold text-slate-700 whitespace-nowrap hover:bg-white/60"
+              >
+                {t('Cancel')}
+              </button>
+            ) : (
+              <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
             )}
           </div>
-        </div>
-        {!searching && (
-          <div
-            className="relative z-[1] bg-white border-b border-slate-100"
-            aria-hidden={folded || undefined}
-            style={{
-              transform: folded ? 'translate3d(0, -100%, 0)' : 'translate3d(0, 0, 0)',
-              opacity: folded ? 0 : 1,
-              visibility: folded ? 'hidden' : 'visible',
-              pointerEvents: folded ? 'none' : 'auto',
-              willChange: 'transform',
-              transition: `transform 240ms ${FOLD_EASE}, opacity 180ms ease, visibility 0s linear ${folded ? '240ms' : '0s'}`,
-            }}
-          >
-            <div className="max-w-6xl mx-auto">
-              <div className="flex gap-2 overflow-x-auto px-3 sm:px-4 pb-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
+          {searching ? (
+            <div className="pt-1">
+              <FilterChips filters={filters} kinds={KINDS} onOpen={openSheet} />
+            </div>
+          ) : (
+            <div data-testid="explore-categories" className="flex items-stretch h-10">
+              <LocationPin country={country} onOpen={() => { searchRef.current?.blur(); setLocating(true); }} />
+              <div className="flex-1 min-w-0 flex items-stretch overflow-x-auto pr-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
                 {KINDS.map(({ key, label }) => {
                   const active = kind === key;
                   return (
@@ -530,21 +550,29 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                       role="tab"
                       aria-selected={active}
                       onClick={() => pick(key)}
-                      className={`h-[30px] px-3.5 rounded-full text-sm font-semibold whitespace-nowrap border transition-colors ${active ? 'text-white border-transparent' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-                      style={active ? { background: BRAND_GRADIENT } : undefined}
+                      className={`relative flex-shrink-0 px-2.5 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? '' : 'text-slate-500 hover:text-slate-800'}`}
                     >
-                      {t(label)}
+                      <span style={active ? GRADIENT_TEXT : undefined}>{t(label)}</span>
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-1/2 bottom-[5px] h-[3px] w-[18px] -ml-[9px] rounded-full transition-opacity duration-200"
+                        style={{ background: BRAND_GRADIENT, opacity: active ? 1 : 0 }}
+                      />
                     </button>
                   );
                 })}
               </div>
             </div>
-          </div>
-        )}
+          )}
+          {showList && (
+            <SuggestionList id={listId} items={suggestions} typed={query} active={keys.active} onPick={pickSuggestion} onHover={keys.setActive} />
+          )}
+        </div>
       </header>
       {searching && (
         <FilterSheet key={sheet.n} section={sheet.section} filters={filters} kinds={KINDS} search={search} onApply={onFilters} onClose={closeSheet} />
       )}
+      <LocationSheet open={locating} country={country} onPick={onCountry} onClose={closeLocation} />
     </>
   );
 }
@@ -559,6 +587,15 @@ export default function Explore() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('all');
+  // The country Explore shows (its location pin): null for every country. Kept on the device.
+  const [country, setCountry] = useState(() => loadExploreCountry());
+  const pickCountry = useCallback((next) => {
+    setCountry(next);
+    saveExploreCountry(next);
+    if (window.scrollY > 0) window.scrollTo({ top: 0 });
+  }, []);
+  // Recent searches (lib/recentSearches.js), kept on the device for this account.
+  const { recent, remember: rememberSearch, clear: clearRecent } = useRecentSearches(appUser?.id || null);
   // Searching: from the moment the search box is tapped until Cancel or the phone's Back. The
   // search's sort and filters (lib/exploreSearch.js) start from the category picked on Explore;
   // total: how many listings the search finds (explore_search's total_count).
@@ -568,6 +605,7 @@ export default function Explore() {
   const [items, setItems] = useState([]);
   const [itemsKind, setItemsKind] = useState('all');
   const [shops, setShops] = useState([]);
+  const shopsFor = useRef(null); // the country the shops on screen are from
   // Shops' ratings (3+ buyers), for the shop row and each card's seller line.
   const [ratings] = useRatingSummaries([...shops.map((s) => s.shop_id), ...items.map((i) => i.shop_id)]);
   const [status, setStatus] = useState('loading'); // loading | ready | error
@@ -621,11 +659,22 @@ export default function Explore() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // A search starts in Explore's category and country (both can be changed in its filters).
+  const [startFilters, setStartFilters] = useState(null);
   const startSearch = useCallback(() => {
-    setFilters(searchFilters(kind));
+    const start = searchFilters(kind, undefined, country);
+    setFilters(start);
+    setStartFilters(start);
     setSearching(true);
     if (window.scrollY > 0) window.scrollTo({ top: 0 });
-  }, [kind]);
+  }, [kind, country]);
+  // A search sent (Enter, the search button, a suggestion, a recent search, Did you mean): shown
+  // at once, and kept among the recent searches.
+  const runSearch = useCallback((text) => {
+    setQuery(text);
+    setSearch(text.trim());
+    rememberSearch(text);
+  }, [rememberSearch]);
   // Back to Explore as it was before the search (its category chip as it was).
   const cancelSearch = useCallback(() => {
     setSearching(false);
@@ -642,6 +691,8 @@ export default function Explore() {
   // Items for every chip except Merchants, which lists storefronts instead.
   // The feed is interleaved by shop on the server, so one shop can't fill it.
   // Searching: explore_search, with the search's sort and filters (always items).
+  // A country picked with the location pin: explore_search lists that country's items in
+  // explore_feed's order, and explore_merchants takes the country too.
   const fetchPage = useCallback(async (offset) => {
     const supabase = await getSupabase();
     if (searching) {
@@ -650,16 +701,28 @@ export default function Explore() {
       return { kind: 'search', rows: data || [] };
     }
     const { data, error } = kind === 'merchants'
-      ? await supabase.rpc('explore_merchants', { p_search: search || null, p_limit: PAGE_SIZE, p_offset: offset })
-      : await supabase.rpc('explore_feed', {
-        p_search: search || null,
-        p_kind: kind === 'all' ? null : kind,
-        p_limit: PAGE_SIZE,
-        p_offset: offset,
-      });
+      ? await supabase.rpc('explore_merchants', { p_search: search || null, p_limit: PAGE_SIZE, p_offset: offset, ...(country ? { p_country: country } : {}) })
+      : country
+        ? await supabase.rpc('explore_search', {
+          p_search: search || null,
+          p_kind: kind === 'all' ? null : kind,
+          p_sort: 'best',
+          p_country: country,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        })
+        : await supabase.rpc('explore_feed', {
+          p_search: search || null,
+          p_kind: kind === 'all' ? null : kind,
+          p_limit: PAGE_SIZE,
+          p_offset: offset,
+        });
     if (error) throw error;
     return { kind, rows: data || [] };
-  }, [search, kind, searching, filters]);
+  }, [search, kind, searching, filters, country]);
+  // The copy kept on the device for opening Explore offline: one per country.
+  const feedCopy = country ? `explore:feed:${country}` : 'explore:feed';
+  const shopsCopy = country ? `explore:shops:${country}` : 'explore:shops';
 
   useEffect(() => {
     const id = ++requestId.current;
@@ -676,13 +739,13 @@ export default function Explore() {
         setStatus('ready');
         setFeedAt(Date.now());
         setFeedKept(false);
-        if (everything) keepSnapshot('explore:feed', rows);
+        if (everything) keepSnapshot(feedCopy, rows);
       })
       .catch((err) => {
         if (id !== requestId.current) return;
         console.warn('Explore feed failed:', err);
         // No connection: the listings kept on the phone, when there are some.
-        const kept = everything ? loadSnapshot('explore:feed') : null;
+        const kept = everything ? loadSnapshot(feedCopy) : null;
         if (Array.isArray(kept?.data) && kept.data.length) {
           setItems(kept.data);
           setItemsKind('all');
@@ -693,7 +756,7 @@ export default function Explore() {
         }
         setStatus('error');
       });
-  }, [fetchPage, reloadKey, search, kind, searching]);
+  }, [fetchPage, reloadKey, search, kind, searching, feedCopy]);
 
   // The connection is back: a feed that couldn't load (or is the copy) loads again.
   const feedStale = useRef(false);
@@ -705,19 +768,23 @@ export default function Explore() {
     (async () => {
       try {
         const supabase = await getSupabase();
-        const { data, error } = await supabase.rpc('explore_shops', { p_limit: 20 });
+        const { data, error } = await supabase.rpc('explore_shops', country ? { p_limit: 20, p_country: country } : { p_limit: 20 });
         if (error) throw error;
-        if (!cancelled) setShops(data || []);
-        keepSnapshot('explore:shops', data || []);
+        if (!cancelled) { shopsFor.current = country; setShops(data || []); }
+        keepSnapshot(shopsCopy, data || []);
       } catch (err) {
         console.warn('Explore shops failed:', err);
-        // No connection: the shops kept on the phone, if none are on screen.
-        const kept = loadSnapshot('explore:shops');
-        if (!cancelled && Array.isArray(kept?.data)) setShops((prev) => (prev.length ? prev : kept.data));
+        // No connection: the shops on screen stay when they're this country's; otherwise the
+        // ones kept on the phone for it (none kept: none shown).
+        const kept = loadSnapshot(shopsCopy);
+        if (cancelled) return;
+        const keptRows = Array.isArray(kept?.data) ? kept.data : [];
+        setShops((prev) => (prev.length && shopsFor.current === country ? prev : keptRows));
+        shopsFor.current = country;
       }
     })();
     return () => { cancelled = true; };
-  }, [reloadKey]);
+  }, [reloadKey, country, shopsCopy]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || status !== 'ready') return;
@@ -752,17 +819,23 @@ export default function Explore() {
   const filtered = searching || !!search || kind !== 'all';
   const picked = KINDS.find((k) => k.key === kind)?.label;
   const kindLabel = kind === 'merchants' ? t('Merchants on Sellio') : (picked ? t(picked) : '');
+  // Searching with nothing typed: recent searches, then the recommended listings (Explore's own
+  // order, in the category and country the search started in); "All listings" with their count
+  // once the sort or a filter is changed.
+  const recommending = searching && !search && sameSearchFilters(filters, startFilters);
   const heading = search ? t('Results for “{search}”', { search })
-    : searching ? t('All listings')
-      : kind === 'all' ? t('Fresh finds') : kindLabel;
+    : recommending ? t('Recommended')
+      : searching ? t('All listings')
+        : kind === 'all' ? t('Fresh finds') : kindLabel;
+  const countryName = t(SEARCH_COUNTRIES.find((c) => c.key === country)?.label || '');
   const sellHref = hasShop ? '/explore/listings?new=1' : '/join';
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ background: PAGE_BG }}>
       <ExploreHeader
         query={query}
         onQuery={setQuery}
-        onSearchNow={(text) => { setQuery(text); setSearch(text.trim()); }}
+        onSearchNow={runSearch}
         kind={kind}
         onKind={setKind}
         signedIn={signedIn}
@@ -773,9 +846,14 @@ export default function Explore() {
         filters={filters}
         onFilters={setFilters}
         search={search}
+        country={country}
+        onCountry={pickCountry}
       />
 
-      <main className="max-w-6xl mx-auto px-2 sm:px-4 pb-32">
+      <div className="relative">
+      {/* The header's wash fades into the page under it. */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-40 pointer-events-none" style={{ background: WASH, WebkitMaskImage: WASH_FADE, maskImage: WASH_FADE }} />
+      <main className="relative max-w-6xl mx-auto px-2 sm:px-4 pb-32">
         {/* The page's heading for search engines and screen readers (the header shows the search). */}
         <h1 className="sr-only">{t('Explore shops and items on Sellio')}</h1>
         {!filtered && shops.length > 0 && (
@@ -795,10 +873,18 @@ export default function Explore() {
           </section>
         )}
 
+        {searching && !query.trim() && (
+          <ExploreRecent
+            searches={recent}
+            onPick={(text) => { document.activeElement?.blur?.(); runSearch(text); }}
+            onClear={clearRecent}
+          />
+        )}
+
         <section aria-labelledby="explore-feed-heading" className={!filtered && shops.length > 0 ? '' : 'pt-2.5'}>
           <div className="flex items-baseline justify-between gap-2 mb-2 px-1 sm:px-0">
             <h2 id="explore-feed-heading" className="min-w-0 truncate text-[15px] font-bold text-slate-900">{heading}</h2>
-            {searching && status === 'ready' && total != null && (
+            {searching && !recommending && status === 'ready' && total != null && (
               <span data-testid="explore-search-count" className="flex-shrink-0 text-xs text-slate-500">{total === 1 ? t('1 listing') : t('{count} listings', { count: total })}</span>
             )}
           </div>
@@ -815,7 +901,7 @@ export default function Explore() {
           )}
 
           {status === 'error' && (
-            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+            <div className="bg-white rounded-2xl p-8 text-center">
               <p className="text-sm text-slate-600">{online ? t('We couldn’t load listings just now.') : t('You’re offline, so listings can’t load just now. They’ll load when you’re back online.')}</p>
               <button
                 type="button"
@@ -829,7 +915,7 @@ export default function Explore() {
 
           {/* Searching with filters on and nothing found: one tap takes the filters off. */}
           {status === 'ready' && items.length === 0 && filtersOn && (
-            <div data-testid="explore-no-match" className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+            <div data-testid="explore-no-match" className="bg-white rounded-2xl p-8 text-center">
               <p className="text-[15px] font-bold text-slate-900">{t('No listings match these filters')}</p>
               <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-600">{t('Try removing a filter, or widen the price.')}</p>
               <button
@@ -848,7 +934,7 @@ export default function Explore() {
             <ExploreNoResults
               search={search}
               kind={searching ? (filters.kind === 'all' ? null : filters.kind) : (kind === 'all' ? null : kind)}
-              onSearch={(text) => { setQuery(text); setSearch(text.trim()); }}
+              onSearch={runSearch}
               onShowAll={() => {
                 setQuery('');
                 setSearch('');
@@ -859,7 +945,7 @@ export default function Explore() {
           )}
 
           {status === 'ready' && items.length === 0 && !search && !filtersOn && (
-            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+            <div className="bg-white rounded-2xl p-8 text-center">
               {filtered ? (
                 <>
                   <p className="text-sm text-slate-600">{t('Nothing matches yet.')}</p>
@@ -870,6 +956,23 @@ export default function Explore() {
                   >
                     {t('Show everything')}
                   </button>
+                </>
+              ) : country ? (
+                <>
+                  {/* A country with nothing listed yet (picked with the location pin). */}
+                  <p className="text-sm text-slate-600">{t('No listings in {country} yet.', { country: countryName })}</p>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => pickCountry(null)}
+                      className="h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      {t('Show all countries')}
+                    </button>
+                    <Link to={sellHref} className="h-9 px-4 rounded-full text-sm font-semibold text-white inline-flex items-center" style={{ background: BRAND_GRADIENT }}>
+                      {t('Start selling')}
+                    </Link>
+                  </div>
                 </>
               ) : (
                 <>
@@ -889,7 +992,10 @@ export default function Explore() {
                   {items.map((shop) => <MerchantCard key={shop.shop_id} shop={shop} rating={ratings[shop.shop_id]} />)}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3"
+                  onClickCapture={(event) => { if (searching && search && event.target.closest?.('a')) rememberSearch(search); }}
+                >
                   {items.map((item) => <ItemCard key={item.product_id} item={item} rating={ratings[item.shop_id]} signedIn={signedIn} onNeedSignIn={signInToLike} />)}
                 </div>
               )}
@@ -918,6 +1024,7 @@ export default function Explore() {
           </span>
         </footer>
       </main>
+      </div>
 
       {/* Phones use the bottom bar's Sell; wider screens keep this button. */}
       <Link

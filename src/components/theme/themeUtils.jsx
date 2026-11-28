@@ -114,6 +114,9 @@ export function generateThemeVariables(darkHex, lightHex) {
     // Consumers: use var(--color-primary-gradient) for buttons/CTAs.
     // If it equals "none", fall back to rgb(var(--color-primary)).
     '--color-primary-gradient': isDefault ? DEFAULT_GRADIENT : `rgb(${dark.r} ${dark.g} ${dark.b})`,
+    // Explore's soft wash behind its header (pages/Explore.jsx): a chosen theme's colour; without
+    // one ('' removes it) Explore uses Sellio's own orange, pink and purple.
+    '--color-wash': isDefault ? '' : `rgb(${dark.r} ${dark.g} ${dark.b})`,
     // shadcn components (Button, Switch, Checkbox, Progress…) read --primary, so a
     // chosen theme reaches every standard button. '' removes the override (no theme).
     '--primary': primaryHsl,

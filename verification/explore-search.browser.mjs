@@ -100,9 +100,9 @@ try {
   const shot = async (name) => { if (shots) await page.screenshot({ path: path.join(shots, `${name}.png`) }); };
   await shot('1-explore');
 
-  await check('Before a search: the logo row is 56 px tall, the search box under it, "My shop" on one line', async () => {
-    assert.equal((await box('[data-testid="explore-top-bar"]')).height, 56);
-    assert.ok((await box('input[type="search"]')).top >= 56);
+  await check('Before a search: the logo row is 48 px tall, the search box under it, "My shop" on one line', async () => {
+    assert.equal((await box('[data-testid="explore-top-bar"]')).height, 48);
+    assert.ok((await box('input[type="search"]')).top >= 48);
     const lines = await page.$eval('[data-testid="explore-my-shop"]', (el) => {
       const tops = new Set();
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -156,7 +156,7 @@ try {
   await page.waitForTimeout(500);
   await shot('4-after-back');
   await check('The phone’s Back again leaves the search: the logo row is back, the search cleared', async () => {
-    assert.equal((await box('[data-testid="explore-top-bar"]')).height, 56);
+    assert.equal((await box('[data-testid="explore-top-bar"]')).height, 48);
     assert.equal(await page.$('[data-testid="explore-filter-chips"]'), null);
     assert.equal(await page.$eval('input[type="search"]', (el) => el.value), '');
   });

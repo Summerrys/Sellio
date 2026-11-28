@@ -38,9 +38,32 @@ export function defaultSearchCurrency() {
   return countryNamed(visitorCountry())?.currency || 'SGD';
 }
 
-// kind: the category picked on Explore before searching (it carries over, and can be cleared).
-export function searchFilters(kind = 'all', currency = defaultSearchCurrency()) {
-  return { sort: 'best', kind, deal: [], country: null, currency, min: '', max: '' };
+// kind: the category picked on Explore before searching (it carries over, and can be cleared);
+// country: the country Explore shows (its location pin), which a search starts in.
+export function searchFilters(kind = 'all', currency = defaultSearchCurrency(), country = null) {
+  return { sort: 'best', kind, deal: [], country, currency, min: '', max: '' };
+}
+
+// The country Explore shows (its location pin; Alvin, 28 Nov 2026, after Taobao's: "a location
+// icon that you can click and immediately choose a country"): one of SEARCH_COUNTRIES' names, or
+// null for every country (the default, as search has been since step 1). Kept on this phone or
+// computer, so Explore opens in it next time.
+const COUNTRY_KEY = 'sellio:explore:country';
+
+export function loadExploreCountry() {
+  try {
+    const saved = window.localStorage.getItem(COUNTRY_KEY);
+    return SEARCH_COUNTRIES.some((country) => country.key && country.key === saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveExploreCountry(country) {
+  try {
+    if (country) window.localStorage.setItem(COUNTRY_KEY, country);
+    else window.localStorage.removeItem(COUNTRY_KEY);
+  } catch { /* no storage: the pick lasts until the page is closed */ }
 }
 
 // The currency a price range is in: the picked country's, else the buyer's.

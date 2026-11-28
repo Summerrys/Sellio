@@ -25,8 +25,6 @@
   "Search Sellio Explore": "Cari di Teroka Sellio",
   "Search for an item or shop": "Cari item atau kedai",
   "Clear search": "Kosongkan carian",
-  "Show categories": "Papar kategori",
-  "Show categories ({pickedLabel} picked)": "Papar kategori ({pickedLabel} dipilih)",
   "Filter listings": "Tapis produk",
   "Log in to like listings.": "Log masuk untuk menyukai produk.",
   "Liked. Find it in Me › My likes.": "Disukai. Cari di Saya › Suka Saya.",
@@ -688,5 +686,11 @@
   "Max": "Maks",
   "With a price set, only listings priced in {currency} show.": "Apabila harga ditetapkan, hanya produk berharga {currency} ditunjukkan.",
   "No listings match these filters": "Tiada produk yang sepadan dengan penapis ini",
-  "Try removing a filter, or widen the price.": "Cuba buang satu penapis, atau luaskan julat harga."
+  "Try removing a filter, or widen the price.": "Cuba buang satu penapis, atau luaskan julat harga.",
+  "Location: {place}": "Lokasi: {place}",
+  "Explore shows listings from shops in the country you pick, and your searches start there.": "Teroka memaparkan produk daripada kedai di negara yang anda pilih, dan carian anda bermula di situ.",
+  "Recent searches": "Carian terkini",
+  "Clear recent searches": "Kosongkan carian terkini",
+  "No listings in {country} yet.": "Belum ada produk di {country}.",
+  "Show all countries": "Papar semua negara"
 }

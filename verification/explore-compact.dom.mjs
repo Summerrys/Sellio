@@ -1,5 +1,7 @@
-// Explore's compact top: categories fold into a button in the search bar when scrolling
-// down and open out again at the top; the feed uses narrow gaps on phones. Also the
+// Explore's compact top (Alvin, 28 Nov 2026, after Taobao's): the logo row scrolls away on phones,
+// the search bar (a coloured ring with the search button inside it) and the categories (words,
+// after the location pin) stay at the top, and no filter button turns up in the search bar when
+// scrolling; the feed uses narrow gaps on phones. Also the
 // sign-in landing (Explore; staff: their shop), staff kept out of Explore, the darker
 // bottom bar, Me's Privacy / Terms links and My listings' small-screen filters.
 // Run: node verification/explore-compact.dom.mjs   (jsdom installed in /tmp/sellio-verification)
@@ -102,61 +104,60 @@ try {
 
   const header = container.querySelector('header');
   const tablist = () => container.querySelector('[role="tablist"]');
-  const foldBox = () => tablist().parentElement.parentElement;
-  const foldButton = () => container.querySelector('button[aria-label^="Show categories"]');
-  const isFolded = () => foldBox().style.transform.includes('-100%');
-  const buttonShown = () => foldButton().style.opacity === '1' && foldButton().style.pointerEvents === 'auto';
+  const topBar = container.querySelector('[data-testid="explore-top-bar"]');
+  const ring = container.querySelector('[data-testid="explore-search-ring"]');
+  const searchButton = container.querySelector('[data-testid="explore-search-button"]');
+  const pin = container.querySelector('[data-testid="explore-location"]');
   assert.ok(header.contains(tablist()), 'categories sit in the header');
-  assert.match(header.className, /sticky top-0/, 'the header stays at the top while scrolling');
-  assert.match(header.querySelector('.h-14')?.className || '', /h-14/, 'logo row stays 56px');
-  assert.match(container.querySelector('input[type="search"]').className, /h-\[38px\]/);
-  assert.match(tablist().querySelector('button').className, /h-\[30px\]/);
-  assert.ok(!isFolded());
-  assert.ok(!buttonShown());
-  passed('Top: 56px logo row, 38px search, 30px category pills; the header stays at the top');
+  assert.ok(header.contains(container.querySelector('input[type="search"]')), 'and the search');
+  assert.ok(header.contains(pin) && pin.compareDocumentPosition(tablist()) & win.Node.DOCUMENT_POSITION_FOLLOWING, 'the location pin starts the categories row');
+  assert.match(header.className, /\bsticky\b/, 'the header stays at the top while scrolling');
+  assert.match(header.className, /top-\[env\(safe-area-inset-top,0px\)\]/, 'just under the status bar');
+  assert.ok(!header.contains(topBar), 'the logo row is not in it: on phones it scrolls away with the page');
+  assert.match(topBar.parentElement.className, /md:sticky/, 'wider screens keep the logo row at the top');
+  assert.match(topBar.className, /\bh-12\b/, 'logo row 48px');
+  passed('Top: a 48px logo row that scrolls away on phones; the search and the categories (after the location pin) stay at the top');
 
-  for (const style of [foldBox().style, foldButton().style]) {
-    assert.match(style.transition, /transform/);
-    assert.doesNotMatch(style.transition, /height|max-height|top|margin|padding/, 'only transform and opacity move: no layout, so it stays smooth');
-  }
-  assert.equal(foldBox().style.willChange, 'transform');
-  passed('The slide moves only transform and opacity (smooth on phones: nothing is laid out again)');
+  assert.match(ring.style.background, /--color-primary-gradient/, 'the ring is the visitor\'s colour');
+  assert.ok(ring.contains(searchButton) && searchButton === ring.firstElementChild.lastElementChild, 'the search button sits inside the ring, on its right');
+  assert.match(searchButton.style.background, /--color-primary-gradient/, 'in the same colour');
+  assert.equal(searchButton.getAttribute('aria-label'), 'Search');
+  assert.match(container.querySelector('input[type="search"]').className, /h-full/);
+  assert.match(ring.firstElementChild.className, /h-\[38px\]/);
+  passed('Search bar: a coloured ring with the search button inside it on the right, in the same colour');
 
+  const tabs = [...tablist().querySelectorAll('[role="tab"]')];
+  assert.deepEqual(tabs.map((b) => b.textContent), ['All', 'Food & drinks', 'Goods', 'Home sellers', 'Merchants']);
+  assert.deepEqual(tabs.map((b) => b.getAttribute('aria-selected')), ['true', 'false', 'false', 'false', 'false']);
+  assert.ok(!tabs[0].className.includes('border'), 'words, not outlined pills');
+  const lineOf = (b) => b.querySelector('span[aria-hidden="true"]');
+  assert.equal(lineOf(tabs[0]).style.opacity, '1', 'a line under the picked one');
+  assert.equal(lineOf(tabs[2]).style.opacity, '0');
+  passed('Categories: words, the picked one in the visitor\'s colour with a line under it');
+
+  assert.equal(container.querySelector('button[aria-label^="Show categories"]'), null, 'no categories button in the search bar');
+  assert.ok(!/SlidersHorizontal|Show categories/.test(await readFile('src/pages/Explore.jsx', 'utf8')), 'and no code left for one');
+  const styleOfRow = () => tablist().parentElement.getAttribute('style') || '';
   await scrollToY(30);
-  assert.ok(!isFolded(), 'a little scroll changes nothing');
   await scrollToY(120);
-  assert.ok(isFolded(), 'scrolled down: categories slide away');
-  assert.equal(foldBox().style.visibility, 'hidden');
-  assert.ok(buttonShown(), 'a categories button shows in the search bar');
-  await scrollToY(20);
-  assert.ok(isFolded(), 'stays folded until the top');
-  await scrollToY(4);
-  assert.ok(!isFolded(), 'back at the top: categories slide back');
-  assert.ok(!buttonShown());
-  passed('Scrolling down slides the categories away into a button in the search bar; back at the top they slide back');
+  assert.equal(styleOfRow(), '', 'scrolled down: the categories row stays as it is (nothing slides away)');
+  assert.ok(header.contains(tablist()));
+  assert.match(header.style.boxShadow, /rgba/, 'a hairline under the header once the page scrolls under it');
+  await scrollToY(400);
+  assert.equal(styleOfRow(), '');
+  await scrollToY(0);
+  assert.equal(header.style.boxShadow, 'none', 'none at the top');
+  passed('Scrolling: no filter button turns up in the search bar; the categories stay in view, a hairline under the header');
 
   await scrollToY(400);
-  foldButton().dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  await sleep(60);
-  assert.ok(!isFolded(), 'the button brings them back while scrolled down');
-  await scrollToY(390);
-  await scrollToY(398);
-  assert.ok(!isFolded(), 'scrolling up a little keeps them');
-  await scrollToY(420);
-  assert.ok(isFolded(), 'any scroll down hides them again');
-  assert.ok(buttonShown());
-  passed('Opened from the button, the categories hide again on the next scroll down');
-
-  foldButton().dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  await sleep(60);
-  const goods = [...tablist().querySelectorAll('button')].find(b => b.textContent === 'Goods');
+  const goods = tabs.find((b) => b.textContent === 'Goods');
   goods.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await sleep(400);
   assert.deepEqual(scrolls.at(-1), { top: 0, behavior: 'smooth' }, 'picking one goes back to the top of the results');
   assert.equal(globalThis.feedCalls.at(-1)[1].p_kind, 'goods');
-  await scrollToY(400);
-  assert.ok(foldButton().querySelector('span'), 'a dot shows a category is picked');
-  passed('Picking a category shows its results from the top; a dot marks a picked category');
+  assert.equal(goods.getAttribute('aria-selected'), 'true');
+  assert.equal(lineOf(goods).style.opacity, '1');
+  passed('Picking a category shows its results from the top, with the line under it');
 
   const grid = container.querySelector('.grid');
   assert.match(grid.className, /gap-2 sm:gap-3/);

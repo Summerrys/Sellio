@@ -2954,8 +2954,6 @@ const explore = {
   "Search Sellio Explore": "Cari di Jelajahi Sellio",
   "Search for an item or shop": "Cari produk atau toko",
   "Clear search": "Hapus pencarian",
-  "Show categories": "Tampilkan kategori",
-  "Show categories ({pickedLabel} picked)": "Tampilkan kategori ({pickedLabel} dipilih)",
   "Filter listings": "Saring produk",
   "Log in to like listings.": "Masuk untuk menyukai produk.",
   "Liked. Find it in Me › My likes.": "Disukai. Lihat di Saya › Produk Disukai.",
@@ -3617,7 +3615,13 @@ const explore = {
   Max,
   "With a price set, only listings priced in {currency} show.": "Jika harga diisi, hanya produk dengan harga dalam {currency} yang tampil.",
   "No listings match these filters": "Tidak ada produk yang cocok dengan filter ini",
-  "Try removing a filter, or widen the price.": "Coba hapus satu filter, atau perluas rentang harga."
+  "Try removing a filter, or widen the price.": "Coba hapus satu filter, atau perluas rentang harga.",
+  "Location: {place}": "Lokasi: {place}",
+  "Explore shows listings from shops in the country you pick, and your searches start there.": "Jelajahi menampilkan produk dari toko di negara yang Anda pilih, dan pencarian Anda dimulai dari sana.",
+  "Recent searches": "Pencarian terakhir",
+  "Clear recent searches": "Hapus pencarian terakhir",
+  "No listings in {country} yet.": "Belum ada produk di {country}.",
+  "Show all countries": "Tampilkan semua negara"
 };
 const GROUPS = { signup, shop, explore };
 export {
