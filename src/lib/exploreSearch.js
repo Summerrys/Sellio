@@ -8,7 +8,9 @@
 // not the same money, and nothing converts between them.
 import { N_ } from './appText';
 import { currencyPrefix, currencyDecimals } from './money';
-import { countryNamed, visitorCountry } from './countries';
+import { COUNTRIES, countryNamed, visitorCountry } from './countries';
+import { isNativeApp } from './nativeApp';
+import { SELLIO_SITE } from './accountFlow';
 
 export const SEARCH_SORTS = [
   { key: 'best', label: N_('Best match') },
@@ -45,25 +47,67 @@ export function searchFilters(kind = 'all', currency = defaultSearchCurrency(), 
 }
 
 // The country Explore shows (its location pin; Alvin, 28 Nov 2026, after Taobao's: "a location
-// icon that you can click and immediately choose a country"): one of SEARCH_COUNTRIES' names, or
-// null for every country (the default, as search has been since step 1). Kept on this phone or
-// computer, so Explore opens in it next time.
+// icon that you can click and immediately choose a country"; later that day: "make it detect where
+// the location is and immediately show that location items"). Kept on this phone or computer:
+//   nothing kept   'auto'   where the visitor is (detectExploreCountry), the default; every
+//                           country when that isn't one of Sellio's or can't be told
+//   'all'                   every country
+//   'Malaysia', …           that country (SEARCH_COUNTRIES' names)
 const COUNTRY_KEY = 'sellio:explore:country';
 
 export function loadExploreCountry() {
   try {
     const saved = window.localStorage.getItem(COUNTRY_KEY);
-    return SEARCH_COUNTRIES.some((country) => country.key && country.key === saved) ? saved : null;
+    if (saved === 'all') return 'all';
+    return SEARCH_COUNTRIES.some((country) => country.key && country.key === saved) ? saved : 'auto';
   } catch {
-    return null;
+    return 'auto';
   }
 }
 
-export function saveExploreCountry(country) {
+export function saveExploreCountry(choice) {
   try {
-    if (country) window.localStorage.setItem(COUNTRY_KEY, country);
+    if (choice && choice !== 'auto') window.localStorage.setItem(COUNTRY_KEY, choice);
     else window.localStorage.removeItem(COUNTRY_KEY);
   } catch { /* no storage: the pick lasts until the page is closed */ }
+}
+
+// Where the visitor is: the country their internet connection comes from, as Sellio's website
+// sees it (public/_worker.js answers /api/country from Cloudflare; no location permission is
+// asked, and a VPN shows the VPN's country). One of SEARCH_COUNTRIES' names; null for anywhere
+// else; undefined when it couldn't be asked (offline, no answer within the time). Each answer is
+// kept on the device (keptDetectedCountry), so Explore opens in it at once next time while it asks
+// again.
+const DETECTED_KEY = 'sellio:explore:detected';
+const ourCountry = (name) => (SEARCH_COUNTRIES.some((country) => country.key && country.key === name) ? name : null);
+
+export function keptDetectedCountry() {
+  try {
+    const kept = JSON.parse(window.localStorage.getItem(DETECTED_KEY) || 'null');
+    return kept && typeof kept === 'object' && 'country' in kept ? ourCountry(kept.country) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function detectExploreCountry({ timeoutMs = 3000 } = {}) {
+  const stop = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => stop?.abort(), timeoutMs);
+  try {
+    const address = isNativeApp() ? `${SELLIO_SITE}/api/country` : '/api/country';
+    const response = await fetch(address, { cache: 'no-store', signal: stop?.signal });
+    if (!response.ok) return undefined;
+    const { country: code } = await response.json();
+    const country = ourCountry(COUNTRIES.find((c) => c.code === code)?.name);
+    try {
+      window.localStorage.setItem(DETECTED_KEY, JSON.stringify({ country, at: Date.now() }));
+    } catch { /* no storage: asked again next time */ }
+    return country;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // The currency a price range is in: the picked country's, else the buyer's.

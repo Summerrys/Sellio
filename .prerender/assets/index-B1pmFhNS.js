@@ -3621,7 +3621,9 @@ const explore = {
   "Recent searches": "最近搜索",
   "Clear recent searches": "清除最近搜索",
   "No listings in {country} yet.": "{country}还没有商品。",
-  "Show all countries": "显示所有国家"
+  "Show all countries": "显示所有国家",
+  "Use my location": "使用我的位置",
+  "Finding where you are…": "正在确定您的位置…"
 };
 const GROUPS = { signup, shop, explore };
 export {

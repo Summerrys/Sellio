@@ -11,6 +11,8 @@
 //   /store/<slug>/, /listing/<id>/, /explore/  →  301 to the same address without the last /
 //   /sitemap.xml          → every public shop and item, from the database (sitemap below)
 //   /llms.txt             → the llms.txt file, with the shops on Explore added (llms below)
+//   /api/country          → the country the visitor's connection comes from (Explore's location
+//                           pin, below)
 //   any other address     → app.html (the app: sign-in, a shop's workspace, Explore's own tabs…)
 // Files (scripts, styles, pictures, /.well-known/assetlinks.json…) skip this worker
 // (_routes.json): Pages serves them itself, with the caching in _headers, and answers a missing
@@ -1045,6 +1047,23 @@ async function llms(env, request, url, ctx) {
   });
 }
 
+// Where a visitor is, for Explore's location pin (Alvin, 28 Nov 2026: "make it detect where the
+// location is and immediately show that location items"): the country Cloudflare sees the request
+// come from, as an ISO code (SG, MY, ID, …), or null when it can't tell (XX) or it's Tor (T1). Only
+// the country: no address, nothing kept. Sellio's app asks from its own pages (another origin), so
+// any page may read the answer; every visitor gets their own (no-store).
+function visitorCountryAnswer(request) {
+  const code = String(request.cf?.country || '').toUpperCase();
+  const country = /^[A-Z]{2}$/.test(code) && code !== 'XX' && code !== 'T1' ? code : null;
+  return new Response(request.method === 'HEAD' ? null : JSON.stringify({ country }), {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     // www.sellio.sg → sellio.sg, same address: one address to sign in on (Google and emailed
@@ -1061,6 +1080,8 @@ export default {
       return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });
     }
     const { pathname } = url;
+
+    if (pathname === '/api/country') return visitorCountryAnswer(request);
 
     const to = REDIRECTS[pathname];
     if (to) return Response.redirect(new URL(to + url.search, url).toString(), 301);

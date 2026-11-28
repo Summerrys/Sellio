@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { Check, Globe, MapPin, X } from 'lucide-react';
+import { Check, Globe, LocateFixed, MapPin, X } from 'lucide-react';
 import { useAppText } from '@/lib/appText';
 import { countryNamed } from '@/lib/countries';
 import { SEARCH_COUNTRIES } from '@/lib/exploreSearch';
@@ -10,10 +10,11 @@ import { BRAND_COLOR } from './shared';
 // and immediately choose a country"; "the location icon can place it at the left side of the
 // searchbar"; "The pin should be outside of the search bar but at the left side"). It sits just
 // left of the search bar, as the cart sits right of it. A tap opens the countries, and a tap on
-// one shows Explore in it at once: the
-// listings, the shops and the merchants of that country, and searches start there
-// (lib/exploreSearch.js keeps the pick on the device). Every country is the default. With one
-// picked, its code (SG, MY, ID) shows beside the pin.
+// one shows Explore in it at once: the listings, the shops and the merchants of that country,
+// and searches start there (lib/exploreSearch.js keeps the pick on the device). By default
+// ("make it detect where the location is and immediately show that location items") Explore
+// shows where the visitor is: "Use my location", detected from their connection, every country
+// when that isn't one of Sellio's. The country shown has its code (SG, MY, ID) beside the pin.
 
 const countryLabel = (key) => SEARCH_COUNTRIES.find((c) => c.key === key)?.label || SEARCH_COUNTRIES[0].label;
 
@@ -36,9 +37,20 @@ export function LocationPin({ country, onOpen }) {
   );
 }
 
-export function LocationSheet({ open, country, onPick, onClose }) {
+// choice: 'auto' (where the visitor is), 'all', or a country's name; detected: that country
+// (undefined while it's being found, null when it isn't one of Sellio's or couldn't be told).
+export function LocationSheet({ open, choice, detected, onPick, onClose }) {
   const { t } = useAppText('explore');
   const titleId = useId();
+  const where = detected === undefined ? t('Finding where you are…') : detected ? t(countryLabel(detected)) : t('Not found');
+  const options = [
+    { key: 'auto', label: t('Use my location'), note: where, badge: <LocateFixed className="w-[18px] h-[18px]" /> },
+    ...SEARCH_COUNTRIES.map(({ key, label }) => ({
+      key: key || 'all',
+      label: t(label),
+      badge: countryNamed(key)?.code || <Globe className="w-[18px] h-[18px]" />,
+    })),
+  ];
   return (
     <BottomSheet open={open} onClose={onClose} labelledBy={titleId}>
       <div className="flex items-center">
@@ -48,15 +60,15 @@ export function LocationSheet({ open, country, onPick, onClose }) {
         </button>
       </div>
       <div role="radiogroup" aria-labelledby={titleId} data-testid="explore-location-sheet">
-        {SEARCH_COUNTRIES.map(({ key, label }) => {
-          const on = country === key;
-          const code = countryNamed(key)?.code;
+        {options.map(({ key, label, note, badge }) => {
+          const on = choice === key;
           return (
             <button
-              key={key || 'all'}
+              key={key}
               type="button"
               role="radio"
               aria-checked={on}
+              data-option={key}
               onClick={() => { onPick(key); onClose(); }}
               className="w-full min-h-[52px] flex items-center gap-3 border-b border-slate-100 last:border-b-0 text-left text-[15px] text-slate-900"
             >
@@ -65,9 +77,12 @@ export function LocationSheet({ open, country, onPick, onClose }) {
                 className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold"
                 style={on ? { background: 'rgb(var(--color-primary, 59 130 246) / 0.12)', color: BRAND_COLOR } : { background: '#f1f5f9', color: '#475569' }}
               >
-                {code || <Globe className="w-[18px] h-[18px]" />}
+                {badge}
               </span>
-              <span className={`flex-1 ${on ? 'font-semibold' : ''}`}>{t(label)}</span>
+              <span className="flex-1 min-w-0">
+                <span className={`block ${on ? 'font-semibold' : ''}`}>{label}</span>
+                {note && <span data-testid="explore-location-found" className="block text-[12.5px] text-slate-500 truncate">{note}</span>}
+              </span>
               {on && <Check className="w-5 h-5 flex-shrink-0" style={{ color: BRAND_COLOR }} aria-hidden="true" />}
             </button>
           );

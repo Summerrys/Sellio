@@ -3621,7 +3621,9 @@ const explore = {
   "Recent searches": "Pencarian terakhir",
   "Clear recent searches": "Hapus pencarian terakhir",
   "No listings in {country} yet.": "Belum ada produk di {country}.",
-  "Show all countries": "Tampilkan semua negara"
+  "Show all countries": "Tampilkan semua negara",
+  "Use my location": "Gunakan lokasi saya",
+  "Finding where you are…": "Mencari lokasi Anda…"
 };
 const GROUPS = { signup, shop, explore };
 export {

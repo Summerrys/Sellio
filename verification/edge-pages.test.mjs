@@ -2,7 +2,8 @@
 // storefront (/store/<slug>), an item (/listing/<id>) and Explore (/explore), each with its own
 // head (title, description, canonical, robots, Open Graph, schema.org structured data) and its
 // content (heading, items, prices, links) for crawlers that run no scripts; plus /llms.txt with
-// the shops added. No network: Supabase, Cloudflare's cache and Pages' files are stand-ins.
+// the shops added, and /api/country (the visitor's country, for Explore's location pin). No
+// network: Supabase, Cloudflare's cache and Pages' files are stand-ins.
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -533,3 +534,29 @@ assert.equal(response.status, 200);
 assert.match(await response.text(), /noindex, nofollow/);
 assert.equal(calls.length, 0);
 passed('app pages: as before, nothing read from the database');
+
+// /api/country: the country Cloudflare sees the request come from (request.cf.country), for
+// Explore's location pin; readable from the app's pages (another origin), never cached.
+const askCountry = async (cf, method = 'GET') => {
+  const request = new Request('https://sellio.sg/api/country', { method });
+  if (cf !== undefined) Object.defineProperty(request, 'cf', { value: cf });
+  const response = await worker.fetch(request, env, ctx);
+  return { response, body: method === 'HEAD' ? await response.text() : await response.json() };
+};
+fresh();
+for (const [cf, want] of [[{ country: 'SG' }, 'SG'], [{ country: 'MY' }, 'MY'], [{ country: 'id' }, 'ID'], [{ country: 'TH' }, 'TH'],
+  [{ country: 'XX' }, null], [{ country: 'T1' }, null], [{ country: '' }, null], [{}, null], [undefined, null], [{ country: 'S G1' }, null]]) {
+  const { response, body } = await askCountry(cf);
+  assert.equal(response.status, 200);
+  assert.deepEqual(body, { country: want }, JSON.stringify(cf));
+  assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
+  assert.equal(response.headers.get('Cache-Control'), 'no-store', 'each visitor gets their own answer');
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), '*', 'the app (another origin) may read it');
+}
+const headOnly = await askCountry({ country: 'SG' }, 'HEAD');
+assert.equal(headOnly.response.status, 200);
+assert.equal(headOnly.body, '');
+const posted = await worker.fetch(new Request('https://sellio.sg/api/country', { method: 'POST' }), env, ctx);
+assert.equal(posted.status, 405);
+assert.equal(calls.length, 0, 'nothing read from the database');
+passed('/api/country: the visitor\'s country code from Cloudflare (null when unknown or Tor), never cached, readable by the app');

@@ -24,7 +24,7 @@ import { SuggestionList, useExploreSuggestions, useSuggestionKeys } from '@/comp
 import { formatMoney } from '@/lib/money';
 import { useAppText, N_ } from '@/lib/appText';
 import { useBackToClose } from '@/lib/useBackToClose';
-import { SEARCH_COUNTRIES, activeFilterCount, loadExploreCountry, priceRange, saveExploreCountry, searchArgs, searchFilters } from '@/lib/exploreSearch';
+import { SEARCH_COUNTRIES, activeFilterCount, detectExploreCountry, keptDetectedCountry, loadExploreCountry, priceRange, saveExploreCountry, searchArgs, searchFilters } from '@/lib/exploreSearch';
 import { useRecentSearches } from '@/lib/recentSearches';
 import { FilterChips, FilterSheet } from '@/components/explore/ExploreFilters';
 import { LocationPin, LocationSheet } from '@/components/explore/ExploreLocation';
@@ -315,7 +315,7 @@ const CATEGORIES_ROW = 40; // the categories row's height (h-10)
 const SAFE_TOP = 'env(safe-area-inset-top, 0px)';
 const GRADIENT_TEXT = { background: BRAND_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
 
-function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search, country, onCountry }) {
+function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search, country, countryChoice, detected, onCountry }) {
   const { t } = useAppText('explore');
   // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
   // A pick, Enter or Escape closes the list until something else is typed.
@@ -574,7 +574,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
       {searching && (
         <FilterSheet key={sheet.n} section={sheet.section} filters={filters} kinds={KINDS} search={search} onApply={onFilters} onClose={closeSheet} />
       )}
-      <LocationSheet open={locating} country={country} onPick={onCountry} onClose={closeLocation} />
+      <LocationSheet open={locating} choice={countryChoice} detected={detected} onPick={onCountry} onClose={closeLocation} />
     </>
   );
 }
@@ -589,11 +589,31 @@ export default function Explore() {
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('all');
-  // The country Explore shows (its location pin): null for every country. Kept on the device.
-  const [country, setCountry] = useState(() => loadExploreCountry());
+  // The country Explore shows (its location pin; null: every country). By default where the
+  // visitor is (lib/exploreSearch.js: detected from their connection, the last answer kept on the
+  // device so Explore opens in it at once while it asks again); or every country, or one, as
+  // picked with the pin and kept on the device.
+  const [countryChoice, setCountryChoice] = useState(() => loadExploreCountry());
+  const [detected, setDetected] = useState(() => keptDetectedCountry()); // undefined: not known yet
+  const [detectRun, setDetectRun] = useState(0);
+  const country = countryChoice === 'auto' ? (detected || null) : countryChoice === 'all' ? null : countryChoice;
+  // The first time, the listings wait for the answer (at most 3 seconds), so they open in the
+  // visitor's country rather than changing under them.
+  const countryPending = countryChoice === 'auto' && detected === undefined;
+  useEffect(() => {
+    if (countryChoice !== 'auto') return undefined;
+    let cancelled = false;
+    detectExploreCountry().then((found) => {
+      if (cancelled) return;
+      // No answer (offline): the last one stays; none ever: every country.
+      setDetected((was) => (found !== undefined ? found : was === undefined ? null : was));
+    });
+    return () => { cancelled = true; };
+  }, [countryChoice, detectRun]);
   const pickCountry = useCallback((next) => {
-    setCountry(next);
+    setCountryChoice(next);
     saveExploreCountry(next);
+    if (next === 'auto') setDetectRun((n) => n + 1); // "Use my location": asked afresh
     if (window.scrollY > 0) window.scrollTo({ top: 0 });
   }, []);
   // Recent searches (lib/recentSearches.js), kept on the device for this account.
@@ -727,6 +747,7 @@ export default function Explore() {
   const shopsCopy = country ? `explore:shops:${country}` : 'explore:shops';
 
   useEffect(() => {
+    if (countryPending) return; // the listings come once Explore knows where the visitor is
     const id = ++requestId.current;
     const everything = !searching && !search && kind === 'all';
     setStatus('loading');
@@ -758,7 +779,7 @@ export default function Explore() {
         }
         setStatus('error');
       });
-  }, [fetchPage, reloadKey, search, kind, searching, feedCopy]);
+  }, [fetchPage, reloadKey, search, kind, searching, feedCopy, countryPending]);
 
   // The connection is back: a feed that couldn't load (or is the copy) loads again.
   const feedStale = useRef(false);
@@ -766,6 +787,7 @@ export default function Explore() {
   useEffect(() => onReconnect(() => { if (feedStale.current) setReloadKey((k) => k + 1); }), []);
 
   useEffect(() => {
+    if (countryPending) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -786,7 +808,7 @@ export default function Explore() {
       }
     })();
     return () => { cancelled = true; };
-  }, [reloadKey, country, shopsCopy]);
+  }, [reloadKey, country, shopsCopy, countryPending]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore || status !== 'ready') return;
@@ -849,6 +871,8 @@ export default function Explore() {
         onFilters={setFilters}
         search={search}
         country={country}
+        countryChoice={countryChoice}
+        detected={detected}
         onCountry={pickCountry}
       />
 
@@ -966,7 +990,7 @@ export default function Explore() {
                   <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                     <button
                       type="button"
-                      onClick={() => pickCountry(null)}
+                      onClick={() => pickCountry('all')}
                       className="h-9 px-4 rounded-full border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                     >
                       {t('Show all countries')}

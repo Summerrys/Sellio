@@ -158,13 +158,13 @@ try {
   await page.waitForSelector('[data-testid="explore-location-sheet"]');
   await page.waitForTimeout(400);
   await shot('3-location');
-  await check('The pin opens the countries at once, every country ticked to start with', async () => {
+  await check('The pin opens the countries at once, "Use my location" ticked to start with (nothing found here: every country)', async () => {
     const options = await page.$$eval('[data-testid="explore-location-sheet"] [role="radio"]', (els) => els.map((el) => [el.textContent.trim(), el.getAttribute('aria-checked')]));
-    assert.deepEqual(options, [['All countries', 'true'], ['SGSingapore', 'false'], ['MYMalaysia', 'false'], ['IDIndonesia', 'false']]);
+    assert.deepEqual(options, [['Use my locationNot found', 'true'], ['All countries', 'false'], ['SGSingapore', 'false'], ['MYMalaysia', 'false'], ['IDIndonesia', 'false']]);
     assert.equal(await page.$('[data-testid="explore-location-code"]'), null, 'no code beside the pin for every country');
   });
   const before = { search: (await calls('explore_search')).length, shops: (await calls('explore_shops')).length };
-  await page.tap('[data-testid="explore-location-sheet"] [role="radio"]:nth-child(3)');
+  await page.tap('[data-testid="explore-location-sheet"] [data-option="Malaysia"]');
   await page.waitForTimeout(700);
   await shot('4-malaysia');
   await check('One tap on Malaysia: the sheet closes, MY shows by the pin, and only Malaysia\'s listings and shops show', async () => {
@@ -201,13 +201,13 @@ try {
 
   await page.tap('[data-testid="explore-location"]');
   await page.waitForSelector('[data-testid="explore-location-sheet"]');
-  await page.tap('[data-testid="explore-location-sheet"] [role="radio"]:nth-child(1)');
+  await page.tap('[data-testid="explore-location-sheet"] [data-option="all"]');
   await page.waitForTimeout(700);
   await check('Every country again: no code by the pin, the feed and shops as before (no country sent)', async () => {
     assert.equal(await page.$('[data-testid="explore-location-code"]'), null);
     assert.deepEqual((await calls('explore_feed')).at(-1), { p_search: null, p_kind: null, p_limit: 24, p_offset: 0 });
     assert.deepEqual((await calls('explore_shops')).at(-1), { p_limit: 20 });
-    assert.equal(await page.evaluate(() => localStorage.getItem('sellio:explore:country')), null);
+    assert.equal(await page.evaluate(() => localStorage.getItem('sellio:explore:country')), 'all', 'every country, kept as picked');
     assert.equal((await page.$$('[data-testid="item-card"]')).length, 14);
   });
 
