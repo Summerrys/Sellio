@@ -299,7 +299,8 @@ function SkeletonGrid() {
 //  - the logo row (logo, My shop, chats and notifications);
 //  - the search bar: a ring in the visitor's colour with the search button inside it on the
 //    right, the location pin (ExploreLocation, the country Explore shows) just left of it and the
-//    cart right of it.
+//    cart right of it. It almost touches the header's bottom edge: 2px under it, as on Taobao
+//    (Alvin, 28 Nov 2026: "Make the searchbar almost touching the header section"; it was 8px).
 // The categories under it (words, with a line under the picked one) are part of the page: they
 // scroll away under the header, as Taobao's row under its search bar does, and come back at the
 // top. Until 28 Nov 2026 they slid away behind the search bar and a button in the search bar
@@ -462,7 +463,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
           {/* The cart sits beside the search (the row above has no room for it on phones);
               its 44px tap area overhangs the row's padding, so the row keeps its height.
               While searching, Cancel takes its place. */}
-          <div className={`px-3 sm:px-4 flex items-center gap-1.5 ${searching ? 'pt-2 pb-1' : 'pt-0.5 pb-2'}`}>
+          <div className={`px-3 sm:px-4 flex items-center gap-1.5 ${searching ? 'pt-2 pb-1' : 'pt-0.5 pb-0.5'}`}>
             {!searching && (
               <LocationPin country={country} onOpen={() => { searchRef.current?.blur(); setLocating(true); }} />
             )}

@@ -141,7 +141,8 @@ try {
     const ring = await box('[data-testid="explore-search-ring"]');
     assert.equal(bar.top, 0, 'the logo row stays');
     assert.equal(header.top, 0);
-    assert.ok(header.bottom - ring.bottom <= 10, `the header ends at the bottom of the search bar (${header.bottom} vs ${ring.bottom})`);
+    // Alvin, 28 Nov 2026: the search bar almost touches the header's bottom edge, as on Taobao.
+    assert.ok(header.bottom - ring.bottom >= 1 && header.bottom - ring.bottom <= 3, `the search bar almost touches the header's bottom edge (${header.bottom - ring.bottom}px under it)`);
     assert.ok(header.height <= 100, `a slim header (${header.height}px)`);
     assert.ok((await box('[data-testid="explore-categories"]')).bottom <= 0, 'the categories scrolled away');
     const inRing = await page.$$eval('[data-testid="explore-search-ring"] button', (els) => els.map((el) => el.getAttribute('aria-label')));
