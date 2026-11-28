@@ -53,6 +53,7 @@ const settle = async () => { await Promise.all(waits); waits = []; };
 
 // Supabase's REST API, answering from these rows.
 const SHOP_ID = 'shop-1';
+const OLD_LINKS = { 'old-dumplings': 'beijing-dumplings' }; // a renamed shop's old link → its link now
 const shopRow = {
   id: SHOP_ID, name: 'Beijing Dumplings', slug: 'beijing-dumplings', logo_url: 'https://cdn.example.com/logo.png', industry: 'f&b',
   currency: 'SGD', country: 'Singapore', phone: '91234567', address: '1 Tampines Ave', payment_qr_url: 'https://cdn.example.com/paynow-secret.png',
@@ -118,7 +119,11 @@ globalThis.fetch = async (input, init = {}) => {
   const rpc = url.pathname.replace('/rest/v1/rpc/', '');
   const body = init.body ? JSON.parse(init.body) : {};
   switch (url.pathname) {
-    case '/rest/v1/rpc/get_storefront_tenant': return json(db.tenant.filter((t) => t.slug === body.p_slug));
+    case '/rest/v1/rpc/get_storefront_tenant': {
+      // As the database: the shop's link now, else a link it had before (app.shop_link_history).
+      const now = db.tenant.filter((t) => t.slug === body.p_slug);
+      return json(now.length ? now : db.tenant.filter((t) => OLD_LINKS[body.p_slug] === t.slug));
+    }
     case '/rest/v1/products': return json(db.products);
     case '/rest/v1/categories': return json(db.categories);
     case '/rest/v1/business_hours': return json(db.hours);
@@ -560,3 +565,12 @@ const posted = await worker.fetch(new Request('https://sellio.sg/api/country', {
 assert.equal(posted.status, 405);
 assert.equal(calls.length, 0, 'nothing read from the database');
 passed('/api/country: the visitor\'s country code from Cloudflare (null when unknown or Tor), never cached, readable by the app');
+
+// A renamed shop's old link (its link follows its name): moved for good to the link now, query kept.
+fresh();
+const moved = await get('https://sellio.sg/store/old-dumplings?ref=qr');
+assert.equal(moved.status, 301);
+assert.equal(moved.headers.get('Location'), 'https://sellio.sg/store/beijing-dumplings?ref=qr');
+const stays = await get('https://sellio.sg/store/beijing-dumplings');
+assert.equal(stays.status, 200, 'the link now is written as before');
+passed('/store/<old link>: 301 to the renamed shop\'s link now');

@@ -50,6 +50,7 @@ const ExploreLikes = lazy(() => import('@/components/explore/ExploreLikes'));
 const ShopRatings = lazy(() => import('@/components/ratings/ShopRatingsPage'));
 const AppFeedbackInbox = lazy(() => import('@/components/feedback/AppFeedbackInbox'));
 const CoinsAdmin = lazy(() => import('@/components/admin/CoinsAdmin'));
+const DeletionsAdmin = lazy(() => import('@/components/admin/DeletionsAdmin'));
 const AppRatingPrompt = lazy(() => import('@/components/feedback/AppRatingPrompt'));
 const Refer = lazy(() => import('./pages/Refer'));
 const ReferralInvite = lazy(() => import('./pages/ReferralInvite'));
@@ -196,6 +197,8 @@ const AuthenticatedApp = () => {
         <Route path="/admin/feedback" element={<LayoutWrapper currentPageName="Explore"><AppFeedbackInbox /></LayoutWrapper>} />
         {/* Admin → Coins: Sellio Coins' rules and the stall items' prices (components/admin/CoinsAdmin.jsx). */}
         <Route path="/admin/coins" element={<LayoutWrapper currentPageName="Explore"><CoinsAdmin /></LayoutWrapper>} />
+        {/* Admin → Deletion requests: delete now, restore, leftover files (components/admin/DeletionsAdmin.jsx). */}
+        <Route path="/admin/deletions" element={<LayoutWrapper currentPageName="Explore"><DeletionsAdmin /></LayoutWrapper>} />
         <Route path="/refer" element={<LayoutWrapper currentPageName="Explore"><Refer /></LayoutWrapper>} />
         <Route path="/store/:tenantSlug" element={<Storefront />} />
         <Route path="/order/:tenantSlug/:tableId" element={<Storefront />} />

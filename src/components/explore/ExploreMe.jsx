@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift, Coins, Map as MapIcon } from 'lucide-react';
+import { Store, LayoutDashboard, Settings, UserRound, LogOut, ChevronRight, Loader2, Copy, Check, Star, ShoppingBag, Flag, Heart, MessageSquareHeart, Gift, Coins, Map as MapIcon, UserX } from 'lucide-react';
 import { getSupabase } from '@/lib/supabaseClient';
 import { useAppUser } from '@/lib/AppUserContext';
 import { useTenant } from '@/components/tenant/TenantContext';
@@ -272,6 +272,11 @@ export default function ExploreMe() {
               {sellioAdmin && (
                 <div className="border-t border-slate-100">
                   <Row to="/admin/coins" icon={Coins} label={t('Sellio Coins')} detail={t('Coin prices, the daily limit and referral coins')} />
+                </div>
+              )}
+              {sellioAdmin && (
+                <div className="border-t border-slate-100">
+                  <Row to="/admin/deletions" icon={UserX} label={t('Deletion requests')} detail={t('Accounts waiting to be deleted')} />
                 </div>
               )}
             </section>

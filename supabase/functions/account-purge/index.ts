@@ -8,9 +8,12 @@
 //                                                           and files (default)
 //   {"action":"remove_account","requestId":"…","dryRun":false}  deletes the closed account for
 //                                                           good, with its shops (account-removal)
+//   {"action":"remove_leftover_files","requestId":"…"}      dry run: the files a deleted account
+//                                                           left in storage (default)
+//   {"action":"remove_leftover_files","requestId":"…","dryRun":false}  removes them
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 import Stripe from "npm:stripe@22.5.0";
-import { removeAccount } from "../_shared/account-removal.ts";
+import { removeAccount, removeLeftoverFiles } from "../_shared/account-removal.ts";
 import { previewShopRemoval, removeShop } from "../_shared/shop-removal.ts";
 
 const json = (body: unknown, status = 200) =>
@@ -49,6 +52,20 @@ Deno.serve(async (req) => {
       const stripe = new Stripe(stripeKey, { apiVersion: "2026-06-24.dahlia" as any });
       const result = await removeAccount(admin, stripe as any, requestId);
       console.log("account-purge remove_account", requestId, result.ok ? "done" : result.error);
+      return json(result, result.ok ? 200 : result.error === "NOT_FOUND" ? 404 : 409);
+    } catch (error) {
+      const message = String((error as Error)?.message ?? error).slice(0, 500);
+      console.error("account-purge failed", requestId, message);
+      return json({ ok: false, error: "FAILED", detail: message }, 500);
+    }
+  }
+
+  if (body?.action === "remove_leftover_files") {
+    const requestId = typeof body.requestId === "string" ? body.requestId.trim() : "";
+    if (!/^[0-9a-f-]{36}$/i.test(requestId)) return json({ error: "BAD_REQUEST" }, 400);
+    try {
+      const result = await removeLeftoverFiles(admin, requestId, body.dryRun !== false);
+      console.log("account-purge remove_leftover_files", requestId, result.ok ? "done" : result.error);
       return json(result, result.ok ? 200 : result.error === "NOT_FOUND" ? 404 : 409);
     } catch (error) {
       const message = String((error as Error)?.message ?? error).slice(0, 500);

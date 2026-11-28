@@ -36,3 +36,25 @@ export async function removeAccount(admin: AdminClient, stripe: StripeClient, re
   }
   return { ok: true, requestId, shops, files, done };
 }
+
+// Files a deleted account left in storage (Admin → Deletion requests, "Remove files"; Alvin,
+// 29 Nov 2026): those of its shops that no longer exist and its own once its login is gone
+// (public.account_leftovers, for a completed request only). Removed through the Storage API,
+// then counted again, so ok means none are left.
+export async function removeLeftoverFiles(admin: AdminClient, requestId: string, dryRun = false) {
+  const read = async () => {
+    const { data, error } = await admin.rpc("account_leftovers", { p_request_id: requestId });
+    if (error) throw new Error("account_leftovers failed: " + error.message);
+    return data;
+  };
+  const plan = await read();
+  if (!plan?.found) return { ok: false, error: "NOT_FOUND", requestId };
+  if (plan.status !== "completed") return { ok: false, error: "NOT_COMPLETED", requestId, status: plan.status };
+  const listed = (plan.files ?? []) as ShopFile[];
+  if (dryRun) return { ok: true, dryRun: true, requestId, files: listed };
+  const files = await removeShopFiles(admin, listed);
+  if (!files.ok) return { ok: false, error: "FILES", requestId, files };
+  const after = await read();
+  const left = Array.isArray(after?.files) ? after.files.length : 0;
+  return left === 0 ? { ok: true, requestId, files, left } : { ok: false, error: "FILES_LEFT", requestId, files, left };
+}

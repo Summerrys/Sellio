@@ -10,6 +10,12 @@ import { startAdsMeasurement } from '@/lib/adsPixel'
 import { appTextReady } from '@/lib/appText'
 import { alertsKind, takeOpenedAlert } from '@/lib/pushAlerts'
 import { startSignOutWatch } from '@/lib/signOutWatch'
+import { sendSignInResultToAuth } from '@/lib/authReturn'
+
+// A sign-in result that Supabase sent to the start page instead of /Auth (src/lib/authReturn.js):
+// to /Auth before anything reads the address, so a closed account sees its screen and a Google
+// sign-up keeps join=1. The apps do this in App.jsx (RootRoute).
+if (!isCapacitorApp()) sendSignInResultToAuth()
 
 removeAppReloadParam()
 

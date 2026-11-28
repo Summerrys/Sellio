@@ -757,6 +757,7 @@
   "Undo": "撤销",
   "Couldn’t remove the logo": "无法移除 Logo",
   "Business settings saved": "商家设置已保存",
+  "Your shop link is now {link}. Old links still open your shop.": "你的店铺链接现在是 {link}。旧链接仍会打开你的店铺。",
   "Couldn’t save your business settings": "无法保存您的商家设置",
   "Business hours saved": "营业时间已保存",
   "Couldn’t save your opening hours": "无法保存您的营业时间",

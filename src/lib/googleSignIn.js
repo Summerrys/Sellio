@@ -1,6 +1,7 @@
 import { getSupabase } from './supabaseClient';
 import { COMPLETE_KEY } from './mobileOAuth';
 import { appPlatform } from './nativeApp';
+import { rememberAuthReturn } from './authReturn';
 
 // The Web client ID of the Google Cloud project behind Supabase's Google provider
 // (Supabase → Authentication → Sign In / Providers → Google). Not a secret: Google shows it
@@ -42,7 +43,9 @@ export async function startGoogleSignIn(options, browser = window) {
     browser.location.replace('/Auth' + new URL(options.redirectTo).search);
     return { mobile: true };
   }
-  // A browser: Supabase's usual Google redirect.
+  // A browser: Supabase's usual Google redirect. What it started with (join=1, an invite's token)
+  // is kept for this tab in case Supabase comes back to the start page instead (authReturn.js).
+  rememberAuthReturn(options.redirectTo, browser);
   const client = await getSupabase();
   const { error } = await client.auth.signInWithOAuth({ provider: 'google', options: askWhichAccount(options) });
   if (error) throw error;

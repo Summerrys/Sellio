@@ -318,6 +318,14 @@ export default function BusinessProfileTab({ tenant, tenantId, refreshVersion = 
       markFormSaved({ ...form });
       queryClient.invalidateQueries({ queryKey: ['currentTenant'] });
       toast.success(t('Business settings saved'));
+      // A new name gives the shop a new link (the database's tenants_link_follows_name); old
+      // links still open the shop. Say so, so the owner shares the new one.
+      if (tenant?.slug) {
+        const { data: fresh } = await supabase.from('tenants').select('slug').eq('id', tenantId).maybeSingle();
+        if (fresh?.slug && fresh.slug !== tenant.slug) {
+          toast.success(t('Your shop link is now {link}. Old links still open your shop.', { link: `sellio.sg/store/${fresh.slug}` }), { duration: 10000 });
+        }
+      }
     } catch (err) {
       setSaveNote(explainError(err, { title: t('Couldn’t save your business settings'), t }));
     } finally {

@@ -973,6 +973,7 @@ async function edgePage(env, request, url, shellPath, view) {
     console.error(`Sellio edge: ${url.pathname} was sent without its content.`, String(error?.message || error));
     written = null;
   }
+  if (written?.redirect) return Response.redirect(new URL(written.redirect, url).toString(), 301);
   const headers = new Headers(shell.headers);
   for (const name of ['ETag', 'Last-Modified', 'Content-Length', 'Content-Encoding']) headers.delete(name);
   headers.set('Content-Type', 'text/html; charset=utf-8');
@@ -996,6 +997,8 @@ async function storeEdge(env, ctx, url, rawSlug, info) {
     return fallbackView('store', canonical);
   }
   if (!data) return missingView('store');
+  // An old link of a renamed shop (app.shop_link_history): moved for good to its link now.
+  if (data.shop.slug && data.shop.slug !== slug) return { redirect: storePath(data.shop.slug) + url.search };
   const shops = await shopsList(env, ctx).catch(() => []);
   return storeView(data, { canonical: storeAddress(data.shop.slug), privateVariant, shops });
 }

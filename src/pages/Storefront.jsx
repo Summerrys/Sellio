@@ -247,6 +247,15 @@ function StorefrontInner() {
         .rpc('get_storefront_tenant', { p_slug: tenantSlug })
         .maybeSingle();
       if (!tenantData) { setNotFound(true); setLoading(false); return; }
+      // An old link of a shop that was renamed since (its link follows its name): on to its link
+      // now, with the rest of the address kept.
+      if (tenantData.slug && tenantData.slug !== tenantSlug) {
+        const next = tableId
+          ? `/order/${encodeURIComponent(tenantData.slug)}/${encodeURIComponent(tableId)}`
+          : `/store/${encodeURIComponent(tenantData.slug)}`;
+        navigate(next + window.location.search + window.location.hash, { replace: true });
+        return;
+      }
       // Only an explicit false closes the page; a response without the
       // field (older database) keeps the menu open.
       if (tenantData.is_available === false) { setUnavailableStore(tenantData); setLoading(false); return; }
