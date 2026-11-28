@@ -29,6 +29,8 @@ import { useRecentSearches } from '@/lib/recentSearches';
 import { FilterChips, FilterSheet } from '@/components/explore/ExploreFilters';
 import { LocationPin, LocationSheet } from '@/components/explore/ExploreLocation';
 import ExploreRecent from '@/components/explore/ExploreRecent';
+import ShopCarousel from '@/components/explore/ShopCarousel';
+import { FlippingHint, useFlippingHint } from '@/components/explore/SearchHint';
 
 // Sellio Explore: a public, Carousell-style feed of items from Sellio shops.
 // Anyone can browse without an account; tapping an item opens its listing page. Data comes from the explore_feed / explore_shops RPCs, which only
@@ -301,6 +303,8 @@ function SkeletonGrid() {
 //    right, the location pin (ExploreLocation, the country Explore shows) just left of it and the
 //    cart right of it. It almost touches the header's bottom edge: 2px under it, as on Taobao
 //    (Alvin, 28 Nov 2026: "Make the searchbar almost touching the header section"; it was 8px).
+//    Past searches roll through the empty bar, newest first, and the search button searches the
+//    one showing (components/explore/SearchHint.jsx, Alvin, 28 Nov 2026, after Taobao's).
 // The categories under it (words, with a line under the picked one) are part of the page: they
 // scroll away under the header, as Taobao's row under its search bar does, and come back at the
 // top. Until 28 Nov 2026 they slid away behind the search bar and a button in the search bar
@@ -315,7 +319,7 @@ const CATEGORIES_ROW = 40; // the categories row's height (h-10)
 const SAFE_TOP = 'env(safe-area-inset-top, 0px)';
 const GRADIENT_TEXT = { background: BRAND_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
 
-function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search, country, countryChoice, detected, onCountry }) {
+function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, hasShop, searching, onSearchStart, onSearchCancel, filters, onFilters, search, country, countryChoice, detected, onCountry, recent = [] }) {
   const { t } = useAppText('explore');
   // Suggestions while typing (ExploreSuggestions), under the search box while it has the focus.
   // A pick, Enter or Escape closes the list until something else is typed.
@@ -345,10 +349,14 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     onSubmit: () => send(query),
     onClose: () => setClosedFor(query),
   });
-  // The search button: sends what's typed; with nothing typed (or before searching) it opens the
-  // search, as a tap on the box does.
+  // The past searches rolling through the empty bar (SearchHint.jsx), until the search opens.
+  const hint = useFlippingHint(recent, !searching && !query);
+  // The search button: sends what's typed; before searching, it searches the past search showing
+  // in the bar, as Taobao's does (Alvin, 28 Nov 2026); with neither it opens the search, as a tap
+  // on the box does.
   const pressSearch = () => {
     if (searching && query.trim()) send(query);
+    else if (!searching && !query.trim() && hint) { onSearchStart(); send(hint); }
     else searchRef.current?.focus();
   };
   // The filter sheet: which part is open (null: none). n starts each opening afresh.
@@ -477,24 +485,27 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                 className="h-[38px] rounded-full bg-white flex items-center"
                 onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); searchRef.current?.focus(); } }}
               >
-                <input
-                  ref={searchRef}
-                  type="search"
-                  value={query}
-                  onChange={(e) => onQuery(e.target.value)}
-                  onFocus={() => { setFocused(true); if (!searching) onSearchStart(); }}
-                  onBlur={() => setFocused(false)}
-                  onKeyDown={keys.onKeyDown}
-                  role="combobox"
-                  aria-label={t('Search Sellio Explore')}
-                  aria-autocomplete="list"
-                  aria-expanded={showList}
-                  aria-controls={showList ? listId : undefined}
-                  aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
-                  placeholder={t('Search for an item or shop')}
-                  enterKeyHint="search"
-                  className="flex-1 min-w-0 h-full bg-transparent pl-4 pr-1 text-[15px] text-slate-900 placeholder:text-slate-400 text-ellipsis outline-none [&::-webkit-search-cancel-button]:hidden"
-                />
+                <div className="relative flex-1 min-w-0 h-full">
+                  <input
+                    ref={searchRef}
+                    type="search"
+                    value={query}
+                    onChange={(e) => onQuery(e.target.value)}
+                    onFocus={() => { setFocused(true); if (!searching) onSearchStart(); }}
+                    onBlur={() => setFocused(false)}
+                    onKeyDown={keys.onKeyDown}
+                    role="combobox"
+                    aria-label={t('Search Sellio Explore')}
+                    aria-autocomplete="list"
+                    aria-expanded={showList}
+                    aria-controls={showList ? listId : undefined}
+                    aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
+                    placeholder={hint ? '' : t('Search for an item or shop')}
+                    enterKeyHint="search"
+                    className="w-full h-full bg-transparent pl-4 pr-1 text-[15px] text-slate-900 placeholder:text-slate-400 text-ellipsis outline-none [&::-webkit-search-cancel-button]:hidden"
+                  />
+                  {hint && <FlippingHint text={hint} />}
+                </div>
                 {query && (
                   <button
                     type="button"
@@ -510,7 +521,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={pressSearch}
-                  aria-label={t('Search')}
+                  aria-label={hint ? t('Search “{suggestion}”', { suggestion: hint }) : t('Search')}
                   data-testid="explore-search-button"
                   className="flex-shrink-0 h-[30px] w-[52px] mr-1 rounded-full text-white flex items-center justify-center active:scale-95 transition-transform"
                   style={{ background: BRAND_GRADIENT }}
@@ -874,6 +885,7 @@ export default function Explore() {
         countryChoice={countryChoice}
         detected={detected}
         onCountry={pickCountry}
+        recent={recent}
       />
 
       <div className="relative">
@@ -882,22 +894,8 @@ export default function Explore() {
       <main className="relative max-w-6xl mx-auto px-2 sm:px-4 pb-32">
         {/* The page's heading for search engines and screen readers (the header shows the search). */}
         <h1 className="sr-only">{t('Explore shops and items on Sellio')}</h1>
-        {!filtered && shops.length > 0 && (
-          <section className="pt-2.5 mb-3" aria-labelledby="explore-shops-heading">
-            <h2 id="explore-shops-heading" className="text-[15px] font-bold text-slate-900 mb-2 px-1 sm:px-0">{t('Shops on Sellio')}</h2>
-            <div className="flex gap-3.5 overflow-x-auto -mx-2 px-3 sm:-mx-4 sm:px-4 pb-1" style={hideScrollbar}>
-              {shops.map((shop) => (
-                <Link key={shop.shop_id} to={storeUrl(shop.shop_slug)} className="w-[66px] flex-shrink-0 flex flex-col items-center gap-1 text-center">
-                  <ShopAvatar name={shop.shop_name} logo={shop.shop_logo_url} size={52} />
-                  <span className="text-xs font-semibold text-slate-800 w-full truncate">{shop.shop_name}</span>
-                  {ratings[shop.shop_id]
-                    ? <span className="-mt-0.5"><RatingPill summary={ratings[shop.shop_id]} size={11} /></span>
-                    : <span className="text-[11px] text-slate-500 -mt-0.5">{Number(shop.item_count) === 1 ? t('1 item') : t('{count} items', { count: shop.item_count })}</span>}
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Shops on Sellio, as cards (components/explore/ShopCarousel.jsx). */}
+        {!filtered && shops.length > 0 && <ShopCarousel shops={shops} ratings={ratings} />}
 
         {searching && !query.trim() && (
           <ExploreRecent

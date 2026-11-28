@@ -2927,6 +2927,7 @@ const Filters = "Filter";
 const Clear = "Hapus";
 const Min = "Min";
 const Max = "Maks";
+const Visit = "Kunjungi";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3623,7 +3624,11 @@ const explore = {
   "No listings in {country} yet.": "Belum ada produk di {country}.",
   "Show all countries": "Tampilkan semua negara",
   "Use my location": "Gunakan lokasi saya",
-  "Finding where you are…": "Mencari lokasi Anda…"
+  "Finding where you are…": "Mencari lokasi Anda…",
+  Visit,
+  "See shop": "Lihat toko",
+  "Previous shop": "Toko sebelumnya",
+  "Next shop": "Toko berikutnya"
 };
 const GROUPS = { signup, shop, explore };
 export {

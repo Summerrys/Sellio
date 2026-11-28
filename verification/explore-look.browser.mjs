@@ -7,7 +7,12 @@
 //    shops, searches) and is kept on the phone for next time; every country again from the pin;
 //  - the search: recent searches (kept per account on the phone) above the recommended listings,
 //    sent ones remembered, a tap on one searches it, the bin clears them; "Recommended" turns into
-//    "All listings" with a count once a filter changes.
+//    "All listings" with a count once a filter changes;
+//  - Shops on Sellio as cards (Alvin, 28 Nov 2026, the carousel): a sideways row, a card snapping
+//    to the left edge with the next peeking in, its photos square with their prices under them and
+//    a See shop tile as tall as them in a gap; arrows only with a mouse, a card a step;
+//  - past searches rolling up through the empty search bar every 3 seconds, the search button
+//    searching the one showing (with reduced motion: no roll).
 // Screenshots go to SHOTS (a folder), when it is set.
 // Run: npm run build (for the styles), then
 //      node verification/explore-look.browser.mjs /tmp/sellio-verification
@@ -39,7 +44,16 @@ const mocks = {
       'Rainbow cake slice', 'Butter cookies', 'Kuih seri muka', 'Banana loaf', 'Lemon tart', 'Onde onde box', 'Brownies', 'Scones'];
     const rows = names.map((name, i) => ({ product_id: 'p' + i, product_name: name, price: 6 + i, currency: shops[i % 3][1], listed_at: at(i + 1),
       image_url: null, shop_id: 's' + (i % 3), shop_name: shops[i % 3][0], shop_slug: 's' + (i % 3), shop_type: 'individual', country: shops[i % 3][2] }));
-    const shopRows = shops.map(([name, , country], i) => ({ shop_id: 's' + i, shop_name: name, shop_slug: 's' + i, item_count: 3, country }));
+    const photo = (a, b, c) => 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x2='1' y2='1'><stop offset='0' stop-color='" + a + "'/><stop offset='1' stop-color='" + b + "'/></linearGradient></defs><rect width='100' height='100' fill='url(#g)'/><circle cx='50' cy='56' r='25' fill='" + c + "'/><ellipse cx='50' cy='44' rx='17' ry='9' fill='#fff' opacity='.55'/></svg>");
+    const colours = [['#fde7d3', '#f7c39e', '#c2410c'], ['#e3f3d8', '#c4e3ae', '#3f6212'], ['#fce7f3', '#f3c9e2', '#be185d'], ['#e0f2fe', '#b6e1fb', '#0369a1']];
+    // Pandan & Co. (a shop) and Bake Habit have three listings with photos; Kuih Mak Teh two, so a See shop tile fills its gap.
+    // Three more shops with no listings in the feed here, so the row is longer than a computer's screen too.
+    const shopRows = shops.map(([name, currency, country], i) => ({ shop_id: 's' + i, shop_name: name, shop_slug: 's' + i, item_count: 3 + i * 3, currency, country,
+      shop_type: i === 0 ? 'merchant' : 'individual',
+      picks: rows.filter((r) => r.shop_id === 's' + i).slice(0, i === 2 ? 2 : 3).map((r, k) => ({ id: r.product_id, name: r.product_name, price: r.price, image_url: photo(...colours[(i + k) % 4]) })) }))
+      .concat([['Grill Street', 'MYR', 'Malaysia', 'merchant'], ['Herbal House', 'MYR', 'Malaysia', 'merchant'], ['Dumpling Corner', 'SGD', 'Singapore', 'individual']].map(([name, currency, country, type], j) => ({
+        shop_id: 'm' + j, shop_name: name, shop_slug: 'm' + j, item_count: 5, currency, country, shop_type: type,
+        picks: [0, 1, 2].map((k) => ({ id: 'm' + j + k, name: name + ' ' + (k + 1), price: 2 + k, image_url: photo(...colours[(j + k + 1) % 4]) })) })));
     window.__calls = [];
     const pick = ({ country, ...row }) => row;
     const client = { rpc: async (name, args) => {
@@ -88,7 +102,10 @@ const out = await build({
   } }],
 });
 const script = out.outputFiles[0].text;
-const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head><body><div id="root"></div><script src="/app.js"></script></body></html>`;
+// main.jsx's: a photo (class sellio-photo) shows once it has loaded.
+const photos = `const mark = (e) => { const img = e.target; if (img instanceof HTMLImageElement && img.classList.contains('sellio-photo')) img.dataset.loaded = '1'; };
+  document.addEventListener('load', mark, true); document.addEventListener('error', mark, true);`;
+const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style><script>${photos}</script></head><body><div id="root"></div><script src="/app.js"></script></body></html>`;
 const server = createServer((req, res) => {
   if (req.url.startsWith('/app.js')) { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(script); return; }
   if (req.url.startsWith('/branding/sellio-logo.webp')) { res.writeHead(200, { 'content-type': 'image/webp' }); res.end(logo); return; }
@@ -131,6 +148,69 @@ try {
     const header = await box('[data-testid="explore-header"]');
     assert.ok(header.bottom <= cats.top + 1, 'the header ends at the bottom of the search bar, the categories under it');
   });
+
+  await check('Shops on Sellio: cards in a sideways row, the first 12px in from the edge and the next peeking in; no arrows on a phone', async () => {
+    const r = await page.evaluate(() => {
+      const rect = (el) => { const b = el.getBoundingClientRect(); return { left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), bottom: Math.round(b.bottom), width: Math.round(b.width), height: Math.round(b.height) }; };
+      const rail = document.querySelector('[data-testid="explore-shops-rail"]');
+      const cards = [...rail.querySelectorAll('[data-testid="shop-card"]')].map(rect);
+      const arrows = document.querySelector('[data-testid="explore-shops-arrows"]');
+      return { cards, scrolls: rail.scrollWidth > rail.clientWidth, page: document.documentElement.scrollWidth, arrows: arrows ? getComputedStyle(arrows).display : 'absent',
+        heading: rect(document.querySelector('#explore-shops-heading')), feed: rect(document.querySelector('#explore-feed-heading')) };
+    });
+    assert.equal(r.cards.length, 6);
+    assert.equal(r.cards[0].left, 12, 'the first card 12px in');
+    assert.ok(Math.abs(r.cards[0].width - 0.86 * (360 - 24)) <= 1, `86% of the row wide (${r.cards[0].width}px)`);
+    assert.equal(r.cards[1].left, r.cards[0].right + 10, '10px apart');
+    assert.ok(r.cards[1].left < 360 && 360 - r.cards[1].left >= 20, `the next peeks in (${360 - r.cards[1].left}px)`);
+    assert.ok(r.scrolls, 'the row scrolls sideways');
+    assert.equal(r.page, 360, 'the page itself is no wider than the phone');
+    assert.equal(r.arrows, 'none', 'no arrows on a phone: it swipes');
+    assert.ok(r.cards[0].top >= r.heading.bottom && r.feed.top > r.cards[0].bottom, 'under its heading, above Fresh finds');
+    assert.ok(r.feed.top <= 470, `Fresh finds starts high on the screen (${r.feed.top}px)`);
+  });
+  await check('A card: logo, name, item count, Home seller or Shop, Visit on the right; three square photos with their prices under them; a See shop tile as tall as the photos in a gap', async () => {
+    const r = await page.evaluate(() => {
+      const rect = (el) => { const b = el.getBoundingClientRect(); return { left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), bottom: Math.round(b.bottom), width: Math.round(b.width), height: Math.round(b.height) }; };
+      return [...document.querySelectorAll('[data-testid="shop-card"]')].map((card) => ({
+        card: rect(card), visit: rect(card.querySelector('[data-testid="shop-visit"]')), visitText: card.querySelector('[data-testid="shop-visit"]').textContent,
+        kind: card.querySelector('[data-testid="shop-kind"]').textContent,
+        photos: [...card.querySelectorAll('[data-testid="shop-pick"] > span:first-child')].map(rect),
+        prices: [...card.querySelectorAll('[data-testid="shop-pick"] > span:last-child')].map((el) => ({ ...rect(el), text: el.textContent })),
+        shown: [...card.querySelectorAll('[data-testid="shop-pick"] img')].map((img) => img.complete && img.naturalWidth > 0 && getComputedStyle(img).opacity === '1'),
+        tile: card.querySelector('[data-testid="shop-see-shop"] > span:first-child') ? rect(card.querySelector('[data-testid="shop-see-shop"] > span:first-child')) : null,
+      }));
+    });
+    const [pandan, bake, kuih] = r;
+    assert.deepEqual(r.map((c) => c.kind), ['Shop', 'Home seller', 'Home seller', 'Shop', 'Shop', 'Home seller']);
+    for (const c of r) {
+      assert.equal(c.visitText, 'Visit');
+      assert.equal(c.visit.height, 34);
+      assert.equal(c.card.right - c.visit.right, 12, 'Visit at the card\'s right, inside its padding');
+    }
+    assert.equal(pandan.photos.length, 3);
+    for (const p of pandan.photos) assert.ok(Math.abs(p.width - p.height) <= 1 && p.width >= 80, `square photos (${p.width}x${p.height})`);
+    assert.ok(pandan.shown.every(Boolean), 'the photos show');
+    assert.deepEqual(pandan.prices.map((p) => p.text), ['S$6.00', 'S$9.00', 'S$12.00'], 'priced in S$');
+    assert.ok(pandan.prices.every((p, i) => p.top >= pandan.photos[i].bottom && p.top - pandan.photos[i].bottom <= 6), 'each price just under its photo');
+    assert.deepEqual(kuih.prices.map((p) => p.text), ['RM8.00', 'RM11.00'], 'Kuih Mak Teh in RM');
+    assert.equal(pandan.tile, null);
+    assert.ok(kuih.tile, 'a See shop tile in Kuih Mak Teh\'s gap');
+    assert.equal(kuih.tile.top, kuih.photos[0].top);
+    assert.equal(kuih.tile.height, kuih.photos[0].height, 'as tall as the photos beside it');
+    assert.equal(kuih.tile.width, kuih.photos[0].width, 'one column wide');
+    assert.ok(r.every((c) => c.card.height === pandan.card.height), `cards the same height (${r.map((c) => c.card.height).join(', ')})`);
+    assert.equal(bake.photos.length, 3);
+  });
+  await page.$eval('[data-testid="explore-shops-rail"]', (el) => el.scrollTo({ left: 150 }));
+  await page.waitForTimeout(700);
+  await shot('1b-cards-scrolled');
+  await check('Scrolled part way, the row settles with a card at the left edge (12px in)', async () => {
+    const lefts = await page.$$eval('[data-testid="shop-card"]', (els) => els.map((el) => Math.round(el.getBoundingClientRect().left)));
+    assert.ok(lefts.includes(12), `a card snapped to the edge (${lefts.join(', ')})`);
+  });
+  await page.$eval('[data-testid="explore-shops-rail"]', (el) => el.scrollTo({ left: 0 }));
+  await page.waitForTimeout(400);
 
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(400);
@@ -264,6 +344,54 @@ try {
   await page.goto(`${base}/explore`).catch(() => page.goto(`${base}/explore`));
   await page.waitForSelector('[data-testid="item-card"]');
 
+  await check('Past searches in the empty search bar: the newest, inside the ring, level with where typing goes; the box\'s placeholder blank', async () => {
+    const r = await page.evaluate(() => {
+      const hint = document.querySelector('[data-testid="explore-search-hint-text"]');
+      const ring = document.querySelector('[data-testid="explore-search-ring"]').getBoundingClientRect();
+      const input = document.querySelector('input[type="search"]');
+      const button = document.querySelector('[data-testid="explore-search-button"]').getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(hint);
+      const words = range.getBoundingClientRect();
+      return { text: hint.textContent, placeholder: input.placeholder, label: document.querySelector('[data-testid="explore-search-button"]').getAttribute('aria-label'),
+        mid: (words.top + words.bottom) / 2, ringMid: (ring.top + ring.bottom) / 2, left: words.left, right: words.right, ringLeft: ring.left, buttonLeft: button.left,
+        colour: getComputedStyle(hint).color, opacity: getComputedStyle(hint).opacity };
+    });
+    assert.equal(r.text, 'brownies');
+    assert.equal(r.placeholder, '');
+    assert.equal(r.label, 'Search “brownies”');
+    assert.ok(Math.abs(r.mid - r.ringMid) <= 1.5, `centred in the bar (${r.mid} / ${r.ringMid})`);
+    assert.ok(r.left >= r.ringLeft + 14 && r.right <= r.buttonLeft, 'inside the bar, clear of the button');
+    assert.equal(r.colour, 'rgb(71, 85, 105)', 'in a darker grey than a placeholder');
+    assert.equal(r.opacity, '1');
+  });
+  await page.waitForTimeout(3150);
+  const rolling = await page.evaluate(() => [...document.querySelectorAll('[data-testid="explore-search-hint"] > span')].map((el) => ({ text: el.textContent, cls: el.className, transform: getComputedStyle(el).transform })));
+  await page.waitForTimeout(600);
+  await shot('6-hint');
+  await check('3 seconds on, the next past search rolls up in as the last rolls away above', async () => {
+    assert.deepEqual(rolling.map((x) => x.text), ['brownies', 'cake'], JSON.stringify(rolling));
+    assert.match(rolling[0].cls, /sellio-hint-out/);
+    assert.match(rolling[1].cls, /sellio-hint-in/);
+    const now = await page.evaluate(() => [...document.querySelectorAll('[data-testid="explore-search-hint"] > span')].map((el) => ({ text: el.textContent, opacity: getComputedStyle(el).opacity, transform: getComputedStyle(el).transform })));
+    assert.deepEqual(now.map((x) => [x.text, x.opacity]), [['brownies', '0'], ['cake', '1']], 'then the new one shows alone');
+    assert.ok(['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(now[1].transform), `in its place (${now[1].transform})`);
+    assert.equal(await page.$eval('[data-testid="explore-search-button"]', (el) => el.getAttribute('aria-label')), 'Search “cake”');
+  });
+  await page.tap('[data-testid="explore-search-button"]');
+  await page.waitForTimeout(800);
+  await shot('7-hint-searched');
+  await check('The search button searches the past search showing', async () => {
+    assert.equal(await page.$eval('input[type="search"]', (el) => el.value), 'cake');
+    assert.equal(await text('#explore-feed-heading'), 'Results for “cake”');
+    assert.ok(await page.$('[data-testid="explore-search-cancel"]'), 'in the search');
+    assert.equal(await page.$('[data-testid="explore-search-hint"]'), null);
+    assert.equal((await calls('explore_search')).at(-1).p_search, 'cake');
+    assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem('sellio:explore:recent:u1'))), ['cake', 'brownies', 'kuih']);
+  });
+  await page.tap('[data-testid="explore-search-cancel"]');
+  await page.waitForTimeout(500);
+  assert.equal(await page.$eval('[data-testid="explore-search-hint-text"]', (el) => el.textContent), 'cake', 'back on Explore: the newest first');
+
   await page.tap('input[type="search"]');
   await page.waitForTimeout(500);
   await page.tap('[data-chip="price"]');
@@ -321,6 +449,38 @@ try {
     assert.equal(fit.tabsScroll, true, 'the rest of the categories scroll sideways');
   });
   await narrow.close();
+
+  // A computer with a mouse, set to reduce motion, with past searches.
+  const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+  await desk.addInitScript(() => { if (!localStorage.getItem('sellio:explore:recent:u1')) localStorage.setItem('sellio:explore:recent:u1', JSON.stringify(['pandan', 'kuih'])); });
+  const wide = await desk.newPage();
+  await wide.goto(`${base}/explore`);
+  await wide.waitForSelector('[data-testid="item-card"]');
+  await wide.waitForTimeout(300);
+  if (shots) await wide.screenshot({ path: path.join(shots, '8-computer.png') });
+  const railLeft = () => wide.$eval('[data-testid="explore-shops-rail"]', (el) => Math.round(el.scrollLeft));
+  const arrowsShown = () => wide.$$eval('[data-testid="explore-shops-arrows"] button', (els) => els.map((el) => ({ label: el.getAttribute('aria-label'), disabled: el.disabled, shown: getComputedStyle(el.parentElement).display !== 'none' })));
+  await check('With a mouse: Previous and Next shop arrows beside the heading; Next moves one card along, Previous back', async () => {
+    const atStart = await arrowsShown();
+    assert.deepEqual(atStart, [{ label: 'Previous shop', disabled: true, shown: true }, { label: 'Next shop', disabled: false, shown: true }]);
+    const width = await wide.$eval('[data-testid="shop-card"]', (el) => el.getBoundingClientRect().width);
+    assert.equal(width, 330, 'at most 330px wide');
+    await wide.click('[aria-label="Next shop"]');
+    await wide.waitForTimeout(400);
+    assert.equal(await railLeft(), 340, 'one card along (its width and the gap)');
+    assert.equal((await arrowsShown())[0].disabled, false, 'Previous works now');
+    await wide.click('[aria-label="Previous shop"]');
+    await wide.waitForTimeout(400);
+    assert.equal(await railLeft(), 0);
+  });
+  await check('Reduced motion: the past searches change without rolling', async () => {
+    assert.equal(await wide.$eval('[data-testid="explore-search-hint-text"]', (el) => el.textContent), 'pandan');
+    await wide.waitForTimeout(3200);
+    const spans = await wide.$$eval('[data-testid="explore-search-hint"] > span', (els) => els.map((el) => ({ text: el.textContent, cls: el.className })));
+    assert.deepEqual(spans.map((x) => x.text), ['kuih'], 'the next one, alone');
+    assert.doesNotMatch(spans[0].cls, /sellio-hint-in/);
+  });
+  await desk.close();
 } finally {
   await browser.close();
   server.close();

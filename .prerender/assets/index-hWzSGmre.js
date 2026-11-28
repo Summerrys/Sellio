@@ -2927,6 +2927,7 @@ const Filters = "Penapis";
 const Clear = "Kosongkan";
 const Min = "Min";
 const Max = "Maks";
+const Visit = "Lawati";
 const explore = {
   All,
   "Food & drinks": "Makanan & minuman",
@@ -3623,7 +3624,11 @@ const explore = {
   "No listings in {country} yet.": "Belum ada produk di {country}.",
   "Show all countries": "Papar semua negara",
   "Use my location": "Guna lokasi saya",
-  "Finding where you are…": "Mencari lokasi anda…"
+  "Finding where you are…": "Mencari lokasi anda…",
+  Visit,
+  "See shop": "Lihat kedai",
+  "Previous shop": "Kedai sebelumnya",
+  "Next shop": "Kedai seterusnya"
 };
 const GROUPS = { signup, shop, explore };
 export {

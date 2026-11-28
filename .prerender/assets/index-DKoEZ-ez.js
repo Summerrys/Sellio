@@ -2927,6 +2927,7 @@ const Filters = "筛选";
 const Clear = "清除";
 const Min = "最低";
 const Max = "最高";
+const Visit = "进店";
 const explore = {
   All,
   "Food & drinks": "餐饮",
@@ -3623,7 +3624,11 @@ const explore = {
   "No listings in {country} yet.": "{country}还没有商品。",
   "Show all countries": "显示所有国家",
   "Use my location": "使用我的位置",
-  "Finding where you are…": "正在确定您的位置…"
+  "Finding where you are…": "正在确定您的位置…",
+  Visit,
+  "See shop": "查看店铺",
+  "Previous shop": "上一家店铺",
+  "Next shop": "下一家店铺"
 };
 const GROUPS = { signup, shop, explore };
 export {

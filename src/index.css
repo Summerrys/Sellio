@@ -111,6 +111,14 @@ html { color-scheme: only light; }
 .sellio-page-enter { animation: sellio-page-enter 180ms ease-out backwards; } /* not "both": a leftover transform would pin fixed children to the page */
 @media (prefers-reduced-motion: reduce) { .sellio-page-enter { animation: none; } }
 
+/* Explore's search bar: past searches roll up through it (components/explore/SearchHint.jsx).
+   Reduced motion: the words change without the roll. */
+@keyframes sellio-hint-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@keyframes sellio-hint-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-100%); } }
+.sellio-hint-in { animation: sellio-hint-in 300ms ease both; }
+.sellio-hint-out { animation: sellio-hint-out 300ms ease both; }
+@media (prefers-reduced-motion: reduce) { .sellio-hint-in { animation: none; } .sellio-hint-out { display: none; } }
+
 /* The default brand colours when no store theme is applied (the website, Explore,
    signed out). A store's theme sets these on <html>, which wins over this. */
 :root {
