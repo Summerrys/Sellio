@@ -7,16 +7,20 @@ import BottomSheet from './BottomSheet';
 import { BRAND_COLOR } from './shared';
 
 // Explore's location pin (Alvin, 28 Nov 2026, after Taobao's: "a location icon that you can click
-// and immediately choose a country"). It starts the row of categories; a tap opens the countries,
-// and a tap on one shows Explore in it at once: the listings, the shops and the merchants of that
-// country, and searches start there (lib/exploreSearch.js keeps the pick on the device). Every
-// country is the default. With one picked, its code (SG, MY, ID) shows beside the pin.
+// and immediately choose a country"; "the location icon can place it at the left side of the
+// searchbar"; "The pin should be outside of the search bar but at the left side"). It sits just
+// left of the search bar, as the cart sits right of it. A tap opens the countries, and a tap on
+// one shows Explore in it at once: the
+// listings, the shops and the merchants of that country, and searches start there
+// (lib/exploreSearch.js keeps the pick on the device). Every country is the default. With one
+// picked, its code (SG, MY, ID) shows beside the pin.
 
 const countryLabel = (key) => SEARCH_COUNTRIES.find((c) => c.key === key)?.label || SEARCH_COUNTRIES[0].label;
 
 export function LocationPin({ country, onOpen }) {
   const { t } = useAppText('explore');
   const code = countryNamed(country)?.code;
+  // A 44px tap area, overhanging the row's padding as the cart's does, so the row keeps its height.
   return (
     <button
       type="button"
@@ -24,9 +28,9 @@ export function LocationPin({ country, onOpen }) {
       aria-haspopup="dialog"
       aria-label={t('Location: {place}', { place: t(countryLabel(country)) })}
       data-testid="explore-location"
-      className="flex-shrink-0 pl-3 sm:pl-4 pr-1.5 inline-flex items-center gap-[3px] text-[13px] font-bold text-slate-800 active:opacity-70"
+      className="flex-shrink-0 h-11 min-w-[36px] -my-[3px] -ml-1.5 px-1 rounded-md inline-flex items-center justify-center gap-[2px] text-[13px] font-bold text-slate-800 hover:bg-white/60 active:opacity-70"
     >
-      <MapPin className="w-[19px] h-[19px]" style={{ color: BRAND_COLOR }} strokeWidth={2.4} aria-hidden="true" />
+      <MapPin className="w-[22px] h-[22px]" style={{ color: BRAND_COLOR }} strokeWidth={2.3} aria-hidden="true" />
       {code && <span data-testid="explore-location-code">{code}</span>}
     </button>
   );

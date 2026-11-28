@@ -1,7 +1,8 @@
 // Explore after Taobao (Alvin, 28 Nov 2026), in real Chromium as a 360 px phone with the app's
 // built styles:
-//  - scrolling: the logo row goes with the page, the search bar and the categories stay at the very
-//    top (one slim header), and no filter button turns up in the search bar;
+//  - scrolling: the logo row and the search bar (the location pin left of it) stay at the top, one
+//    slim header ending at the bottom of the search bar; the categories under it scroll away with
+//    the page, and no filter button turns up in the search bar;
 //  - the location pin: a tap opens the countries, one tap shows Explore in that country (listings,
 //    shops, searches) and is kept on the phone for next time; every country again from the pin;
 //  - the search: recent searches (kept per account on the phone) above the recommended listings,
@@ -111,34 +112,41 @@ try {
   const text = (selector) => page.$eval(selector, (el) => el.textContent.trim());
   await shot('1-top');
 
-  await check('At the top: logo row, then the search bar (coloured ring, search button inside on the right), then the pin and the categories', async () => {
+  await check('At the top: the logo row, then the pin, the search bar (coloured ring, search button inside on the right) and the cart, then the categories', async () => {
     const bar = await box('[data-testid="explore-top-bar"]');
     const ring = await box('[data-testid="explore-search-ring"]');
     const button = await box('[data-testid="explore-search-button"]');
+    const pin = await box('[data-testid="explore-location"]');
+    const cart = await box('a[href="/explore/cart"]');
     const cats = await box('[data-testid="explore-categories"]');
     assert.equal(bar.top, 0);
     assert.ok(ring.top >= bar.bottom && cats.top >= ring.bottom, 'in that order');
+    assert.ok(pin.right <= ring.left && pin.left >= 0, `the pin is outside the search bar, on its left (${pin.left}-${pin.right} | ${ring.left})`);
+    assert.ok(Math.abs((pin.top + pin.bottom) / 2 - (ring.top + ring.bottom) / 2) <= 2, 'level with it');
+    assert.ok(cart.left >= ring.right && cart.right <= 360, 'the cart right of it');
     assert.ok(button.right <= ring.right && button.right >= ring.right - 8 && button.top > ring.top && button.bottom < ring.bottom, 'the button sits in the ring at its right end');
     const ringBg = await page.$eval('[data-testid="explore-search-ring"]', (el) => getComputedStyle(el).backgroundImage);
     assert.match(ringBg, /gradient/, 'the ring is the visitor\'s gradient');
     assert.ok(cats.bottom <= 150, `the whole top is slim (ends at ${cats.bottom}px)`);
-    const pin = await box('[data-testid="explore-location"]');
-    const firstTab = await box('[role="tab"]');
-    assert.ok(pin.right <= firstTab.left + 1 && pin.top >= cats.top, 'the pin starts the categories row');
+    const header = await box('[data-testid="explore-header"]');
+    assert.ok(header.bottom <= cats.top + 1, 'the header ends at the bottom of the search bar, the categories under it');
   });
 
   await page.evaluate(() => window.scrollTo(0, 600));
   await page.waitForTimeout(400);
   await shot('2-scrolled');
-  await check('Scrolled down: the logo row has gone up with the page, the search bar and categories stay at the very top, no filter button in the search bar', async () => {
+  await check('Scrolled down: the logo row and search bar stay at the top, the header ending at the search bar; the categories have gone up with the page; no filter button in the search bar', async () => {
     const bar = await box('[data-testid="explore-top-bar"]');
-    assert.ok(bar.bottom <= 0, `the logo row is off screen (bottom ${bar.bottom})`);
     const header = await box('[data-testid="explore-header"]');
-    assert.equal(header.top, 0, 'the header sits at the top');
-    assert.ok(header.height <= 96, `a slim header (${header.height}px)`);
-    assert.ok((await box('[data-testid="explore-categories"]')).top < header.bottom, 'with the categories in it');
+    const ring = await box('[data-testid="explore-search-ring"]');
+    assert.equal(bar.top, 0, 'the logo row stays');
+    assert.equal(header.top, 0);
+    assert.ok(header.bottom - ring.bottom <= 10, `the header ends at the bottom of the search bar (${header.bottom} vs ${ring.bottom})`);
+    assert.ok(header.height <= 100, `a slim header (${header.height}px)`);
+    assert.ok((await box('[data-testid="explore-categories"]')).bottom <= 0, 'the categories scrolled away');
     const inRing = await page.$$eval('[data-testid="explore-search-ring"] button', (els) => els.map((el) => el.getAttribute('aria-label')));
     assert.deepEqual(inRing, ['Search'], 'only the search button in the search bar');
+    assert.ok(await page.$('[data-testid="explore-location"]'), 'the pin stays beside it');
     assert.notEqual(await page.$eval('[data-testid="explore-header"]', (el) => el.style.boxShadow), 'none', 'a hairline under it');
   });
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -182,8 +190,9 @@ try {
 
   await page.tap('input[type="search"]');
   await page.waitForTimeout(500);
-  await check('A search starts in the pinned country (its Location chip shows it)', async () => {
+  await check('A search starts in the pinned country (its Location chip shows it; the pin steps aside while searching)', async () => {
     assert.equal(await page.$eval('[data-chip="location"]', (el) => el.textContent.trim()), 'Malaysia');
+    assert.equal(await page.$('[data-testid="explore-location"]'), null);
     assert.equal((await calls('explore_search')).at(-1).p_country, 'Malaysia');
   });
   await page.tap('[data-testid="explore-search-cancel"]');
@@ -288,20 +297,22 @@ try {
   });
   await small.waitForTimeout(300);
   if (shots) await small.screenshot({ path: path.join(shots, '6-narrow-large-text.png') });
-  await check('320 px with the text 30% larger: the search bar, its button and the cart fit, the categories row scrolls sideways on one line', async () => {
+  await check('320 px with the text 30% larger: the pin, the search bar, its button and the cart fit; the categories row scrolls sideways on one line', async () => {
     const fit = await small.evaluate(() => {
       const r = (sel) => document.querySelector(sel).getBoundingClientRect();
       const ring = r('[data-testid="explore-search-ring"]');
       const button = r('[data-testid="explore-search-button"]');
       const cart = r('a[href="/explore/cart"]');
+      const pin = r('[data-testid="explore-location"]');
       const tabs = [...document.querySelectorAll('[role="tab"]')];
       const lines = tabs.map((tab) => { const range = document.createRange(); range.selectNodeContents(tab.firstChild); return new Set([...range.getClientRects()].map((x) => Math.round(x.top))).size; });
       const row = document.querySelector('[data-testid="explore-categories"]');
-      return { ringRight: ring.right, buttonRight: button.right, buttonWidth: button.width, cartRight: cart.right, lines,
+      return { ringLeft: ring.left, ringRight: ring.right, ringWidth: ring.width, pinLeft: pin.left, pinRight: pin.right, buttonRight: button.right, buttonWidth: button.width, cartRight: cart.right, lines,
         pageOverflow: document.documentElement.scrollWidth - window.innerWidth, rowHeight: row.getBoundingClientRect().height,
-        tabsScroll: row.lastElementChild.scrollWidth > row.lastElementChild.clientWidth };
+        tabsScroll: (() => { const list = row.querySelector('[role="tablist"]'); return list.scrollWidth > list.clientWidth; })() };
     });
     assert.ok(fit.buttonRight <= fit.ringRight && fit.buttonWidth >= 50, JSON.stringify(fit));
+    assert.ok(fit.pinLeft >= 0 && fit.pinRight <= fit.ringLeft && fit.ringWidth >= 180, `pin, then a usable search bar (${JSON.stringify(fit)})`);
     assert.ok(fit.cartRight <= 320, `cart on screen (${fit.cartRight})`);
     assert.equal(fit.pageOverflow, 0, 'nothing wider than the phone');
     assert.deepEqual(fit.lines, [1, 1, 1, 1, 1], 'each category on one line');

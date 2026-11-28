@@ -1,7 +1,7 @@
-// Explore's compact top (Alvin, 28 Nov 2026, after Taobao's): the logo row scrolls away on phones,
-// the search bar (a coloured ring with the search button inside it) and the categories (words,
-// after the location pin) stay at the top, and no filter button turns up in the search bar when
-// scrolling; the feed uses narrow gaps on phones. Also the
+// Explore's compact top (Alvin, 28 Nov 2026, after Taobao's): the logo row and the search bar (a
+// coloured ring with the search button inside it, the location pin left of it) stay at the top,
+// the categories under them (words) scroll away with the page, and no filter button turns up in
+// the search bar when scrolling; the feed uses narrow gaps on phones. Also the
 // sign-in landing (Explore; staff: their shop), staff kept out of Explore, the darker
 // bottom bar, Me's Privacy / Terms links and My listings' small-screen filters.
 // Run: node verification/explore-compact.dom.mjs   (jsdom installed in /tmp/sellio-verification)
@@ -104,27 +104,33 @@ try {
 
   const header = container.querySelector('header');
   const tablist = () => container.querySelector('[role="tablist"]');
+  const categories = () => container.querySelector('[data-testid="explore-categories"]');
   const topBar = container.querySelector('[data-testid="explore-top-bar"]');
   const ring = container.querySelector('[data-testid="explore-search-ring"]');
   const searchButton = container.querySelector('[data-testid="explore-search-button"]');
   const pin = container.querySelector('[data-testid="explore-location"]');
-  assert.ok(header.contains(tablist()), 'categories sit in the header');
-  assert.ok(header.contains(container.querySelector('input[type="search"]')), 'and the search');
-  assert.ok(header.contains(pin) && pin.compareDocumentPosition(tablist()) & win.Node.DOCUMENT_POSITION_FOLLOWING, 'the location pin starts the categories row');
+  const input = container.querySelector('input[type="search"]');
   assert.match(header.className, /\bsticky\b/, 'the header stays at the top while scrolling');
-  assert.match(header.className, /top-\[env\(safe-area-inset-top,0px\)\]/, 'just under the status bar');
-  assert.ok(!header.contains(topBar), 'the logo row is not in it: on phones it scrolls away with the page');
-  assert.match(topBar.parentElement.className, /md:sticky/, 'wider screens keep the logo row at the top');
+  assert.match(header.className, /\btop-0\b/);
+  assert.ok(header.contains(topBar) && header.contains(input), 'with the logo row and the search bar in it');
   assert.match(topBar.className, /\bh-12\b/, 'logo row 48px');
-  passed('Top: a 48px logo row that scrolls away on phones; the search and the categories (after the location pin) stay at the top');
+  assert.ok(!header.contains(tablist()), 'the categories are not in it');
+  assert.equal(header.nextElementSibling, categories(), 'they come right after it, as part of the page');
+  assert.ok(categories().contains(tablist()));
+  assert.ok(!categories().className.includes('sticky') && !categories().className.includes('fixed'), 'and scroll away with it');
+  passed('Top: the logo row and the search bar stay at the top; the categories under them are part of the page');
 
+  assert.ok(!ring.contains(pin), 'the pin is outside the search bar');
+  assert.equal(pin.nextElementSibling, ring, 'just left of it');
+  assert.ok(header.contains(pin));
   assert.match(ring.style.background, /--color-primary-gradient/, 'the ring is the visitor\'s colour');
   assert.ok(ring.contains(searchButton) && searchButton === ring.firstElementChild.lastElementChild, 'the search button sits inside the ring, on its right');
   assert.match(searchButton.style.background, /--color-primary-gradient/, 'in the same colour');
   assert.equal(searchButton.getAttribute('aria-label'), 'Search');
-  assert.match(container.querySelector('input[type="search"]').className, /h-full/);
+  assert.match(input.className, /h-full/);
+  assert.match(input.className, /text-ellipsis/, 'a placeholder too long for a narrow bar ends with "…"');
   assert.match(ring.firstElementChild.className, /h-\[38px\]/);
-  passed('Search bar: a coloured ring with the search button inside it on the right, in the same colour');
+  passed('Search bar: a coloured ring with the search button inside it on the right; the location pin outside it on the left');
 
   const tabs = [...tablist().querySelectorAll('[role="tab"]')];
   assert.deepEqual(tabs.map((b) => b.textContent), ['All', 'Food & drinks', 'Goods', 'Home sellers', 'Merchants']);
@@ -137,20 +143,22 @@ try {
 
   assert.equal(container.querySelector('button[aria-label^="Show categories"]'), null, 'no categories button in the search bar');
   assert.ok(!/SlidersHorizontal|Show categories/.test(await readFile('src/pages/Explore.jsx', 'utf8')), 'and no code left for one');
-  const styleOfRow = () => tablist().parentElement.getAttribute('style') || '';
-  await scrollToY(30);
+  const ringButtons = () => [...ring.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'));
+  await scrollToY(20);
+  assert.equal(header.style.boxShadow, 'none', 'no line while the categories (on the same wash) pass under the header');
   await scrollToY(120);
-  assert.equal(styleOfRow(), '', 'scrolled down: the categories row stays as it is (nothing slides away)');
-  assert.ok(header.contains(tablist()));
+  assert.deepEqual(ringButtons(), ['Search'], 'scrolled down: only the search button in the search bar');
+  assert.ok(header.contains(topBar) && !topBar.getAttribute('aria-hidden'), 'the logo row stays');
+  assert.equal(header.nextElementSibling, categories(), 'the categories stay in the page (scrolled away under the header)');
   assert.match(header.style.boxShadow, /rgba/, 'a hairline under the header once the page scrolls under it');
   await scrollToY(400);
-  assert.equal(styleOfRow(), '');
+  assert.deepEqual(ringButtons(), ['Search']);
   await scrollToY(0);
   assert.equal(header.style.boxShadow, 'none', 'none at the top');
-  passed('Scrolling: no filter button turns up in the search bar; the categories stay in view, a hairline under the header');
+  passed('Scrolling: no filter button turns up in the search bar; the logo row stays, a hairline under the header');
 
-  await scrollToY(400);
   const goods = tabs.find((b) => b.textContent === 'Goods');
+  await scrollToY(30);
   goods.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await sleep(400);
   assert.deepEqual(scrolls.at(-1), { top: 0, behavior: 'smooth' }, 'picking one goes back to the top of the results');

@@ -293,22 +293,24 @@ function SkeletonGrid() {
 
 // Explore's top (Alvin, 28 Nov 2026, after Taobao's home page: "Notice how slim the headerbar with
 // searchbar before the item on pages is? And also the softer color tone"). On a soft wash of the
-// visitor's colour (WASH):
-//  - the logo row (logo, My shop, chats and notifications) scrolls away with the page on phones;
-//    wider screens keep it at the top, with their menu links;
-//  - the search bar stays at the top: a ring in the visitor's colour, with the search button at
-//    its right in the same colour;
-//  - so do the categories under it: words, with a line under the picked one, after the location
-//    pin (ExploreLocation), which picks the country Explore shows.
-// Until 28 Nov 2026 the categories slid away behind the search bar when scrolling, and a button
-// in the search bar brought them back. Alvin had that button taken out: searching has its own
-// filters, and the categories now stay in view.
+// visitor's colour (WASH), the header stays at the top while the page scrolls and ends at the
+// bottom of the search bar ("the slim look I mentioned is referring to the bottom of the
+// searchbar"):
+//  - the logo row (logo, My shop, chats and notifications);
+//  - the search bar: a ring in the visitor's colour with the search button inside it on the
+//    right, the location pin (ExploreLocation, the country Explore shows) just left of it and the
+//    cart right of it.
+// The categories under it (words, with a line under the picked one) are part of the page: they
+// scroll away under the header, as Taobao's row under its search bar does, and come back at the
+// top. Until 28 Nov 2026 they slid away behind the search bar and a button in the search bar
+// brought them back; Alvin had that button taken out, as searching has its own filters.
 //
 // Searching (Alvin, 26 Nov 2026), from the moment the search box is tapped: the logo row folds
 // away so the search box sits at the top, "Cancel" (or the phone's Back) leaves the search, and
 // the categories give way to the search's sort and filter chips (ExploreFilters), which stay put
-// while the results scroll.
-const TOP_BAR = 48; // the logo row's height (h-12)
+// with the search box while the results scroll. The pin steps aside: the search's own Location
+// filter sets its country.
+const CATEGORIES_ROW = 40; // the categories row's height (h-10)
 const SAFE_TOP = 'env(safe-area-inset-top, 0px)';
 const GRADIENT_TEXT = { background: BRAND_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', WebkitTextFillColor: 'transparent' };
 
@@ -363,7 +365,8 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     searchRef.current?.blur();
     onSearchCancel();
   };
-  // A hairline under the header once the page scrolls under it.
+  // A hairline under the header once the page scrolls under it (past the categories, which share
+  // its wash).
   const [stuck, setStuck] = useState(false);
   const searchingNow = useRef(searching);
   searchingNow.current = searching;
@@ -371,7 +374,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
     let frame = 0;
     const check = () => {
       frame = 0;
-      setStuck(window.scrollY > (searchingNow.current ? 1 : TOP_BAR));
+      setStuck(window.scrollY > (searchingNow.current ? 1 : CATEGORIES_ROW));
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
     check();
@@ -381,21 +384,21 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
-  useEffect(() => { setStuck(window.scrollY > (searching ? 1 : TOP_BAR)); }, [searching]);
+  useEffect(() => { setStuck(window.scrollY > (searching ? 1 : CATEGORIES_ROW)); }, [searching]);
   const pick = (key) => {
     onKind(key);
-    // Picked while scrolled down: back to the top, where the new results start.
-    if (window.scrollY > TOP_BAR) window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Picked with the page a little scrolled: back to the top, where the new results start.
+    if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <>
-      {/* Sellio's iPhone app draws under the status bar: the wash stays behind it while the page
-          scrolls. (No height anywhere else.) */}
-      <div aria-hidden="true" className="fixed inset-x-0 top-0 z-40 pointer-events-none" style={{ height: SAFE_TOP, background: WASH }} />
-      {/* The logo row: part of the page on phones (it scrolls away), at the top on wider screens.
-          Searching, it folds away, and nothing in it can be reached meanwhile. */}
-      <div className="relative md:sticky md:top-0 z-30" style={{ paddingTop: SAFE_TOP, background: WASH }}>
+      <header
+        data-testid="explore-header"
+        className="sticky top-0 z-30"
+        style={{ paddingTop: SAFE_TOP, background: WASH, boxShadow: stuck ? '0 1px 0 rgba(15,23,42,0.07)' : 'none', transition: 'box-shadow 200ms ease' }}
+      >
+        {/* The logo row. Searching, it folds away, and nothing in it can be reached meanwhile. */}
         <div
           data-testid="explore-top-bar"
           aria-hidden={searching || undefined}
@@ -455,19 +458,14 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
             </div>
           </div>
         </div>
-      </div>
-      {/* The search and the categories (searching: its chips), at the top while the page
-          scrolls; the suggestions open under both. */}
-      <header
-        data-testid="explore-header"
-        className={`sticky z-30 top-[env(safe-area-inset-top,0px)] ${searching ? '' : 'md:top-[calc(env(safe-area-inset-top,0px)+3rem)]'}`}
-        style={{ background: WASH, boxShadow: stuck ? '0 1px 0 rgba(15,23,42,0.07)' : 'none', transition: 'box-shadow 200ms ease' }}
-      >
         <div className="relative max-w-6xl mx-auto">
           {/* The cart sits beside the search (the row above has no room for it on phones);
               its 44px tap area overhangs the row's padding, so the row keeps its height.
               While searching, Cancel takes its place. */}
-          <div className={`px-3 sm:px-4 pb-1 flex items-center gap-1.5 ${searching ? 'pt-2' : 'pt-0.5'}`}>
+          <div className={`px-3 sm:px-4 flex items-center gap-1.5 ${searching ? 'pt-2 pb-1' : 'pt-0.5 pb-2'}`}>
+            {!searching && (
+              <LocationPin country={country} onOpen={() => { searchRef.current?.blur(); setLocating(true); }} />
+            )}
             {/* The ring is the search's colour; the search button sits inside it, on the right. */}
             <div
               data-testid="explore-search-ring"
@@ -494,7 +492,7 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
                   aria-activedescendant={showList && keys.active >= 0 ? `${listId}-${keys.active}` : undefined}
                   placeholder={t('Search for an item or shop')}
                   enterKeyHint="search"
-                  className="flex-1 min-w-0 h-full bg-transparent pl-4 pr-1 text-[15px] text-slate-900 placeholder:text-slate-400 outline-none [&::-webkit-search-cancel-button]:hidden"
+                  className="flex-1 min-w-0 h-full bg-transparent pl-4 pr-1 text-[15px] text-slate-900 placeholder:text-slate-400 text-ellipsis outline-none [&::-webkit-search-cancel-button]:hidden"
                 />
                 {query && (
                   <button
@@ -533,35 +531,9 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
               <CartLink className="flex-shrink-0 -my-[3px] -mr-1" />
             )}
           </div>
-          {searching ? (
+          {searching && (
             <div className="pt-1">
               <FilterChips filters={filters} kinds={KINDS} onOpen={openSheet} />
-            </div>
-          ) : (
-            <div data-testid="explore-categories" className="flex items-stretch h-10">
-              <LocationPin country={country} onOpen={() => { searchRef.current?.blur(); setLocating(true); }} />
-              <div className="flex-1 min-w-0 flex items-stretch overflow-x-auto pr-2" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
-                {KINDS.map(({ key, label }) => {
-                  const active = kind === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => pick(key)}
-                      className={`relative flex-shrink-0 px-2.5 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? '' : 'text-slate-500 hover:text-slate-800'}`}
-                    >
-                      <span style={active ? GRADIENT_TEXT : undefined}>{t(label)}</span>
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-1/2 bottom-[5px] h-[3px] w-[18px] -ml-[9px] rounded-full transition-opacity duration-200"
-                        style={{ background: BRAND_GRADIENT, opacity: active ? 1 : 0 }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           )}
           {showList && (
@@ -569,6 +541,35 @@ function ExploreHeader({ query, onQuery, onSearchNow, kind, onKind, signedIn, ha
           )}
         </div>
       </header>
+      {/* The categories: part of the page, under the header, on the same wash. */}
+      {!searching && (
+        <div data-testid="explore-categories" style={{ background: WASH }}>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-stretch h-10 overflow-x-auto pl-0.5 pr-2 sm:pl-1.5" style={hideScrollbar} role="tablist" aria-label={t('Filter listings')}>
+              {KINDS.map(({ key, label }) => {
+                const active = kind === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => pick(key)}
+                    className={`relative flex-shrink-0 px-2.5 text-[15px] font-semibold whitespace-nowrap transition-colors ${active ? '' : 'text-slate-500 hover:text-slate-800'}`}
+                  >
+                    <span style={active ? GRADIENT_TEXT : undefined}>{t(label)}</span>
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-1/2 bottom-[5px] h-[3px] w-[18px] -ml-[9px] rounded-full transition-opacity duration-200"
+                      style={{ background: BRAND_GRADIENT, opacity: active ? 1 : 0 }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       {searching && (
         <FilterSheet key={sheet.n} section={sheet.section} filters={filters} kinds={KINDS} search={search} onApply={onFilters} onClose={closeSheet} />
       )}
